@@ -1,39 +1,62 @@
 # Dependencies
-/node_modules
-/.pnp
+node_modules/
+.pnp/
 .pnp.js
 
 # Testing
-/coverage
+coverage/
+.nyc_output/
 
 # Production
-/build
+build/
+dist/
+out/
 
 # Development
+.env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 
-# Editor
-.vscode/
+# IDE
 .idea/
+.vscode/
 *.swp
 *.swo
 .DS_Store
+Thumbs.db
 
 # Logs
+logs/
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Cache
-.eslintcache
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Temporary files
+*.bak
+*.tmp
+*.temp
 .cache/
-.npm/
 
-# Cursor history
-.config/Cursor/User/History/
+# TypeScript
+*.tsbuildinfo
 
-# Recovery backups
-backups/ 
+# Yarn
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+.pnp.*
+
+# Recovery files
+.gauntlet/recovery/*.bak 

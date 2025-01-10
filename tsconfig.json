@@ -1,17 +1,10 @@
 {
   "compilerOptions": {
-    "target": "es5",
+    "target": "es2020",
     "lib": [
       "dom",
       "dom.iterable",
       "esnext"
-    ],
-    "types": [
-      "react",
-      "react-dom",
-      "styled-components",
-      "jest",
-      "node"
     ],
     "allowJs": true,
     "skipLibCheck": true,
@@ -26,9 +19,36 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "jsxImportSource": "react"
+    "baseUrl": "src",
+    "paths": {
+      "@core/*": ["core/*"],
+      "@types/*": ["core/types/*"],
+      "@utils/*": ["core/utils/*"],
+      "@services/*": ["core/services/*"],
+      "@patterns/*": ["core/patterns/*"],
+      "@test/*": ["core/test/*"]
+    },
+    "noImplicitAny": true,
+    "noImplicitThis": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noImplicitReturns": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitOverride": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
   },
   "include": [
     "src"
+  ],
+  "exclude": [
+    "node_modules",
+    "build",
+    "dist",
+    "coverage",
+    ".gauntlet"
   ]
 } 
