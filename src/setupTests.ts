@@ -1,23 +1,12 @@
-/// <reference types="vitest" />
-import { defineConfig } from 'vitest/config'
-import react from '@vitejs/plugin-react'
+import '@testing-library/jest-dom';
+import { expect, afterEach } from 'vitest';
+import { cleanup } from '@testing-library/react';
+import * as matchers from '@testing-library/jest-dom/matchers';
 
-export default defineConfig({
-  plugins: [react()],
-  test: {
-    globals: true,
-    environment: 'jsdom',
-    setupFiles: [
-      './src/setupTests.ts',
-      './src/test/setup.ts'
-    ],
-    include: ['src/**/*.{test,spec}.{ts,tsx}'],
-    coverage: {
-      reporter: ['text', 'json', 'html'],
-      exclude: [
-        'node_modules/',
-        'src/setupTests.ts',
-      ],
-    },
-  },
-}) 
+// Extend Vitest's expect with React Testing Library's matchers
+expect.extend(matchers);
+
+// Cleanup after each test
+afterEach(() => {
+  cleanup();
+}); 

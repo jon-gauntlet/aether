@@ -1,4 +1,5 @@
 // Core system types that form the foundation of the type system
+import { ProtectionState } from './protection';
 
 export type SystemState = {
   health: number;  // 0-1 system health indicator
@@ -12,13 +13,6 @@ export type FlowState = {
   duration: number;
   intensity: number;
   quality: number;
-};
-
-export type ProtectionState = {
-  immunity: number;     // 0-1 system immunity level
-  stability: number;    // 0-1 system stability
-  coherence: number;    // 0-1 state coherence
-  preservation: number; // 0-1 state preservation
 };
 
 export type SystemMetrics = {

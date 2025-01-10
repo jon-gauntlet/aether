@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import styled from 'styled-components';
-import { FlowState } from '../core/types/base';
+import { FlowState, FlowStateType } from '../core/types/flow/types';
 
 interface FlowModeSelectorProps {
   currentState: FlowState;
@@ -109,13 +109,13 @@ const ButtonWrapper = styled.div`
   }
 `;
 
-const stateDescriptions: Record<FlowState, string> = {
-  [FlowState.FOCUS]: 'Balanced productivity state',
-  [FlowState.FLOW]: 'Enhanced performance state',
-  [FlowState.HYPERFOCUS]: 'Maximum intensity state',
-  [FlowState.EXHAUSTED]: 'Recovery needed',
-  [FlowState.RECOVERING]: 'Restoring energy',
-  [FlowState.DISTRACTED]: 'Reduced focus state'
+const stateDescriptions: Record<FlowStateType, string> = {
+  [FlowStateType.FOCUS]: 'Balanced productivity state',
+  [FlowStateType.FLOW]: 'Enhanced performance state',
+  [FlowStateType.HYPERFOCUS]: 'Maximum intensity state',
+  [FlowStateType.EXHAUSTED]: 'Recovery needed',
+  [FlowStateType.RECOVERING]: 'Restoring energy',
+  [FlowStateType.DISTRACTED]: 'Reduced focus state'
 };
 
 export const FlowModeSelector: React.FC<FlowModeSelectorProps> = ({
@@ -124,33 +124,43 @@ export const FlowModeSelector: React.FC<FlowModeSelectorProps> = ({
   recoveryProgress = 0,
   cooldown = false
 }) => {
-  const isStateDisabled = (state: FlowState): boolean => {
+  const isStateDisabled = (stateType: FlowStateType): boolean => {
     if (cooldown) return true;
-    if (state === FlowState.EXHAUSTED && currentState === FlowState.RECOVERING) return true;
-    if (state === FlowState.HYPERFOCUS && currentState !== FlowState.FLOW) return true;
+    if (stateType === FlowStateType.EXHAUSTED && currentState.type === FlowStateType.RECOVERING) return true;
+    if (stateType === FlowStateType.HYPERFOCUS && currentState.type !== FlowStateType.FLOW) return true;
     return false;
+  };
+
+  const handleStateSelect = (stateType: FlowStateType) => {
+    if (!isStateDisabled(stateType)) {
+      onSelect({
+        ...currentState,
+        type: stateType,
+        lastTransition: Date.now()
+      });
+    }
   };
 
   return (
     <Container>
       <ButtonGroup>
-        {Object.values(FlowState).map(state => (
-          <ButtonWrapper key={state}>
+        {Object.values(FlowStateType).map(stateType => (
+          <ButtonWrapper key={stateType}>
             <StateButton
-              isActive={currentState === state}
-              isDisabled={isStateDisabled(state)}
-              disabled={isStateDisabled(state)}
-              onClick={() => !isStateDisabled(state) && onSelect(state)}
-              aria-label={state}
+              isActive={currentState.type === stateType}
+              isDisabled={isStateDisabled(stateType)}
+              disabled={isStateDisabled(stateType)}
+              onClick={() => handleStateSelect(stateType)}
+              aria-label={stateType}
             >
-              {state}
+              {stateType}
             </StateButton>
-            <Tooltip>{stateDescriptions[state]}</Tooltip>
+            <Tooltip>{stateDescriptions[stateType]}</Tooltip>
           </ButtonWrapper>
         ))}
       </ButtonGroup>
       
-      {currentState === FlowState.RECOVERING && (
+      {currentState.type === FlowStateType.RECOVERING && (
         <ProgressBar
           progress={recoveryProgress}
           role="progressbar"
