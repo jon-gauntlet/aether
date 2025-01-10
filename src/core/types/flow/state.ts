@@ -54,4 +54,3 @@ export interface ConsciousnessState {
   };
   flow: Flow;
   coherence: number;
-} 

@@ -1,6 +1,6 @@
-import { Connection, Space } from '../core';
-import { EnergyState, Protection } from '../energy';
-import { NaturalFlow, Resonance } from '../flow';
+import { Connection, Space } from './consciousness';
+import { EnergyState, Protection } from '../energy/types';
+import { NaturalFlow, Resonance } from '../flow/types';
 
 // Extended space types
 export interface MindSpace extends Space {
@@ -70,4 +70,3 @@ export const isThoughtEvolution = (evolution: any): evolution is ThoughtEvolutio
     isConsciousnessState(evolution.to) &&
     typeof evolution.depth === 'number'
   );
-}; 

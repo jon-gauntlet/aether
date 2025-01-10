@@ -9,4 +9,3 @@ export interface Stream {
   flow: NaturalFlow;
   resonance: Resonance;
   timestamp: number;
-}

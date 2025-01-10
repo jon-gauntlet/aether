@@ -1,211 +1,186 @@
 import { BehaviorSubject, Observable } from 'rxjs';
-import { FlowState } from '../types/base';
-import { ConsciousnessState } from '../types/consciousness';
-import { Energy, EnergyMetrics } from '../energy/types';
-
-export enum PresenceState {
-  ACTIVE = 'ACTIVE',
-  FOCUSED = 'FOCUSED',
-  FLOW = 'FLOW',
-  RECOVERING = 'RECOVERING',
-  INACTIVE = 'INACTIVE'
-}
-
-export interface PresenceMetrics {
-  depth: number;
-  clarity: number;
-  stability: number;
-  resonance: number;
-  coherence: number;
-}
-
-export interface PresenceSystemState {
-  state: PresenceState;
-  metrics: PresenceMetrics;
-  lastTransition: Date;
-  history: Array<{
-    timestamp: Date;
-    state: PresenceState;
-    metrics: PresenceMetrics;
-    duration: number;
-  }>;
-}
+import { map, distinctUntilChanged } from 'rxjs/operators';
+import {
+  NaturalFlow,
+  FlowSpace,
+  EnergyState,
+  isCoherent,
+  isProtected,
+  isFlowing
+} from '../types/consciousness';
 
 export class PresenceSystem {
-  private state$: BehaviorSubject<PresenceSystemState>;
-  private readonly MAX_HISTORY = 100;
-  private readonly STABILITY_THRESHOLD = 0.7;
-  private readonly RESONANCE_THRESHOLD = 0.8;
+  private flow$: BehaviorSubject<NaturalFlow>;
+  private energy$: BehaviorSubject<EnergyState>;
+  private spaces: Map<string, BehaviorSubject<FlowSpace>>;
 
-  constructor() {
-    this.state$ = new BehaviorSubject<PresenceSystemState>({
-      state: PresenceState.ACTIVE,
-      metrics: {
-        depth: 1.0,
-        clarity: 1.0,
-        stability: 1.0,
-        resonance: 1.0,
-        coherence: 1.0
+  constructor(
+    initialFlow: NaturalFlow,
+    initialEnergy: EnergyState
+  ) {
+    this.flow$ = new BehaviorSubject<NaturalFlow>(initialFlow);
+    this.energy$ = new BehaviorSubject<EnergyState>(initialEnergy);
+    this.spaces = new Map();
+    this.initializeProtection();
+  }
+
+  private initializeProtection(): void {
+    // Core protection cycles
+    setInterval(() => this.maintainPresence(), 100);
+    setInterval(() => this.deepenStates(), 150);
+  }
+
+  // Protection Systems
+  private maintainPresence(): void {
+    const currentFlow = this.flow$.value;
+    const currentEnergy = this.energy$.value;
+
+    // Maintain flow coherence
+    if (!isCoherent(currentFlow)) {
+      this.flow$.next({
+        ...currentFlow,
+        coherence: Math.min(currentFlow.coherence + 0.1, 1),
+        presence: Math.min(currentFlow.presence + 0.1, 1)
+      });
+    }
+
+    // Protect energy
+    if (!isProtected(currentEnergy)) {
+      this.energy$.next({
+        ...currentEnergy,
+        protection: Math.min(currentEnergy.protection + 0.1, 1),
+        stability: Math.min(currentEnergy.stability + 0.1, 1)
+      });
+    }
+  }
+
+  private deepenStates(): void {
+    // Deepen space states
+    this.spaces.forEach((space$) => {
+      const space = space$.value;
+      if (!isFlowing(space)) {
+        space$.next({
+          ...space,
+          flow: {
+            ...space.flow,
+            rhythm: Math.min(space.flow.rhythm + 0.1, 1),
+            resonance: Math.min(space.flow.resonance + 0.1, 1)
+          }
+        });
+      }
+    });
+  }
+
+  // Space Operations
+  createSpace(type: FlowSpace['type']): string {
+    const id = crypto.randomUUID();
+    const space: FlowSpace = {
+      id,
+      type,
+      flow: {
+        rhythm: 1,
+        resonance: 1,
+        coherence: 1,
+        presence: 1
       },
-      lastTransition: new Date(),
-      history: []
-    });
-  }
-
-  public observeState(): Observable<PresenceSystemState> {
-    return this.state$.asObservable();
-  }
-
-  public updateState(
-    newState: PresenceState,
-    consciousness: ConsciousnessState,
-    energy: Energy
-  ): void {
-    const currentState = this.state$.getValue();
-    const now = new Date();
-    const duration = now.getTime() - currentState.lastTransition.getTime();
-
-    const metrics = this.calculateMetrics(
-      consciousness,
-      energy,
-      currentState.metrics
-    );
-
-    this.state$.next({
-      state: newState,
-      metrics,
-      lastTransition: now,
-      history: this.addToHistory(currentState.history, {
-        timestamp: now,
-        state: currentState.state,
-        metrics: currentState.metrics,
-        duration
-      })
-    });
-  }
-
-  public handleFlowTransition(
-    flowState: FlowState,
-    consciousness: ConsciousnessState,
-    energy: Energy
-  ): void {
-    const presenceState = this.mapFlowToPresence(flowState);
-    if (presenceState) {
-      this.updateState(presenceState, consciousness, energy);
-    }
-  }
-
-  public synchronize(consciousness: ConsciousnessState): void {
-    const currentState = this.state$.getValue();
-    const metrics = this.calculateMetrics(
-      consciousness,
-      consciousness.energy,
-      currentState.metrics
-    );
-
-    if (metrics.stability < this.STABILITY_THRESHOLD) {
-      this.updateState(
-        PresenceState.RECOVERING,
-        consciousness,
-        consciousness.energy
-      );
-    } else if (metrics.resonance > this.RESONANCE_THRESHOLD) {
-      this.updateState(
-        PresenceState.FLOW,
-        consciousness,
-        consciousness.energy
-      );
-    }
-  }
-
-  private calculateMetrics(
-    consciousness: ConsciousnessState,
-    energy: Energy,
-    currentMetrics: PresenceMetrics
-  ): PresenceMetrics {
-    const avgEnergy = (energy.mental + energy.physical + energy.emotional) / 3;
-    
-    const depth = consciousness.metrics.depth * avgEnergy;
-    const clarity = consciousness.metrics.clarity * (energy.mental / 3 + avgEnergy * 2/3);
-    const stability = this.calculateStability(consciousness, energy, currentMetrics);
-    const resonance = this.calculateResonance(consciousness, currentMetrics);
-    const coherence = consciousness.metrics.coherence * stability;
-
-    return {
-      depth: Math.min(1, depth),
-      clarity: Math.min(1, clarity),
-      stability: Math.min(1, stability),
-      resonance: Math.min(1, resonance),
-      coherence: Math.min(1, coherence)
+      depth: 1,
+      connections: []
     };
+
+    this.spaces.set(id, new BehaviorSubject(space));
+    return id;
   }
 
-  private calculateStability(
-    consciousness: ConsciousnessState,
-    energy: Energy,
-    metrics: PresenceMetrics
+  deepenSpace(id: string): void {
+    const space = this.spaces.get(id)?.value;
+    if (space) {
+      this.spaces.get(id)?.next({
+        ...space,
+        depth: Math.min(space.depth + 0.1, 1)
+      });
+    }
+  }
+
+  // Flow Operations
+  increaseFlow(): void {
+    const current = this.flow$.value;
+    this.flow$.next({
+      ...current,
+      rhythm: Math.min(current.rhythm + 0.1, 1),
+      resonance: Math.min(current.resonance + 0.1, 1)
+    });
+  }
+
+  deepenFlow(): void {
+    const current = this.flow$.value;
+    this.flow$.next({
+      ...current,
+      coherence: Math.min(current.coherence + 0.1, 1),
+      presence: Math.min(current.presence + 0.1, 1)
+    });
+  }
+
+  // Energy Operations
+  raiseEnergy(): void {
+    const current = this.energy$.value;
+    this.energy$.next({
+      ...current,
+      level: Math.min(current.level + 0.1, 1),
+      quality: Math.min(current.quality + 0.05, 1)
+    });
+  }
+
+  conserveEnergy(): void {
+    const current = this.energy$.value;
+    this.energy$.next({
+      ...current,
+      stability: Math.min(current.stability + 0.1, 1),
+      protection: Math.min(current.protection + 0.1, 1)
+    });
+  }
+
+  // Observation
+  observeFlow(): Observable<NaturalFlow> {
+    return this.flow$.pipe(distinctUntilChanged());
+  }
+
+  observeEnergy(): Observable<EnergyState> {
+    return this.energy$.pipe(distinctUntilChanged());
+  }
+
+  observeSpace(id: string): Observable<FlowSpace | undefined> {
+    return this.spaces.get(id)?.pipe(
+      distinctUntilChanged()
+    ) || new Observable<FlowSpace>();
+  }
+
+  // Pure Functions
+  static calculatePresenceQuality(
+    flow: NaturalFlow,
+    energy: EnergyState
   ): number {
-    const avgEnergy = (energy.mental + energy.physical + energy.emotional) / 3;
-    const consciousnessStability = consciousness.flowSpace.stability;
-    const currentStability = metrics.stability;
-
-    return (
-      avgEnergy * 0.3 +
-      consciousnessStability * 0.4 +
-      currentStability * 0.3
+    const flowQuality = (
+      flow.rhythm * 0.3 +
+      flow.resonance * 0.3 +
+      flow.coherence * 0.2 +
+      flow.presence * 0.2
     );
-  }
 
-  private calculateResonance(
-    consciousness: ConsciousnessState,
-    metrics: PresenceMetrics
-  ): number {
-    const fieldResonance = consciousness.fields.reduce((sum, field) =>
-      sum + field.resonance.amplitude * field.resonance.frequency, 0
-    ) / Math.max(1, consciousness.fields.length);
-
-    return (
-      fieldResonance * 0.6 +
-      metrics.coherence * 0.4
+    const energyQuality = (
+      energy.level * 0.3 +
+      energy.quality * 0.3 +
+      energy.stability * 0.2 +
+      energy.protection * 0.2
     );
+
+    return (flowQuality * 0.6 + energyQuality * 0.4);
   }
 
-  private mapFlowToPresence(flowState: FlowState): PresenceState | null {
-    switch (flowState) {
-      case FlowState.FLOW:
-        return PresenceState.FLOW;
-      case FlowState.FOCUS:
-        return PresenceState.FOCUSED;
-      case FlowState.RECOVERING:
-        return PresenceState.RECOVERING;
-      default:
-        return null;
-    }
-  }
-
-  private addToHistory(
-    history: Array<{
-      timestamp: Date;
-      state: PresenceState;
-      metrics: PresenceMetrics;
-      duration: number;
-    }>,
-    entry: {
-      timestamp: Date;
-      state: PresenceState;
-      metrics: PresenceMetrics;
-      duration: number;
-    }
-  ): Array<{
-    timestamp: Date;
-    state: PresenceState;
-    metrics: PresenceMetrics;
-    duration: number;
-  }> {
-    const updatedHistory = [...history, entry];
-    if (updatedHistory.length > this.MAX_HISTORY) {
-      return updatedHistory.slice(-this.MAX_HISTORY);
-    }
-    return updatedHistory;
+  static calculateSpacePresence(space: FlowSpace): number {
+    return (
+      space.flow.presence * 0.4 +
+      space.flow.coherence * 0.3 +
+      space.depth * 0.3
+    );
   }
 } 

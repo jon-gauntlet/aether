@@ -21,4 +21,3 @@ export interface DetailedFlowMetrics extends FlowMetrics {
   energy: number;
   focus: number;
   resonance: number;
-} 

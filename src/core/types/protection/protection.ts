@@ -1,5 +1,5 @@
-import { Field } from '../flow';
-import { FlowState } from '../flow';
+import { Field } from '../flow/types';
+import { FlowState } from '../flow/types';
 
 // Protection level enumeration
 export enum ProtectionLevel {
@@ -70,4 +70,3 @@ export const isProtectionEvent = (event: any): event is ProtectionEvent => {
     typeof event.timestamp === 'string' &&
     typeof event.level === 'number'
   );
-}; 

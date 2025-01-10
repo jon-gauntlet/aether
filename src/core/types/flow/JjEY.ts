@@ -8,4 +8,3 @@ export interface Stream {
   id: StreamId;
   type: string;
   timestamp: number;
-}

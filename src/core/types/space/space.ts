@@ -1,5 +1,5 @@
-import { Connection } from '../core';
-import { Resonance } from '../flow';
+import { Connection } from './space';
+import { Resonance } from '../flow/types';
 
 // Space field definition
 export interface Field {
@@ -58,4 +58,3 @@ export const isWave = (wave: any): wave is Wave => {
     typeof wave.amplitude === 'number' &&
     typeof wave.phase === 'number'
   );
-}; 

@@ -26,4 +26,3 @@ export interface Energy {
   type: EnergyType;
   flow: FlowState;
   meta: EnergyMeta;
-} 
