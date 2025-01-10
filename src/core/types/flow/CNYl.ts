@@ -17,4 +17,3 @@ export interface Stream {
   clarity?: number;
   near?: any[];
   harmony?: number;
-}

@@ -54,4 +54,3 @@ export const createMockConsciousness = (): ConsciousnessState => {
       flexibility: 0.7
     }
   };
-}; 

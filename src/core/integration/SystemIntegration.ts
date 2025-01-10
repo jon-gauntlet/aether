@@ -1,255 +1,321 @@
-import { BehaviorSubject, Observable, combineLatest } from 'rxjs';
-import { map } from 'rxjs/operators';
-import { FlowSystem } from '../flow/FlowSystem';
-import { EnergySystem } from '../energy/EnergySystem';
-import { PatternSystem } from '../pattern/PatternSystem';
-import { PresenceSystem } from '../presence/PresenceSystem';
-import { ConsciousnessSystem } from '../consciousness/ConsciousnessSystem';
-import { FieldSystem } from '../fields/FieldSystem';
-import { ProtectionSystem } from '../protection/ProtectionSystem';
-import { FlowState } from '../types/base';
-import { ConsciousnessState } from '../types/consciousness';
-import { Energy, EnergyMetrics } from '../energy/types';
-import { EnergyPattern } from '../pattern/types';
+import { Observable, BehaviorSubject, combineLatest, throwError } from 'rxjs';
+import { map, distinctUntilChanged, debounceTime, catchError } from 'rxjs/operators';
+import { 
+  ConsciousnessState, 
+  MindSpace, 
+  FlowSpace,
+  Field,
+  FlowState,
+  EnergyState,
+  NaturalFlow
+} from '../types/consciousness';
+import { createEmptyNaturalFlow, createNaturalFlow } from '../factories/flow';
 
-export interface SystemState {
-  isActive: boolean;
-  isStable: boolean;
-  metrics: {
-    efficiency: number;
-    sustainability: number;
-    resilience: number;
-    coherence: number;
-  };
+class SystemIntegrationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'SystemIntegrationError';
+  }
 }
 
+/**
+ * SystemIntegration manages the natural evolution of system state,
+ * maintaining harmony between different parts of consciousness.
+ */
 export class SystemIntegration {
-  private state$: BehaviorSubject<SystemState>;
-  private readonly STABILITY_THRESHOLD = 0.7;
+  private flowEngine: NaturalFlow;
+
+  private readonly errorSubject = new BehaviorSubject<Error | null>(null);
 
   constructor(
-    private readonly flowSystem: FlowSystem,
-    private readonly energySystem: EnergySystem,
-    private readonly patternSystem: PatternSystem,
-    private readonly presenceSystem: PresenceSystem,
-    private readonly consciousnessSystem: ConsciousnessSystem,
-    private readonly fieldSystem: FieldSystem,
-    private readonly protectionSystem: ProtectionSystem
+    private readonly stateManager: {
+      observeFlow: () => Observable<FlowState>;
+      observeEnergy: () => Observable<EnergyState>;
+      observeSpaces: () => Observable<MindSpace[]>;
+      updateSpace: (id: string, space: MindSpace) => void;
+      updateFlow: (flow: FlowState) => void;
+      updateEnergy: (energy: EnergyState) => void;
+    }
   ) {
-    this.state$ = new BehaviorSubject<SystemState>({
-      isActive: false,
-      isStable: true,
-      metrics: {
-        efficiency: 1.0,
-        sustainability: 1.0,
-        resilience: 1.0,
-        coherence: 1.0
-      }
-    });
-
-    this.initializeSubscriptions();
+    this.flowEngine = createEmptyNaturalFlow();
   }
 
-  public activate(): void {
-    const currentState = this.state$.getValue();
-    this.state$.next({
-      ...currentState,
-      isActive: true
-    });
+  // System State Management
+  observeSystemState(): Observable<ConsciousnessState> {
+    return combineLatest([
+      this.stateManager.observeFlow(),
+      this.stateManager.observeEnergy(),
+      this.stateManager.observeSpaces()
+    ]).pipe(
+      debounceTime(16), // Natural rhythm (60fps)
+      map(([flow, energy, mindSpaces]) => {
+        try {
+          if (!flow || !energy || !mindSpaces) {
+            throw new SystemIntegrationError('Invalid system state: missing flow, energy or spaces');
+          }
+
+          const mainSpace: MindSpace = mindSpaces[0] || {
+            id: 'root',
+            resonance: {
+              frequency: this.calculateSystemFrequency(flow, energy),
+              amplitude: 1,
+              harmony: this.calculateSystemStability(flow, energy),
+              field: this.createField(flow, energy),
+              essence: this.calculateSystemStability(flow, energy)
+            },
+            depth: this.calculateSystemDepth(flow, energy),
+            connections: []
+          };
+
+          // Convert MindSpaces to FlowSpaces with proper NaturalFlow instances
+          const flowSpaces: FlowSpace[] = this.convertToFlowSpaces(mindSpaces);
+
+          const systemState: ConsciousnessState = {
+            id: 'root',
+            type: 'individual' as const,
+            space: mainSpace,
+            spaces: flowSpaces,
+            resonance: mainSpace.resonance,
+            depth: this.calculateSystemDepth(flow, energy),
+            protection: {
+              strength: this.calculateSystemResilience(flow, energy),
+              level: this.calculateSystemStability(flow, energy),
+              field: mainSpace.resonance.field,
+              resilience: this.calculateSystemResilience(flow, energy),
+              adaptability: this.calculateSystemStability(flow, energy)
+            },
+            energy,
+            flow: this.flowEngine,
+            connections: []
+          };
+
+          this.validateState(systemState);
+          return systemState;
+
+        } catch (error) {
+          this.errorSubject.next(error instanceof Error ? error : new Error(String(error)));
+          throw error;
+        }
+      }),
+      distinctUntilChanged(),
+      catchError(error => {
+        console.error('System state observation error:', error);
+        return throwError(() => error);
+      })
+    );
   }
 
-  public deactivate(): void {
-    const currentState = this.state$.getValue();
-    this.state$.next({
-      ...currentState,
-      isActive: false
-    });
+  // Error handling
+  observeErrors(): Observable<Error | null> {
+    return this.errorSubject.asObservable();
   }
 
-  public getState(): Observable<SystemState> {
-    return this.state$.asObservable();
+  private validateState(state: ConsciousnessState): void {
+    if (!state.flow || typeof state.flow.observeDepth !== 'function') {
+      throw new SystemIntegrationError('Invalid flow state: missing required methods');
+    }
+    if (!state.energy || typeof state.energy.level !== 'number') {
+      throw new SystemIntegrationError('Invalid energy state: missing level');
+    }
+    if (!state.spaces || !Array.isArray(state.spaces)) {
+      throw new SystemIntegrationError('Invalid spaces: must be an array');
+    }
   }
 
-  public handleStateTransition(newState: FlowState): void {
-    const consciousness = (this.consciousnessSystem.getState() as BehaviorSubject<ConsciousnessState>).getValue();
-    const energy = (this.energySystem.observeEnergy() as BehaviorSubject<Energy>).getValue();
-
-    // Convert ConsciousnessMetrics to EnergyMetrics
-    const energyMetrics: EnergyMetrics = {
-      efficiency: consciousness.metrics.coherence,
-      sustainability: consciousness.metrics.integration,
-      recovery: consciousness.metrics.flexibility,
-      adaptability: consciousness.metrics.depth,
-      stability: consciousness.metrics.clarity
+  private createField(flow: FlowState, energy: EnergyState): Field {
+    return {
+      center: { x: 0, y: 0, z: 0 },
+      radius: Math.max(1, energy.level),
+      strength: this.calculateSystemResilience(flow, energy),
+      waves: []
     };
+  }
 
-    // Update flow state
-    this.flowSystem.transitionTo(newState, energy, energyMetrics);
+  private convertToFlowSpaces(mindSpaces: MindSpace[]): FlowSpace[] {
+    return mindSpaces.map(mindSpace => {
+      const flowState: FlowState = {
+        presence: mindSpace.resonance.harmony,
+        harmony: mindSpace.resonance.harmony,
+        rhythm: mindSpace.resonance.frequency,
+        resonance: mindSpace.resonance.amplitude,
+        coherence: mindSpace.resonance.essence
+      };
+      
+      return {
+        id: mindSpace.id,
+        type: 'meditation',
+        flow: createNaturalFlow(flowState),
+        depth: mindSpace.depth,
+        connections: mindSpace.connections
+      };
+    });
+  }
 
-    // Update energy based on flow transition
-    this.energySystem.handleFlowTransition(newState, consciousness);
-
-    // Update presence based on flow transition
-    this.presenceSystem.handleFlowTransition(newState, consciousness, energy);
-
-    // Update protection based on state change
-    this.protectionSystem.handleStateTransition(newState, consciousness);
-
-    // Update consciousness state
-    this.consciousnessSystem.updateState(newState);
-
-    // Find and evolve matching pattern
-    const pattern = this.patternSystem.findMatchingPattern(newState, energy);
-    if (pattern) {
-      this.patternSystem.evolvePattern(pattern.pattern, {
-        energyLevels: energy,
-        metrics: energyMetrics
-      }, true);
+  // System Evolution
+  async evolveSystemState(
+    currentState: ConsciousnessState,
+    targetState: Partial<ConsciousnessState>
+  ): Promise<void> {
+    // Flow evolution
+    if (targetState.flow) {
+      await this.evolveFlow(currentState.flow, targetState.flow);
     }
 
-    this.updateSystemState();
+    // Energy evolution
+    if (targetState.energy) {
+      await this.evolveEnergy(currentState.energy, targetState.energy);
+    }
+
+    // Space evolution
+    if (targetState.space) {
+      await this.evolveSpace(currentState.space, targetState.space);
+    }
   }
 
-  public synchronize(): void {
-    const consciousness = (this.consciousnessSystem.getState() as BehaviorSubject<ConsciousnessState>).getValue();
-    
-    // Synchronize presence with consciousness
-    this.presenceSystem.synchronize(consciousness);
+  // Natural Transitions
+  private async evolveFlow(
+    current: FlowState,
+    target: Partial<FlowState>
+  ): Promise<void> {
+    const nextFlow: FlowState = {
+      rhythm: this.calculateNextValue(current.rhythm, target.rhythm),
+      resonance: this.calculateNextValue(current.resonance, target.resonance),
+      coherence: this.calculateNextValue(current.coherence, target.coherence),
+      presence: this.calculateNextValue(current.presence, target.presence),
+      harmony: this.calculateNextValue(current.harmony, target.harmony)
+    };
 
-    // Synchronize fields with consciousness
-    consciousness.fields.forEach(field => {
-      this.fieldSystem.updateField(field.id, {
-        strength: field.strength * consciousness.flowSpace.stability
-      });
-    });
-
-    this.updateSystemState();
+    this.stateManager.updateFlow(nextFlow);
   }
 
-  private initializeSubscriptions(): void {
-    // Monitor flow state changes
-    this.flowSystem.getState().subscribe(flowState => {
-      if (flowState.isStable !== this.state$.getValue().isStable) {
-        this.updateSystemState();
-      }
-    });
+  private async evolveEnergy(
+    current: EnergyState,
+    target: Partial<EnergyState>
+  ): Promise<void> {
+    const nextEnergy = {
+      level: this.calculateNextValue(current.level, target.level),
+      quality: this.calculateNextValue(current.quality, target.quality),
+      stability: this.calculateNextValue(current.stability, target.stability),
+      protection: this.calculateNextValue(current.protection, target.protection)
+    };
 
-    // Monitor energy state changes
-    this.energySystem.observeState().subscribe(() => {
-      this.updateSystemState();
-    });
-
-    // Monitor pattern state changes
-    this.patternSystem.getState().subscribe(patternState => {
-      if (patternState.isStable !== this.state$.getValue().isStable) {
-        this.updateSystemState();
-      }
-    });
-
-    // Monitor protection state changes
-    this.protectionSystem.getState().subscribe(protectionState => {
-      if (!protectionState.isProtected) {
-        this.handleProtectionBreach(0.5); // Medium severity breach
-      }
-    });
+    this.stateManager.updateEnergy(nextEnergy);
   }
 
-  private updateSystemState(): void {
-    const flowState = (this.flowSystem.getState() as BehaviorSubject<any>).getValue();
-    const energyState = (this.energySystem.observeState() as BehaviorSubject<any>).getValue();
-    const patternState = (this.patternSystem.getState() as BehaviorSubject<any>).getValue();
-    const presenceState = (this.presenceSystem.observeState() as BehaviorSubject<any>).getValue();
-    const protectionState = (this.protectionSystem.getState() as BehaviorSubject<any>).getValue();
+  private async evolveSpace(
+    currentSpace: MindSpace,
+    targetSpace: MindSpace
+  ): Promise<void> {
+    const nextSpace: MindSpace = {
+      id: currentSpace.id,
+      resonance: {
+        frequency: this.calculateNextValue(currentSpace.resonance.frequency, targetSpace.resonance.frequency),
+        amplitude: this.calculateNextValue(currentSpace.resonance.amplitude, targetSpace.resonance.amplitude),
+        harmony: this.calculateNextValue(currentSpace.resonance.harmony, targetSpace.resonance.harmony),
+        essence: this.calculateNextValue(currentSpace.resonance.essence, targetSpace.resonance.essence),
+        field: this.calculateNextField(currentSpace.resonance.field, targetSpace.resonance.field)
+      },
+      depth: this.calculateNextValue(currentSpace.depth, targetSpace.depth),
+      connections: currentSpace.connections
+    };
 
-    const metrics = this.calculateSystemMetrics(
-      flowState,
-      energyState,
-      patternState,
-      presenceState,
-      protectionState
-    );
-
-    this.state$.next({
-      ...this.state$.getValue(),
-      isStable: this.checkSystemStability(metrics),
-      metrics
-    });
+    this.stateManager.updateSpace(nextSpace.id, nextSpace);
   }
 
-  private calculateSystemMetrics(
-    flowState: any,
-    energyState: any,
-    patternState: any,
-    presenceState: any,
-    protectionState: any
-  ): {
-    efficiency: number;
-    sustainability: number;
-    resilience: number;
-    coherence: number;
-  } {
-    const efficiency = (
-      flowState.metrics.efficiency * 0.3 +
-      energyState.metrics.efficiency * 0.3 +
-      presenceState.metrics.clarity * 0.4
-    );
+  private calculateNextValue(current: number, target?: number): number {
+    if (target === undefined) return current;
+    return current + (target - current) * 0.1;
+  }
 
-    const sustainability = (
-      energyState.metrics.sustainability * 0.4 +
-      protectionState.metrics.sustainability * 0.3 +
-      presenceState.metrics.stability * 0.3
-    );
-
-    const resilience = (
-      protectionState.metrics.resilience * 0.4 +
-      (patternState.isStable ? 0.4 : 0.2) +
-      presenceState.metrics.coherence * 0.2
-    );
-
-    const coherence = (
-      presenceState.metrics.coherence * 0.4 +
-      flowState.metrics.stability * 0.3 +
-      protectionState.metrics.integrity * 0.3
-    );
-
+  private calculateNextField(current: Field, target?: Field): Field {
+    if (!target) return current;
     return {
-      efficiency: Math.min(1, efficiency),
-      sustainability: Math.min(1, sustainability),
-      resilience: Math.min(1, resilience),
-      coherence: Math.min(1, coherence)
+      center: {
+        x: this.calculateNextValue(current.center.x, target.center.x),
+        y: this.calculateNextValue(current.center.y, target.center.y),
+        z: this.calculateNextValue(current.center.z, target.center.z)
+      },
+      radius: this.calculateNextValue(current.radius, target.radius),
+      strength: this.calculateNextValue(current.strength, target.strength),
+      waves: current.waves // Keep existing waves for now
     };
   }
 
-  private checkSystemStability(metrics: {
-    efficiency: number;
-    sustainability: number;
-    resilience: number;
-    coherence: number;
-  }): boolean {
-    const stabilityScore = (
-      metrics.efficiency * 0.3 +
-      metrics.sustainability * 0.3 +
-      metrics.resilience * 0.2 +
-      metrics.coherence * 0.2
+  private calculateSystemDepth(
+    flow: FlowState,
+    energy: EnergyState
+  ): number {
+    return (
+      flow.presence * 0.4 +
+      flow.coherence * 0.3 +
+      energy.quality * 0.3
     );
-
-    return stabilityScore >= this.STABILITY_THRESHOLD;
   }
 
-  private handleProtectionBreach(severity: number): void {
-    const currentState = this.state$.getValue();
+  private calculateSystemFrequency(
+    flow: FlowState,
+    energy: EnergyState
+  ): number {
+    return (
+      flow.rhythm * 0.4 +
+      flow.resonance * 0.3 +
+      energy.quality * 0.3
+    );
+  }
+
+  private calculateSystemStability(
+    flow: FlowState,
+    energy: EnergyState
+  ): number {
+    return (
+      flow.coherence * 0.4 +
+      flow.presence * 0.3 +
+      energy.stability * 0.3
+    );
+  }
+
+  private calculateSystemResilience(
+    flow: FlowState,
+    energy: EnergyState
+  ): number {
+    return (
+      energy.protection * 0.4 +
+      energy.stability * 0.3 +
+      flow.presence * 0.3
+    );
+  }
+
+  private async evolveState(): Promise<ConsciousnessState> {
+    const flow = await this.stateManager.observeFlow().pipe(
+      map(flowState => createNaturalFlow(flowState))
+    ).toPromise();
+
+    const energy = await this.stateManager.observeEnergy().toPromise();
+    const spaces = await this.stateManager.observeSpaces().toPromise();
     
-    if (!currentState.isActive) return;
-
-    // Update protection system
-    this.protectionSystem.handleBreach(severity);
-
-    // Force consciousness recovery
-    this.consciousnessSystem.updateState(FlowState.RECOVERING);
-
-    // Update energy system
-    this.energySystem.deplete(severity);
-
-    this.updateSystemState();
+    return {
+      id: 'system',
+      type: 'individual',
+      space: spaces[0],
+      spaces: this.convertToFlowSpaces(spaces),
+      resonance: {
+        frequency: this.calculateSystemFrequency(flow, energy),
+        amplitude: this.calculateSystemStability(flow, energy),
+        harmony: this.calculateSystemResilience(flow, energy),
+        field: this.createField(flow, energy),
+        essence: this.calculateSystemDepth(flow, energy)
+      },
+      depth: this.calculateSystemDepth(flow, energy),
+      protection: {
+        strength: energy.protection,
+        level: energy.quality,
+        field: this.createField(flow, energy),
+        resilience: this.calculateSystemResilience(flow, energy),
+        adaptability: this.calculateSystemStability(flow, energy)
+      },
+      energy,
+      flow,
+      connections: []
+    };
   }
 } 

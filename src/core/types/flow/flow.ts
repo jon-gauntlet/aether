@@ -65,4 +65,3 @@ export interface SystemFlow extends FlowMetrics {
   adaptability: number;// System flexibility
   emergence: number;   // Pattern emergence
   balance: number;     // System balance
-} 

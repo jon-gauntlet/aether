@@ -37,4 +37,3 @@ export interface SystemMeta {
 // Re-export everything
 export * from './metrics';
 export * from './state';
-export * from './stream'; 

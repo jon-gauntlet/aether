@@ -1,193 +1,184 @@
 import { BehaviorSubject, Observable, combineLatest } from 'rxjs';
-import { map } from 'rxjs/operators';
-import { Field, FlowState } from '../types/base';
-import { ConsciousnessState } from '../types/consciousness';
-import { Energy, EnergyMetrics } from '../energy/types';
-import { EnergyPattern, PatternState } from '../pattern/types';
-
-export interface AutonomicState {
-  isActive: boolean;
-  isProtected: boolean;
-  isStable: boolean;
-  currentPattern: EnergyPattern | null;
-  metrics: {
-    efficiency: number;
-    sustainability: number;
-    adaptability: number;
-    resilience: number;
-  };
-}
+import { map, distinctUntilChanged, debounceTime } from 'rxjs/operators';
+import {
+  AutonomicState,
+  EnhancedEnergyState,
+  FlowState,
+  ContextState,
+  Protection,
+  FlowMetrics,
+  EnergyMetrics,
+  ContextMetrics,
+  DevelopmentPhase,
+  PatternState
+} from '../types/base';
 
 export class AutonomicSystem {
-  private state$: BehaviorSubject<AutonomicState>;
-  private readonly MIN_EFFICIENCY = 0.3;
-  private readonly MIN_SUSTAINABILITY = 0.4;
-  private readonly STABILITY_THRESHOLD = 0.7;
+  // Sacred proportions embedded as natural constants
+  private readonly GOLDEN_RATIO = 1.618033988749895;  // Divine proportion
+  private readonly SILVER_RATIO = 2.414213562373095;  // Growth spiral
+  private readonly BRONZE_RATIO = 3.302775637731995;  // Material harmony
+  
+  // Time cycles aligned with natural rhythms (in milliseconds)
+  private readonly BREATH_CYCLE = 5000;      // Natural breath
+  private readonly RENEWAL_CYCLE = 15000;    // Energy restoration
+  private readonly HARMONY_CYCLE = 8000;     // Flow alignment
+  private readonly PATTERN_CYCLE = 10000;    // Natural emergence
+
+  private state$ = new BehaviorSubject<AutonomicState>({
+    energy: {
+      id: 'initial-energy',
+      level: 0.8,
+      capacity: 100,
+      protection: 0.8,
+      timestamp: Date.now(),
+      metrics: {
+        intensity: 0.8,
+        coherence: 0.7,
+        resonance: 0.75,
+        presence: 0.8,
+        harmony: 0.7,
+        rhythm: 0.6,
+        level: 0.8,
+        capacity: 100,
+        stability: 0.8,
+        flow: 0.75,
+        coherence: 0.8
+      },
+      resonance: {
+        primary: {
+          frequency: 0.8,
+          amplitude: 0.7,
+          phase: 0.6
+        },
+        harmonics: [{
+          frequency: 0.8,
+          amplitude: 0.7,
+          phase: 0.6
+        }],
+        frequency: 0.8,
+        amplitude: 0.7,
+        phase: 0.6,
+        coherence: 0.75,
+        harmony: 0.8
+      },
+      field: {
+        center: { x: 0, y: 0, z: 0 },
+        radius: 1,
+        strength: 0.8,
+        coherence: 0.75,
+        stability: 0.7,
+        waves: [{
+          frequency: 0.8,
+          amplitude: 0.7,
+          phase: 0.6
+        }]
+      }
+    },
+    flow: {
+      id: 'initial-flow',
+      type: 'natural',
+      metrics: {
+        intensity: 0.8,
+        coherence: 0.7,
+        resonance: 0.75,
+        presence: 0.8,
+        harmony: 0.7,
+        rhythm: 0.6,
+        depth: 0.7,
+        clarity: 0.8,
+        stability: 0.75,
+        focus: 0.8,
+        energy: 0.7,
+        quality: 0.75
+      },
+      protection: {
+        level: 0.8,
+        type: 'natural',
+        strength: 0.75
+      },
+      timestamp: Date.now()
+    },
+    context: {
+      id: 'initial-context',
+      type: 'development',
+      depth: 0.8,
+      presence: 'active',
+      flow: 'natural',
+      metrics: {
+        depth: 0.8,
+        presence: 0.7,
+        coherence: 0.75,
+        stability: 0.8
+      },
+      protection: {
+        level: 0.8,
+        type: 'natural'
+      },
+      timestamp: Date.now()
+    },
+    protection: {
+      level: 0.8,
+      type: 'natural',
+      strength: 0.75
+    },
+    pattern: {
+      id: 'initial-pattern',
+      type: DevelopmentPhase.INITIAL,
+      context: [],
+      states: []
+    }
+  });
 
   constructor() {
-    this.state$ = new BehaviorSubject<AutonomicState>({
-      isActive: false,
-      isProtected: true,
-      isStable: true,
-      currentPattern: null,
-      metrics: {
-        efficiency: 0.8,
-        sustainability: 0.8,
-        adaptability: 0.7,
-        resilience: 0.7
-      }
-    });
+    this.initializeNaturalSystem();
   }
 
-  public getState(): Observable<AutonomicState> {
+  private initializeNaturalSystem() {
+    setInterval(() => this.maintainEnergyBalance(), this.RENEWAL_CYCLE);
+    setInterval(() => this.enableNaturalProtection(), this.HARMONY_CYCLE);
+    this.observePatterns();
+  }
+
+  public observeState(): Observable<AutonomicState> {
     return this.state$.asObservable();
   }
 
-  public activate(): void {
-    const currentState = this.state$.getValue();
-    this.state$.next({
-      ...currentState,
-      isActive: true
-    });
-  }
-
-  public deactivate(): void {
-    const currentState = this.state$.getValue();
-    this.state$.next({
-      ...currentState,
-      isActive: false,
-      currentPattern: null
-    });
-  }
-
-  public updatePattern(
-    pattern: EnergyPattern | null,
-    energy: Energy,
-    metrics: EnergyMetrics
-  ): void {
-    const currentState = this.state$.getValue();
+  private maintainEnergyBalance() {
+    const currentState = this.state$.value;
+    const energyMetrics = currentState.energy.metrics;
     
-    if (!currentState.isActive) return;
-
-    const efficiency = this.calculateEfficiency(energy, metrics);
-    const sustainability = this.calculateSustainability(energy, metrics);
-    const adaptability = pattern ? this.calculateAdaptability(pattern) : currentState.metrics.adaptability;
-    const resilience = this.calculateResilience(energy, metrics, pattern);
-
-    this.state$.next({
-      ...currentState,
-      currentPattern: pattern,
+    // Natural energy balancing logic
+    const newEnergy = {
+      ...currentState.energy,
       metrics: {
-        efficiency,
-        sustainability,
-        adaptability,
-        resilience
-      },
-      isStable: this.checkStability(efficiency, sustainability, resilience)
-    });
-  }
-
-  public handleStateTransition(
-    newState: FlowState,
-    energy: Energy,
-    metrics: EnergyMetrics
-  ): void {
-    const currentState = this.state$.getValue();
-    
-    if (!currentState.isActive) return;
-
-    const efficiency = this.calculateEfficiency(energy, metrics) * 0.9; // Slight penalty for transition
-    const sustainability = this.calculateSustainability(energy, metrics);
-    
-    this.state$.next({
-      ...currentState,
-      metrics: {
-        ...currentState.metrics,
-        efficiency,
-        sustainability
-      },
-      isStable: this.checkStability(
-        efficiency,
-        sustainability,
-        currentState.metrics.resilience
-      )
-    });
-  }
-
-  public handleBreach(severity: number): void {
-    const currentState = this.state$.getValue();
-    
-    if (!currentState.isActive) return;
-
-    const resilienceFactor = Math.max(0, 1 - severity);
-    const newResilience = currentState.metrics.resilience * resilienceFactor;
-    const newEfficiency = currentState.metrics.efficiency * resilienceFactor;
+        ...energyMetrics,
+        level: Math.min(1, energyMetrics.level + (this.GOLDEN_RATIO * 0.1)),
+        stability: Math.min(1, energyMetrics.stability + (this.SILVER_RATIO * 0.05)),
+        flow: Math.min(1, energyMetrics.flow + (this.BRONZE_RATIO * 0.02))
+      }
+    };
 
     this.state$.next({
       ...currentState,
-      isProtected: newResilience > this.MIN_SUSTAINABILITY,
-      metrics: {
-        ...currentState.metrics,
-        resilience: newResilience,
-        efficiency: newEfficiency
-      },
-      isStable: this.checkStability(
-        newEfficiency,
-        currentState.metrics.sustainability,
-        newResilience
-      )
+      energy: newEnergy
     });
   }
 
-  private calculateEfficiency(energy: Energy, metrics: EnergyMetrics): number {
-    const avgEnergy = (energy.mental + energy.physical + energy.emotional) / 3;
-    return Math.max(this.MIN_EFFICIENCY,
-      avgEnergy * metrics.efficiency * metrics.sustainability
-    );
-  }
+  private enableNaturalProtection() {
+    const currentState = this.state$.value;
+    const protection = currentState.protection;
+    
+    // Natural protection enhancement
+    const newProtection = {
+      ...protection,
+      level: Math.min(1, protection.level + (this.GOLDEN_RATIO * 0.05)),
+      strength: Math.min(1, (protection.strength || 0) + (this.SILVER_RATIO * 0.02))
+    };
 
-  private calculateSustainability(energy: Energy, metrics: EnergyMetrics): number {
-    const avgEnergy = (energy.mental + energy.physical + energy.emotional) / 3;
-    return Math.max(this.MIN_SUSTAINABILITY,
-      avgEnergy * metrics.sustainability * metrics.recovery
-    );
-  }
-
-  private calculateAdaptability(pattern: EnergyPattern): number {
-    if (!pattern.evolution.history.length) return 0.7;
-
-    const successRate = pattern.evolution.history
-      .filter(h => h.success).length / pattern.evolution.history.length;
-
-    const stateBonus = pattern.state === PatternState.STABLE ? 0.2 :
-      pattern.state === PatternState.PROTECTED ? 0.3 : 0;
-
-    return Math.min(1, successRate + stateBonus);
-  }
-
-  private calculateResilience(
-    energy: Energy,
-    metrics: EnergyMetrics,
-    pattern: EnergyPattern | null
-  ): number {
-    const baseResilience = metrics.recovery * 0.4 + metrics.sustainability * 0.4;
-    const patternBonus = pattern?.state === PatternState.PROTECTED ? 0.2 : 0;
-    const energyFactor = (energy.mental + energy.physical + energy.emotional) / 3;
-
-    return Math.min(1, baseResilience + patternBonus) * energyFactor;
-  }
-
-  private checkStability(
-    efficiency: number,
-    sustainability: number,
-    resilience: number
-  ): boolean {
-    const stabilityScore = (
-      efficiency * 0.4 +
-      sustainability * 0.3 +
-      resilience * 0.3
-    );
-
-    return stabilityScore > this.STABILITY_THRESHOLD;
+    this.state$.next({
+      ...currentState,
+      protection: newProtection
+    });
   }
 } 

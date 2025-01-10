@@ -1,5 +1,5 @@
-import { Field } from '../flow';
-import { FlowState } from '../flow';
+import { Field } from '../flow/types';
+import { FlowState } from '../flow/types';
 
 // Core energy state
 export interface EnergyState {
@@ -65,4 +65,3 @@ export interface EnergyEvolution {
   to: EnergyState;
   flowState: FlowState;
   timestamp: string;
-} 
