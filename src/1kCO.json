@@ -1,0 +1,24 @@
+{
+  "name": "chatgenius",
+  "version": "0.1.0",
+  "description": "Natural workspace for flow and focus",
+  "main": "dist/index.js",
+  "bin": {
+    "space": "./dist/cli/workspace.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "cli": "ts-node src/cli/workspace.ts"
+  },
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "commander": "^11.0.0",
+    "typescript": "^5.0.0",
+    "ts-node": "^10.9.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.4.5"
+  }
+} 

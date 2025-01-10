@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Cursor (Default)
+Comment=Default Cursor Installation
+Exec=/usr/local/bin/cursor %F
+Icon=cursor
+Type=Application
+Categories=Development;IDE;
+NoDisplay=true
+X-AppImage-Integrate=false
+StartupWMClass=Cursor 

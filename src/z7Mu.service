@@ -1,0 +1,25 @@
+[Unit]
+Description=AI System Evolution Service
+After=cursor.slice
+PartOf=cursor.slice
+
+[Service]
+Type=notify
+NotifyAccess=all
+Environment=PYTHONPATH=/home/jon/ai_system_evolution
+Environment=EVOLUTION_ROOT=/home/jon/ai_system_evolution
+ExecStart=/home/jon/ai_system_evolution/services/evolve.sh
+Restart=always
+RestartSec=30
+WatchdogSec=120
+
+# Resource limits
+CPUWeight=50
+CPUQuota=60%
+MemoryHigh=6G
+MemoryMax=8G
+TasksMax=64
+IOWeight=50
+
+[Install]
+WantedBy=default.target 

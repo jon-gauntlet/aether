@@ -1,0 +1,5 @@
+#!/bin/bash
+
+# Redirect all default cursor launches to our optimized version
+echo "Redirecting to optimized Cursor version..."
+exec /home/jon/scripts/cursor/cursor-wrapper "$@"

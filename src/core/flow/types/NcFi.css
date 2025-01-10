@@ -1,0 +1,120 @@
+.pattern-monitor {
+  min-width: 400px;
+}
+
+.pattern-monitor-header {
+  margin-bottom: var(--spacing-lg);
+}
+
+.pattern-monitor-header h3 {
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.pattern-monitor-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.no-patterns {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: var(--spacing-lg);
+}
+
+.pattern-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.pattern-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: var(--spacing-md);
+  background: var(--surface-variant);
+  border-radius: var(--radius-md);
+  transition: all 0.2s ease;
+}
+
+.pattern-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px var(--shadow-hover);
+}
+
+.pattern-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.pattern-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.pattern-name {
+  color: var(--text-primary);
+  font-weight: 500;
+  font-size: 16px;
+}
+
+.pattern-type {
+  color: var(--text-secondary);
+  font-size: 12px;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+}
+
+.pattern-metrics {
+  display: flex;
+  gap: var(--spacing-lg);
+}
+
+.pattern-strength,
+.pattern-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+label {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.strength-indicator {
+  color: var(--primary);
+  font-size: 14px;
+  letter-spacing: 2px;
+}
+
+.stage-indicator {
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.pattern-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+/* Flow State Adaptations */
+.pattern-monitor.flow-state-focus .pattern-item {
+  background: var(--surface-focus);
+}
+
+.pattern-monitor.flow-state-flow .pattern-item {
+  background: var(--surface-flow);
+}
+
+.pattern-monitor.flow-state-rest .pattern-item {
+  background: var(--surface-rest);
+} 

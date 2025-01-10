@@ -1,0 +1,381 @@
+#!/bin/bash
+
+# One-shot setup script for Dual Claude system
+# Just run this once and everything will be ready
+
+set -euo pipefail
+
+CURSOR_CONFIG="/home/jon/.config/cursor"
+CURSOR_SHARE="/home/jon/.local/share/cursor"
+SYSTEMD_USER_DIR="/home/jon/.config/systemd/user"
+SCRIPTS_DIR="/home/jon/scripts/cursor"
+DEBUG=true
+
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
+}
+
+debug() {
+    if [[ "$DEBUG" == "true" ]]; then
+        echo "[DEBUG] $1"
+    fi
+}
+
+check_dependencies() {
+    log "Checking dependencies..."
+    local deps=(systemctl jq lsof pkill chmod rsync tar)
+    for dep in "${deps[@]}"; do
+        if ! command -v "$dep" >/dev/null 2>&1; then
+            log "ERROR: Required dependency '$dep' not found"
+            return 1
+        fi
+    done
+}
+
+verify_cursor() {
+    log "Verifying cursor installation..."
+    
+    # Check command existence
+    if ! command -v cursor >/dev/null 2>&1; then
+        log "ERROR: cursor not found in PATH"
+        return 1
+    fi
+    debug "Found cursor in PATH"
+    
+    # Check binary
+    local cursor_bin=$(command -v cursor)
+    if [[ ! -x "$cursor_bin" ]]; then
+        log "ERROR: cursor binary not executable"
+        return 1
+    fi
+    debug "Cursor binary is executable: $cursor_bin"
+    
+    # Check version without actually launching
+    if ! cursor --version 2>/dev/null | grep -q "Version\|version"; then
+        log "ERROR: cursor --version failed"
+        debug "Version output: $(cursor --version 2>&1)"
+        return 1
+    fi
+    debug "Cursor version check passed"
+    
+    # Check UI launcher
+    local desktop_file="/home/jon/.local/share/applications/cursor.desktop"
+    if [[ ! -f "$desktop_file" ]]; then
+        log "WARNING: UI launcher not found at $desktop_file"
+    else
+        debug "UI launcher exists"
+    fi
+    
+    # Verify no hanging cursor processes
+    local cursor_count=$(pgrep -f "^cursor( |$)" | wc -l)
+    debug "Found $cursor_count cursor processes"
+    if (( cursor_count > 5 )); then
+        log "WARNING: High number of cursor processes ($cursor_count)"
+    fi
+    
+    debug "Cursor installation verified"
+    return 0
+}
+
+backup_cursor_config() {
+    log "Backing up cursor configuration..."
+    local timestamp=$(date '+%Y%m%d_%H%M%S')
+    local backup_base="/tmp/cursor_backup_$timestamp"
+    
+    mkdir -p "$backup_base"
+    
+    if [[ -d "$CURSOR_CONFIG" ]]; then
+        cp -r "$CURSOR_CONFIG" "$backup_base/"
+        debug "Backed up $CURSOR_CONFIG"
+    fi
+    
+    if [[ -d "$CURSOR_SHARE" ]]; then
+        # Exclude the backups directory to avoid recursion
+        rsync -a --exclude 'backups' "$CURSOR_SHARE/" "$backup_base/cursor_share/"
+        debug "Backed up $CURSOR_SHARE"
+    fi
+    
+    # Create final backup in cursor directory
+    mkdir -p "$CURSOR_SHARE/backups"
+    tar czf "$CURSOR_SHARE/backups/backup_$timestamp.tar.gz" -C "$backup_base" .
+    debug "Created compressed backup at $CURSOR_SHARE/backups/backup_$timestamp.tar.gz"
+    
+    # Cleanup temp files
+    rm -rf "$backup_base"
+}
+
+setup_directories() {
+    log "Creating required directories..."
+    local dirs=(
+        "$CURSOR_SHARE/contexts/project"
+        "$CURSOR_SHARE/contexts/system"
+        "$CURSOR_SHARE/contexts/.sacred"
+        "$CURSOR_SHARE/logs"
+        "$CURSOR_SHARE/metrics/claude"
+        "$CURSOR_SHARE/state"
+        "$CURSOR_SHARE/run"
+        "$CURSOR_CONFIG/contexts/patterns"
+        "$CURSOR_SHARE/backups"
+    )
+    
+    for dir in "${dirs[@]}"; do
+        mkdir -p "$dir"
+        chmod 755 "$dir"
+        debug "Created directory: $dir"
+    done
+}
+
+setup_executables() {
+    log "Setting up executables..."
+    local scripts=(
+        "claude-autonomic-manager"
+        "launch-dual-claude"
+        "context-crystallizer"
+    )
+    
+    for script in "${scripts[@]}"; do
+        local script_path="$SCRIPTS_DIR/$script"
+        if [[ ! -f "$script_path" ]]; then
+            log "ERROR: Required script $script not found"
+            return 1
+        fi
+        chmod +x "$script_path"
+        debug "Made executable: $script_path"
+    done
+}
+
+check_service_file() {
+    local service="$1"
+    if [[ ! -f "$SYSTEMD_USER_DIR/$service" ]]; then
+        log "ERROR: Service file $service not found"
+        return 1
+    fi
+    debug "Service file exists: $service"
+}
+
+stop_optimization_services() {
+    log "Stopping optimization services..."
+    local services=(
+        "cursor-startup.service"
+        "claude-autonomic-manager.service"
+        "cursor-claude-project.slice"
+        "cursor-claude-system.slice"
+    )
+    
+    for svc in "${services[@]}"; do
+        systemctl --user stop "$svc" 2>/dev/null || true
+        debug "Stopped service: $svc"
+    done
+    
+    # Only kill optimization-related cursor instances
+    pkill -f "cursor.*CURSOR_CONTEXT_TYPE" 2>/dev/null || true
+    
+    # Give processes time to clean up
+    sleep 2
+}
+
+reload_systemd() {
+    log "Reloading systemd..."
+    systemctl --user daemon-reload
+    debug "Systemd reloaded"
+}
+
+enable_services() {
+    log "Enabling services..."
+    local services=(
+        "cursor-startup.service"
+        "claude-autonomic-manager.service"
+    )
+    
+    for svc in "${services[@]}"; do
+        if ! check_service_file "$svc"; then
+            return 1
+        fi
+        systemctl --user enable "$svc"
+        debug "Enabled service: $svc"
+    done
+}
+
+check_service_status() {
+    local service="$1"
+    local max_attempts=5
+    local attempt=1
+    
+    while (( attempt <= max_attempts )); do
+        local status
+        status=$(systemctl --user status "$service" 2>&1)
+        debug "Service $service status (attempt $attempt):"
+        debug "$status"
+        
+        if systemctl --user is-active "$service" >/dev/null 2>&1; then
+            return 0
+        fi
+        
+        log "Service $service not active yet (attempt $attempt/$max_attempts)"
+        journalctl --user -u "$service" -n 10 --no-pager
+        
+        (( attempt++ ))
+        sleep 2
+    done
+    
+    log "Service $service failed to start after $max_attempts attempts. Status:"
+    echo "$status"
+    return 1
+}
+
+start_services() {
+    log "Starting services..."
+    
+    # Start autonomic manager first
+    log "Starting autonomic manager..."
+    if ! systemctl --user start claude-autonomic-manager.service; then
+        log "ERROR: Failed to start autonomic manager"
+        journalctl --user -u claude-autonomic-manager.service -n 50 --no-pager
+        return 1
+    fi
+    
+    # Check its status
+    if ! check_service_status "claude-autonomic-manager.service"; then
+        return 1
+    fi
+    
+    # Start cursor startup service
+    log "Starting cursor startup service..."
+    if ! systemctl --user start cursor-startup.service; then
+        log "ERROR: Failed to start cursor startup service"
+        journalctl --user -u cursor-startup.service -n 50 --no-pager
+        return 1
+    fi
+    
+    # Check its status
+    if ! check_service_status "cursor-startup.service"; then
+        return 1
+    fi
+}
+
+verify_setup() {
+    log "Verifying setup..."
+    local services=(
+        "cursor-startup.service"
+        "claude-autonomic-manager.service"
+    )
+    
+    local slices=(
+        "cursor-claude-project.slice"
+        "cursor-claude-system.slice"
+    )
+    
+    # Check services with detailed output
+    for svc in "${services[@]}"; do
+        if ! check_service_status "$svc"; then
+            return 1
+        fi
+    done
+    
+    # Check slices
+    for slice in "${slices[@]}"; do
+        if ! systemctl --user is-active "$slice" >/dev/null 2>&1; then
+            log "ERROR: Slice $slice not active"
+            systemctl --user status "$slice"
+            return 1
+        fi
+        debug "Slice active: $slice"
+    done
+    
+    # Give processes time to start
+    log "Waiting for processes to start..."
+    sleep 5
+    
+    # Check processes with retries
+    local max_attempts=5
+    local attempt=1
+    
+    while (( attempt <= max_attempts )); do
+        local project_running=false
+        local system_running=false
+        
+        pgrep -f "cursor.*CURSOR_CONTEXT_TYPE=project" >/dev/null && project_running=true
+        pgrep -f "cursor.*CURSOR_CONTEXT_TYPE=system" >/dev/null && system_running=true
+        
+        if $project_running && $system_running; then
+            debug "All processes running"
+            return 0
+        fi
+        
+        log "Waiting for processes (attempt $attempt/$max_attempts)..."
+        (( attempt++ ))
+        sleep 2
+    done
+    
+    [[ "$project_running" != "true" ]] && log "ERROR: Project Claude not running"
+    [[ "$system_running" != "true" ]] && log "ERROR: System Claude not running"
+    return 1
+}
+
+verify_cursor_after() {
+    log "Verifying cursor still works..."
+    if ! cursor --version >/dev/null 2>&1; then
+        log "ERROR: cursor command not working after setup"
+        return 1
+    fi
+    debug "Cursor still working"
+}
+
+cleanup_on_failure() {
+    log "Setup failed, cleaning up..."
+    stop_optimization_services
+    log "Dumping service logs..."
+    journalctl --user -u claude-autonomic-manager.service -n 50 --no-pager
+    journalctl --user -u cursor-startup.service -n 50 --no-pager
+    
+    # Verify cursor still works
+    if ! verify_cursor_after; then
+        log "CRITICAL: Cursor may be broken. Please check your installation"
+        log "You can restore from backup at $CURSOR_SHARE/backups/"
+    fi
+}
+
+main() {
+    log "Starting Dual Claude setup..."
+    
+    if ! check_dependencies; then
+        return 1
+    fi
+    
+    if ! verify_cursor; then
+        return 1
+    fi
+    
+    backup_cursor_config
+    setup_directories
+    
+    if ! setup_executables; then
+        return 1
+    fi
+    
+    stop_optimization_services
+    reload_systemd
+    
+    if ! enable_services; then
+        cleanup_on_failure
+        return 1
+    fi
+    
+    if ! start_services; then
+        cleanup_on_failure
+        return 1
+    fi
+    
+    if verify_setup && verify_cursor_after; then
+        log "Setup completed successfully!"
+        log "Both Claudes are running and managed autonomically"
+        log "You can now close this terminal and start working"
+        log "Cursor command line and UI functionality preserved"
+    else
+        cleanup_on_failure
+        return 1
+    fi
+}
+
+# Run setup
+main 

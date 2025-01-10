@@ -1,0 +1,22 @@
+# Database
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/ai_lms"
+
+# Authentication
+NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_SECRET="your-secret-key-here"
+
+# OAuth Providers
+GITHUB_ID=""
+GITHUB_SECRET=""
+GOOGLE_ID=""
+GOOGLE_SECRET=""
+
+# AI Services
+CLAUDE_API_KEY=""
+
+# Search
+MEILISEARCH_HOST="http://localhost:7700"
+MEILISEARCH_API_KEY=""
+
+# Redis
+REDIS_URL="redis://localhost:6379" 

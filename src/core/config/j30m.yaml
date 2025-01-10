@@ -1,0 +1,159 @@
+---
+# Parser configurations for each source type and tool
+
+sast:
+  brakeman:
+    file_pattern: "findings/sast/brakeman.json"
+    parser_module: "parsers.sast.brakeman_parser"
+    parser_class: "BrakemanParser"
+    severity_map:
+      High: 8.0
+      Medium: 5.0
+      Low: 2.0
+    required_fields:
+      - warning_type
+      - message
+      - file
+      - line
+    preserve_fields:
+      - fingerprint
+      - check_name
+      - code
+      - user_input
+      - confidence
+      - cwe_id
+
+  bearer:
+    file_pattern: "findings/sast/bearer.json"
+    parser_module: "parsers.sast.bearer_parser"
+    parser_class: "BearerParser"
+    severity_map:
+      critical: 9.0
+      high: 7.0
+      medium: 5.0
+      low: 3.0
+      info: 1.0
+    required_fields:
+      - id
+      - title
+      - description
+    preserve_fields:
+      - documentation_url
+      - line_number
+      - full_filename
+
+  snyk:
+    file_pattern: "findings/sast/snyk-*.json"
+    parser_module: "parsers.sast.snyk_parser"
+    parser_class: "SnykParser"
+    severity_map:
+      critical: 9.0
+      high: 7.0
+      medium: 5.0
+      low: 3.0
+    required_fields:
+      - id
+      - title
+      - severity
+    preserve_fields:
+      - originalLocations
+      - references
+      - tags
+
+dast:
+  wapiti:
+    file_pattern: "findings/dast/wapiti.json"
+    parser_module: "parsers.dast.wapiti_parser"
+    parser_class: "WapitiParser"
+    severity_map:
+      "3": 9.0  # Critical
+      "2": 7.0  # High
+      "1": 5.0  # Medium
+      "0": 3.0  # Low
+    required_fields:
+      - vulnerability_type
+      - path
+      - info
+    preserve_fields:
+      - http_request
+      - curl_command
+      - classification
+
+  nikto:
+    file_pattern: "findings/dast/nikto.json"
+    parser_module: "parsers.dast.nikto_parser"
+    parser_class: "NiktoParser"
+    severity_map:
+      critical: 9.0
+      high: 7.0
+      medium: 5.0
+      low: 3.0
+    required_fields:
+      - id
+      - msg
+    preserve_fields:
+      - osvdbid
+      - method
+      - uri
+
+  zap:
+    file_pattern: "findings/dast/zaproxy/*.json"
+    parser_module: "parsers.dast.zap_parser"
+    parser_class: "ZAPParser"
+    severity_map:
+      High: 8.0
+      Medium: 5.0
+      Low: 2.0
+      Informational: 1.0
+    required_fields:
+      - alert
+      - risk
+      - url
+    preserve_fields:
+      - solution
+      - otherinfo
+      - reference
+      - cweid
+      - wascid
+
+llm:
+  claude:
+    file_pattern: "findings/claude-3.5-sonnet/findings.json"
+    parser_module: "parsers.llm.claude_parser"
+    parser_class: "ClaudeParser"
+    severity_map:
+      Critical: 9.0
+      High: 7.0
+      Medium: 5.0
+      Low: 3.0
+      Info: 1.0
+    required_fields:
+      - id
+      - title
+      - security_category
+      - severity
+    preserve_fields:
+      - evidence
+      - remediation
+      - related_findings
+
+# Global configuration
+global:
+  output_dir: "/home/jon/security-assessment/data/normalized_findings"
+  schema_path: "/home/jon/security-assessment/data/schemas/normalized_finding.json"
+  log_level: "INFO"
+  batch_size: 100
+  max_workers: 4
+
+# Error handling configuration
+error_handling:
+  max_retries: 3
+  retry_delay: 1
+  skip_on_error: false
+  preserve_partial: true
+
+# Validation configuration
+validation:
+  validate_source: true
+  validate_output: true
+  strict_mode: false  # If true, fails on any validation error 

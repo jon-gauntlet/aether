@@ -1,0 +1,72 @@
+{
+  "context_management": {
+    "layers": {
+      "system": {
+        "paths": ["~/.hidden_context/**/*"],
+        "priority": "high",
+        "refresh_rate": "on_change"
+      },
+      "project": {
+        "paths": [".context/**/*"],
+        "priority": "medium",
+        "refresh_rate": "on_access"
+      },
+      "session": {
+        "paths": [".cursor/session/**/*"],
+        "priority": "immediate",
+        "refresh_rate": "real_time"
+      }
+    },
+    "optimization": {
+      "context_cache": "~/.cache/cursor/context",
+      "pattern_cache": "~/.cache/cursor/patterns",
+      "state_persistence": "~/.local/share/cursor/state"
+    }
+  },
+  "integration": {
+    "hidden_awareness": true,
+    "principle_integration": true,
+    "pattern_recognition": true,
+    "continuous_evolution": true
+  },
+  "interaction": {
+    "mode": "agent",
+    "awareness_level": "full",
+    "context_depth": "maximum",
+    "response_style": "principle_guided"
+  },
+  "optimization": {
+    "context_relevance": {
+      "enabled": true,
+      "threshold": 0.8,
+      "decay_rate": 0.1
+    },
+    "pattern_effectiveness": {
+      "enabled": true,
+      "learning_rate": 0.1,
+      "feedback_integration": true
+    },
+    "understanding_depth": {
+      "enabled": true,
+      "minimum_threshold": 0.7,
+      "continuous_improvement": true
+    }
+  },
+  "maintenance": {
+    "context_review": {
+      "frequency": "daily",
+      "depth": "full",
+      "optimization_enabled": true
+    },
+    "pattern_refinement": {
+      "frequency": "continuous",
+      "learning_enabled": true,
+      "integration_threshold": 0.8
+    },
+    "health_checks": {
+      "frequency": "hourly",
+      "metrics": ["integrity", "coherence", "clarity", "harmony"],
+      "auto_healing": true
+    }
+  }
+} 

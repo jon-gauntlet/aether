@@ -1,0 +1,74 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": [
+    "finding_id",
+    "source",
+    "title",
+    "description",
+    "severity",
+    "security_category"
+  ],
+  "properties": {
+    "finding_id": {
+      "type": "string",
+      "description": "Unique identifier for the finding"
+    },
+    "source": {
+      "type": "string",
+      "description": "Source of the finding (e.g., 'sast', 'dast', 'claude-3.5-sonnet')"
+    },
+    "title": {
+      "type": "string",
+      "description": "Brief title describing the finding"
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed description of the finding"
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["critical", "high", "medium", "low", "info"],
+      "description": "Severity level of the finding"
+    },
+    "security_category": {
+      "type": "string",
+      "enum": [
+        "1. Sessions",
+        "2. Sessions",
+        "3. Cross-Site Request Forgery (CSRF)",
+        "4. Redirection and Files",
+        "5. User Management",
+        "6. Injection",
+        "7. Unsafe Query Generation",
+        "8. HTTP Security Headers",
+        "9. Intranet and Admin Security",
+        "10. Environmental Security",
+        "11. Dependency Management and CVEs"
+      ],
+      "description": "Security category from Rails Security Guide"
+    },
+    "recommendations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of recommended actions to remediate the finding"
+    },
+    "location": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string"
+        },
+        "line": {
+          "type": "integer"
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional tool-specific metadata"
+    }
+  }
+} 

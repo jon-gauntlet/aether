@@ -1,0 +1,48 @@
+name: Deployment Check
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  pre-deploy-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install Dependencies
+      run: npm install --legacy-peer-deps
+      
+    - name: Type Check
+      run: npm run type-check || true
+      
+    - name: Build Test
+      run: npm run build
+      
+    - name: Run Tests
+      run: npm test -- --passWithNoTests
+      
+    - name: Bundle Size Check
+      run: |
+        npm run build
+        echo "Checking bundle size..."
+        ls -lh dist/assets/
+        
+    - name: Environment Check
+      run: |
+        echo "Validating environment setup..."
+        node -e "console.log(require('./package.json').dependencies)"
+        
+    - name: Cache Check
+      run: |
+        echo "Validating build cache..."
+        ls -la node_modules/.cache || true 

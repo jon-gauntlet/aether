@@ -1,0 +1,164 @@
+{
+    "tasks": {
+        "evolution": {
+            "schedule": "0 */4 * * *",
+            "priority": 10,
+            "resources": {
+                "cpu_max": 20,
+                "memory_max": 1024,
+                "io_priority": "idle"
+            },
+            "conditions": {
+                "system_idle": true,
+                "health_check": true,
+                "backup_exists": true
+            }
+        },
+        "pattern_optimization": {
+            "schedule": "0 */2 * * *",
+            "priority": 20,
+            "resources": {
+                "cpu_max": 30,
+                "memory_max": 2048,
+                "io_priority": "low"
+            },
+            "conditions": {
+                "pattern_count": ">100",
+                "confidence_below": 0.8,
+                "system_load": "<50%"
+            }
+        },
+        "context_enhancement": {
+            "schedule": "*/30 * * * *",
+            "priority": 30,
+            "resources": {
+                "cpu_max": 40,
+                "memory_max": 3072,
+                "io_priority": "normal"
+            },
+            "conditions": {
+                "context_size": ">1GB",
+                "last_enhancement": ">30m",
+                "system_load": "<70%"
+            }
+        },
+        "model_updates": {
+            "schedule": "0 0 * * *",
+            "priority": 40,
+            "resources": {
+                "cpu_max": 50,
+                "memory_max": 4096,
+                "io_priority": "high"
+            },
+            "conditions": {
+                "new_models": true,
+                "disk_space": ">10GB",
+                "system_idle": true
+            }
+        },
+        "backup": {
+            "schedule": "0 2 * * *",
+            "priority": 50,
+            "resources": {
+                "cpu_max": 30,
+                "memory_max": 2048,
+                "io_priority": "normal"
+            },
+            "conditions": {
+                "last_backup": ">24h",
+                "changes_detected": true,
+                "disk_space": ">5GB"
+            }
+        }
+    },
+    "windows": {
+        "maintenance": {
+            "start": "02:00",
+            "end": "06:00",
+            "days": ["Mon", "Wed", "Fri", "Sun"],
+            "priority": "high",
+            "tasks": ["evolution", "model_updates", "backup"]
+        },
+        "optimization": {
+            "start": "22:00",
+            "end": "02:00",
+            "days": ["*"],
+            "priority": "medium",
+            "tasks": ["pattern_optimization", "context_enhancement"]
+        },
+        "background": {
+            "start": "06:00",
+            "end": "22:00",
+            "days": ["*"],
+            "priority": "low",
+            "tasks": []
+        }
+    },
+    "priorities": {
+        "levels": {
+            "critical": 0,
+            "high": 1,
+            "medium": 2,
+            "low": 3,
+            "background": 4
+        },
+        "adjustments": {
+            "system_load": {
+                "high": "+2",
+                "medium": "+1",
+                "low": "0"
+            },
+            "resource_availability": {
+                "high": "-1",
+                "medium": "0",
+                "low": "+1"
+            },
+            "time_window": {
+                "maintenance": "-2",
+                "optimization": "-1",
+                "background": "+1"
+            }
+        }
+    },
+    "resources": {
+        "allocation": {
+            "strategy": "dynamic",
+            "oversubscription": false,
+            "preemption": true
+        },
+        "limits": {
+            "total_cpu": 80,
+            "total_memory": 8192,
+            "total_io": 1000
+        },
+        "reservation": {
+            "system": {
+                "cpu": 20,
+                "memory": 2048,
+                "io": 200
+            },
+            "user": {
+                "cpu": 50,
+                "memory": 4096,
+                "io": 500
+            }
+        }
+    },
+    "optimization": {
+        "task_batching": {
+            "enabled": true,
+            "max_batch_size": 5,
+            "max_delay": "5m"
+        },
+        "resource_sharing": {
+            "enabled": true,
+            "max_sharing_level": 3,
+            "priority_inheritance": true
+        },
+        "adaptive_scheduling": {
+            "enabled": true,
+            "learning_rate": 0.1,
+            "history_window": "7d"
+        }
+    }
+} 

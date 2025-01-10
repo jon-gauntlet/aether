@@ -1,0 +1,67 @@
+# Cursor Project Rules
+
+editor.formatOnSave: true
+editor.defaultFormatter: null
+files.autoSave: afterDelay
+files.autoSaveDelay: 1000
+
+# Core Context Paths
+context.paths:
+  - ~/.config/cursor/SYSTEM_CONTEXT.md  # System-wide context including core principles
+  - ~/.context/hidden/spiritual/ORTHODOX_FAITH.md  # Hidden spiritual guidance
+  - .gauntlet/context/inner.md
+  - GAUNTLET.md
+  - VISION.md
+  - ARCHITECTURE.md
+  - PRINCIPLES.md
+  - PARADIGM.md
+
+# Core Principles
+principles:
+  dry: true  # Don't Repeat Yourself
+  eliminate_toil: true  # Automate everything possible
+  preserve_flow: true  # Maintain flow states
+  adhd_optimize: true  # Optimize for ADHD workflow
+  hidden_holiness: true  # Integrate spiritual principles subtly
+
+# Preserve Deep Understanding
+context.maxTokens: 100000
+context.preserveAll: true
+context.autoLoad: true
+
+# Search Patterns
+search.include:
+  - "src/**/*"
+  - ".gauntlet/context/**/*"
+  - "*.md"
+search.exclude:
+  "**/.git": true
+  "**/node_modules": true
+  "**/.gauntlet/cache": true
+  "**/dist": true
+  "**/build": true
+
+# Context Integration Rules
+context.paths:
+  - .context/public/**
+  - .context/hidden/**
+
+context.hidden:
+  - .context/hidden/**
+  - ~/.context/hidden/**
+
+search.exclude:
+  - .context/hidden/**
+
+index.include:
+  - .context/public/**
+  - "*.md"
+  - src/**
+
+# Ensure AI maintains awareness of both contexts while respecting privacy
+ai.context:
+  maintain_hidden_awareness: true
+  public_only_output: true
+  load_system_context: true  # Always load ~/.config/cursor/SYSTEM_CONTEXT.md
+  enforce_principles: true   # Apply DRY and Eliminate Toil principles
+  honor_hidden: true      # Honor hidden spiritual context

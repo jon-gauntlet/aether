@@ -1,0 +1,23 @@
+[Unit]
+Description=AI System Evolution Model Service
+After=network-online.target
+Before=llm-service.service
+PartOf=ai-evolution.slice
+
+[Service]
+Type=simple
+WorkingDirectory=/home/jon/ai_system_evolution
+ExecStart=/usr/bin/python3 services/model_service.py
+Nice=19
+CPUQuota=20%
+MemoryHigh=1G
+IOWeight=10
+Restart=on-failure
+RestartSec=5
+StartLimitBurst=3
+StartLimitIntervalSec=60
+Environment=CURSOR_CONFIG_DIR=/home/jon/.config/cursor
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=default.target 

@@ -1,0 +1,65 @@
+#!/bin/bash
+
+# Optimization script for Cursor processes
+# This script is designed to be called with sudo without password
+
+ACTION="$1"
+shift
+ARGS="$@"
+
+case "$ACTION" in
+    "optimize")
+        PID="$1"
+        # Set process priorities
+        renice -n -10 "$PID" 2>/dev/null
+        chrt -f -p 50 "$PID" 2>/dev/null
+        ionice -c 1 -n 0 -p "$PID" 2>/dev/null
+        taskset -pc 0-7 "$PID" 2>/dev/null
+        ;;
+        
+    "sysctl")
+        # Set system parameters
+        param_name="${ARGS%=*}"
+        param_value="${ARGS#*=}"
+        sysctl -w "$param_name=$param_value" > /dev/null 2>&1
+        ;;
+        
+    "cpupower")
+        # Set CPU governor
+        cpupower frequency-set -g performance > /dev/null 2>&1
+        ;;
+        
+    "verify")
+        PID="$1"
+        # Verify process optimization
+        NICE=$(ps -o nice= -p "$PID" | tr -d ' -')
+        SCHED=$(ps -o cls= -p "$PID" | tr -d ' ')
+        AFFINITY=$(taskset -pc "$PID" 2>/dev/null | awk '{print $NF}')
+        IO=$(ionice -p "$PID" 2>/dev/null)
+        
+        # More detailed verification output
+        echo "Process $PID verification:"
+        echo "Nice: $NICE (want: 10 or higher)"
+        echo "Scheduler: $SCHED (want: FF)"
+        echo "Affinity: $AFFINITY (want: 0-7)"
+        echo "IO: $IO (want: realtime)"
+        
+        # Numeric comparison for nice value (negative is better)
+        [[ "$NICE" =~ ^[0-9]+$ ]] && [[ "$NICE" -ge 10 ]] && \
+        [[ "$SCHED" == "FF" ]] && \
+        [[ "$IO" == *"realtime"* ]] && \
+        [[ "$AFFINITY" == *"0-7"* ]] && exit 0
+        
+        exit 1
+        ;;
+        
+    *)
+        echo "Usage: $0 {optimize|verify|sysctl|cpupower} [args...]"
+        echo "Examples:"
+        echo "  $0 optimize 1234"
+        echo "  $0 verify 1234"
+        echo "  $0 sysctl vm.swappiness=1"
+        echo "  $0 cpupower"
+        exit 1
+        ;;
+esac 

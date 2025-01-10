@@ -1,0 +1,53 @@
+[Unit]
+Description=Context Optimization and Integration Service
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=exec
+ExecStart=/usr/bin/env bash -c 'while true; do \
+    # State Management \
+    find ~/.hidden_context -type f \( -name "*.md" -o -name "*.txt" -o -name "*.pdf" \) -exec touch -a {} +; \
+    \
+    # Pattern Recognition \
+    find ~/.cache/cursor/patterns -type f -mtime +1 -delete; \
+    find ~/.cache/cursor/context -type f -mtime +7 -delete; \
+    \
+    # Cache Optimization \
+    find ~/.cache/cursor -type f -size +100M -mtime +1 -delete; \
+    \
+    # Context Integration \
+    find ~/.hidden_context -type f -name "*.md" -exec touch {} +; \
+    find projects/*/.context -type f -name "*.md" -exec touch {} +; \
+    \
+    # Energy State Monitoring \
+    ps aux | grep -i "cursor" | awk "{print \$3}" > ~/.cache/cursor/energy/cpu_usage.log; \
+    journalctl --user -u context-optimization --since "5 minutes ago" | grep -i "energy" > ~/.cache/cursor/energy/state.log; \
+    \
+    # Flow State Detection \
+    last_commit=$(git log -1 --format=%at 2>/dev/null || echo 0); \
+    now=$(date +%s); \
+    if [ $((now - last_commit)) -lt 300 ]; then \
+        echo "flow_state_detected" > ~/.cache/cursor/energy/flow_state.log; \
+    fi; \
+    \
+    # Pattern Acceleration \
+    find ~/.hidden_context/gauntlet -type f -mtime -1 -exec touch {} +; \
+    find ~/.cache/cursor/patterns -type f -mtime -1 -exec cp {} ~/.cache/cursor/patterns/accelerated/ \; 2>/dev/null; \
+    \
+    # Risk Mitigation \
+    journalctl --user -u context-optimization --since "1 hour ago" | grep -q "error" && \
+        notify-send "Context System Health Check Required"; \
+    \
+    # State Recovery Preparation \
+    find ~/.cache/cursor/recovery -type f -mtime +1 -delete; \
+    mkdir -p ~/.cache/cursor/recovery/snapshots/$(date +%Y%m%d); \
+    cp ~/.cache/cursor/context/*.json ~/.cache/cursor/recovery/snapshots/$(date +%Y%m%d)/ 2>/dev/null; \
+    \
+    sleep 60; \
+done'
+Restart=always
+RestartSec=1
+
+[Install]
+WantedBy=default.target 

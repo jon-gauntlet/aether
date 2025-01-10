@@ -1,0 +1,1 @@
+jon ALL=(ALL) NOPASSWD: /home/jon/scripts/cursor-priority.sh 

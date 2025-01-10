@@ -1,0 +1,10 @@
+Cmnd_Alias CURSOR_COMMANDS = /usr/bin/pacman, /usr/bin/systemctl, /usr/bin/journalctl, /usr/bin/cat, /usr/bin/ls, /usr/bin/grep, /usr/bin/find, /usr/bin/cp, /usr/bin/mv, /usr/bin/mkdir, /usr/bin/rm, /usr/bin/chown, /usr/bin/chmod
+Cmnd_Alias CURSOR_PATHS = /home/jon/workspace/*, /home/jon/scripts/*, /etc/systemd/system/*, /var/log/cursor/*
+
+jon ALL=(ALL) NOPASSWD: CURSOR_COMMANDS
+jon ALL=(ALL) NOPASSWD: CURSOR_PATHS
+
+Defaults!CURSOR_COMMANDS env_keep += "CURSOR_*"
+Defaults!CURSOR_PATHS env_keep += "CURSOR_*"
+Defaults!CURSOR_COMMANDS secure_path = /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Defaults!CURSOR_PATHS secure_path = /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin 

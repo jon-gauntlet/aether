@@ -1,0 +1,19 @@
+# Downloaded resources
+resources/docs/
+resources/practice/
+resources/books/
+resources/algorithms/
+resources/templates/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db 

@@ -1,0 +1,20 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(var(--grid-columns), 1fr);
+  gap: var(--grid-gap);
+  width: 100%;
+  transition: all 0.3s ease;
+}
+
+/* Flow States */
+.grid.flow-state-focus {
+  gap: calc(var(--grid-gap) * 1.5);
+}
+
+.grid.flow-state-flow {
+  gap: var(--grid-gap);
+}
+
+.grid.flow-state-rest {
+  gap: calc(var(--grid-gap) * 0.75);
+} 

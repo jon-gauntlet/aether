@@ -1,0 +1,14 @@
+[Slice]
+Description=Cursor Context Management Slice
+Before=slices.target
+
+# Resource Limits
+CPUWeight=50
+IOWeight=50
+MemoryHigh=2G
+TasksMax=32
+
+# Adaptive Behavior
+CPUQuota=25%
+CPUQuotaPeriodSec=1s
+MemoryLow=512M 

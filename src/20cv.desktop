@@ -1,0 +1,18 @@
+[Desktop Entry]
+Name=Cursor (Optimized)
+GenericName=Cursor IDE
+Comment=AI-first code editor with performance optimization
+Exec=/home/jon/scripts/cursor/launch-cursor --workspace %F
+TryExec=/home/jon/scripts/cursor/launch-cursor
+Icon=cursor
+Type=Application
+Categories=Development;TextEditor;IDE;
+MimeType=text/plain;inode/directory;application/x-cursor-workspace;
+StartupWMClass=Cursor
+Keywords=cursor;code;editor;ide;development;ai;copilot;optimized;
+X-KDE-StartupNotify=true
+X-GNOME-UsesNotifications=true
+NoDisplay=false
+X-AppImage-Integrate=false
+X-KDE-SubstituteUID=false
+Version=1.0 

@@ -1,0 +1,36 @@
+#!/bin/bash
+set -euo pipefail
+
+# Configuration
+APPIMAGE_PATH="/opt/cursor-bin/cursor-bin.AppImage"
+XDG_CONFIG_HOME=${XDG_CONFIG_HOME:-~/.config}
+
+# Error handling
+if [ ! -f "$APPIMAGE_PATH" ]; then
+    echo "Error: Cursor AppImage not found at $APPIMAGE_PATH" >&2
+    echo "Please reinstall Cursor or verify the installation path" >&2
+    exit 1
+fi
+
+if [ ! -x "$APPIMAGE_PATH" ]; then
+    echo "Error: Cursor AppImage is not executable" >&2
+    echo "Attempting to fix permissions..." >&2
+    sudo chmod +x "$APPIMAGE_PATH" || {
+        echo "Failed to set executable permissions" >&2
+        exit 1
+    }
+fi
+
+# Load user flags if they exist
+if [[ -f $XDG_CONFIG_HOME/cursor-flags.conf ]]; then
+    CURSOR_USER_FLAGS="$(sed 's/#.*//' $XDG_CONFIG_HOME/cursor-flags.conf | tr '\n' ' ')"
+else
+    CURSOR_USER_FLAGS=""
+fi
+
+# Launch with error handling
+if ! exec "$APPIMAGE_PATH" "$@" $CURSOR_USER_FLAGS; then
+    echo "Error: Failed to launch Cursor" >&2
+    echo "Please check the installation and try again" >&2
+    exit 1
+fi 

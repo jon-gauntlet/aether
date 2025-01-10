@@ -1,0 +1,158 @@
+// Core Types
+export interface Wave {
+  frequency: number;
+  amplitude: number;
+  phase: number;
+}
+
+export interface Field {
+  center: {
+    x: number;
+    y: number;
+    z: number;
+  };
+  radius: number;
+  strength: number;
+  coherence: number;
+  stability: number;
+  waves: Wave[];
+}
+
+export interface Resonance {
+  primary: Wave;
+  harmonics: Wave[];
+  frequency: number;
+  amplitude: number;
+  phase: number;
+  coherence: number;
+  harmony: number;
+}
+
+// Flow Types
+export interface FlowMetrics extends BaseMetrics {
+  depth: number;
+  clarity: number;
+  stability: number;
+  focus: number;
+  energy: number;
+}
+
+export interface FlowState {
+  id: string;
+  type: 'natural' | 'guided' | 'resonant' | 'protected';
+  metrics: FlowMetrics;
+  protection: Protection;
+  timestamp: number;
+}
+
+export interface NaturalFlow {
+  id: string;
+  metrics: FlowMetrics;
+  resonance: Resonance;
+}
+
+// Space Types
+export interface Connection {
+  source: string;
+  target: string;
+  strength: number;
+  type: string;
+  id: string;
+  quality: number;
+}
+
+export interface FlowSpace {
+  id: string;
+  flows: NaturalFlow[];
+  connections: Connection[];
+  timestamp: number;
+  type: string;
+  metrics: FlowMetrics;
+}
+
+export interface MindSpace {
+  id: string;
+  fields: Field[];
+  flows: FlowSpace;
+}
+
+// Energy Types
+export interface EnergyState {
+  id: string;
+  level: number;
+  type: string;
+  metrics: BaseMetrics;
+  capacity: number;
+  quality: number;
+  stability: number;
+  protection: number;
+  flow: number;
+  recovery: number;
+  reserves: number;
+  timestamp: number;
+  resonance: Resonance;
+  field: Field;
+}
+
+// Shared Metrics
+export interface BaseMetrics {
+  intensity: number;
+  coherence: number;
+  resonance: number;
+  presence: number;
+  harmony: number;
+  rhythm: number;
+}
+
+export interface Protection {
+  level: number;
+  type: 'natural' | 'enhanced' | 'autonomous';
+  strength: number;
+}
+
+// Base State Interface
+export interface BaseState {
+  id: string;
+  timestamp: number;
+  metrics: BaseMetrics;
+  protection: Protection;
+}
+
+// Pattern Types
+export interface BasePattern {
+  id: string;
+  type: string;
+  context: string[];
+  strength: number;
+  evolution: {
+    iterations: number;
+    success_rate: number;
+    strength: number;
+  };
+}
+
+export interface PatternIndex {
+  [key: string]: {
+    type: string;
+    frequency: number;
+    lastUsed: number;
+    energyEfficiency?: number;
+    flowOptimization?: number;
+    patternStrength?: number;
+  }
+}
+
+// Type Guards
+export const isValidMeasure = (value: unknown): value is number => {
+  if (typeof value !== 'number' || isNaN(value)) return false;
+  return value >= 0 && value <= 1;
+};
+
+export const isProtected = (protection: Protection): boolean =>
+  protection.level >= 0.8;
+
+export const isCoherent = (metrics: BaseMetrics): boolean =>
+  metrics.coherence >= 0.7;
+
+export const hasPattern = (pattern: BasePattern): boolean =>
+  pattern.evolution.strength >= 0.7;

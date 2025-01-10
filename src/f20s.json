@@ -1,0 +1,139 @@
+{
+  "evolution_tracking": {
+    "patterns": {
+      "spiritual": {
+        "sources": ["~/.hidden_context/spiritual/**/*"],
+        "tracking": {
+          "principle_emergence": true,
+          "understanding_depth": true,
+          "integration_quality": true
+        },
+        "metrics": {
+          "depth": {
+            "measurement": "continuous",
+            "threshold": 0.9,
+            "improvement_rate": 0.1
+          },
+          "integration": {
+            "measurement": "daily",
+            "threshold": 0.85,
+            "harmony_index": 0.9
+          }
+        }
+      },
+      "technical": {
+        "sources": [
+          "~/.hidden_context/system/**/*",
+          "projects/**/.context/**/*"
+        ],
+        "tracking": {
+          "pattern_recognition": true,
+          "implementation_quality": true,
+          "optimization_effectiveness": true
+        },
+        "metrics": {
+          "quality": {
+            "measurement": "continuous",
+            "threshold": 0.8,
+            "improvement_rate": 0.15
+          },
+          "effectiveness": {
+            "measurement": "hourly",
+            "threshold": 0.75,
+            "optimization_index": 0.8
+          }
+        }
+      },
+      "personal": {
+        "sources": ["~/.hidden_context/personal/**/*"],
+        "tracking": {
+          "growth_patterns": true,
+          "energy_optimization": true,
+          "focus_enhancement": true
+        },
+        "metrics": {
+          "growth": {
+            "measurement": "daily",
+            "threshold": 0.7,
+            "acceleration_rate": 0.1
+          },
+          "optimization": {
+            "measurement": "continuous",
+            "threshold": 0.8,
+            "efficiency_index": 0.85
+          }
+        }
+      }
+    },
+    "integration": {
+      "cross_domain": {
+        "enabled": true,
+        "depth": "maximum",
+        "analysis": {
+          "pattern_matching": true,
+          "principle_alignment": true,
+          "synergy_detection": true
+        },
+        "metrics": {
+          "alignment": {
+            "measurement": "continuous",
+            "threshold": 0.85,
+            "harmony_index": 0.9
+          },
+          "effectiveness": {
+            "measurement": "daily",
+            "threshold": 0.8,
+            "impact_score": 0.85
+          }
+        }
+      },
+      "temporal": {
+        "tracking": {
+          "pattern_evolution": true,
+          "understanding_growth": true,
+          "integration_depth": true
+        },
+        "windows": {
+          "short_term": "1d",
+          "medium_term": "7d",
+          "long_term": "30d"
+        },
+        "metrics": {
+          "evolution": {
+            "measurement": "continuous",
+            "threshold": 0.75,
+            "growth_rate": 0.1
+          },
+          "depth": {
+            "measurement": "weekly",
+            "threshold": 0.8,
+            "improvement_rate": 0.15
+          }
+        }
+      }
+    },
+    "optimization": {
+      "learning": {
+        "enabled": true,
+        "adaptation_rate": 0.1,
+        "methods": {
+          "pattern_refinement": true,
+          "context_enhancement": true,
+          "integration_improvement": true
+        }
+      },
+      "resources": {
+        "allocation": {
+          "cpu_limit": 0.3,
+          "memory_limit": "2GB",
+          "storage_limit": "10GB"
+        },
+        "priorities": {
+          "pattern_analysis": "high",
+          "context_processing": "medium",
+          "optimization_tasks": "low"
+        }
+      }
+    }
+  }
+} 

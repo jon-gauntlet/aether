@@ -1,0 +1,109 @@
+.state-card {
+  min-width: 300px;
+}
+
+.state-card-header {
+  margin-bottom: var(--spacing-md);
+}
+
+.state-card-header h3 {
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.state-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.state-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.flow-state,
+.flow-level {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+label {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+/* Flow Indicators */
+.flow-indicator {
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.flow-focus {
+  background: var(--state-focus);
+  color: var(--on-state-focus);
+}
+
+.flow-flow {
+  background: var(--state-flow);
+  color: var(--on-state-flow);
+}
+
+.flow-rest {
+  background: var(--state-rest);
+  color: var(--on-state-rest);
+}
+
+/* Level Indicators */
+.level-indicator {
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.level-high {
+  background: var(--level-high);
+  color: var(--on-level-high);
+}
+
+.level-medium {
+  background: var(--level-medium);
+  color: var(--on-level-medium);
+}
+
+.level-low {
+  background: var(--level-low);
+  color: var(--on-level-low);
+}
+
+/* Pattern List */
+.pattern-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.pattern-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-sm);
+  background: var(--surface-variant);
+  border-radius: var(--radius-sm);
+}
+
+.pattern-name {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.pattern-strength {
+  color: var(--primary);
+  font-size: 12px;
+  letter-spacing: 2px;
+} 

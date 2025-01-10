@@ -1,0 +1,75 @@
+.pattern-creator {
+  min-width: 400px;
+}
+
+.pattern-creator-header {
+  margin-bottom: var(--spacing-lg);
+}
+
+.pattern-creator-header h3 {
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.pattern-creator-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.form-field label {
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.form-field input,
+.form-field select {
+  padding: var(--spacing-sm);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-primary);
+  font-size: 16px;
+  transition: all 0.2s ease;
+}
+
+.form-field input:focus,
+.form-field select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-light);
+}
+
+.form-field input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--spacing-md);
+}
+
+/* Flow State Adaptations */
+.pattern-creator.flow-state-focus .form-field input:focus,
+.pattern-creator.flow-state-focus .form-field select:focus {
+  border-color: var(--state-focus);
+  box-shadow: 0 0 0 2px var(--state-focus-light);
+}
+
+.pattern-creator.flow-state-flow .form-field input,
+.pattern-creator.flow-state-flow .form-field select {
+  background: var(--surface-flow);
+}
+
+.pattern-creator.flow-state-rest .form-field input,
+.pattern-creator.flow-state-rest .form-field select {
+  background: var(--surface-rest);
+} 

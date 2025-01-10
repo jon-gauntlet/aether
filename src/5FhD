@@ -1,0 +1,174 @@
+#!/usr/bin/env zsh
+
+# Deep Work Mode Manager
+# Optimized for sustained excellence
+
+# Exit if being sourced
+[[ $ZSH_EVAL_CONTEXT == *:file:* ]] && return 0
+
+# Colors
+[[ -z "$NO_COLOR" ]] && {
+    GREEN='\033[0;32m'
+    YELLOW='\033[1;33m'
+    BLUE='\033[0;34m'
+    RED='\033[0;31m'
+    NC='\033[0m'
+}
+
+# Data storage
+DATA_DIR="$HOME/.local/share/gauntlet"
+DEEP_DIR="$DATA_DIR/deep"
+STATUS_FILE="$DEEP_DIR/status"
+LOG_FILE="$DEEP_DIR/sessions.md"
+mkdir -p "$DEEP_DIR"
+
+# Show help if needed
+[[ "$1" == "help" || $# -eq 0 ]] && {
+    cat << EOF
+Deep Work Mode - Optimized for Excellence
+
+Core Commands:
+  deep start     Enter deep work mode
+  deep end       Exit deep work mode
+  deep status    Check current state
+  deep log       View session history
+
+Features:
+  - Blocks distractions
+  - Tracks focus time
+  - Protects peak hours
+  - Orthodox mode
+  - Auto-logging
+EOF
+    exit 0
+}
+
+# Check if in deep work mode
+is_deep() {
+    [[ -f "$STATUS_FILE" ]]
+}
+
+# Get current session duration
+get_duration() {
+    local start=$(cat "$STATUS_FILE")
+    echo $(( ($(date +%s) - start) / 60 ))
+}
+
+# Start deep work session
+start_deep() {
+    if is_deep; then
+        echo -e "${YELLOW}Already in deep work mode${NC}"
+        show_status
+        return 1
+    fi
+
+    # Orthodox check
+    [[ $(date +%u) -eq 7 ]] && {
+        echo -e "${YELLOW}Orthodox Sunday - Consider your observance${NC}"
+        read -p "Continue? [y/N] " confirm
+        [[ "$confirm" != "y" ]] && return 1
+    }
+
+    # Save current hosts
+    sudo cp /etc/hosts "$DEEP_DIR/hosts.bak"
+
+    # Block distractions
+    sudo sh -c 'cat >> /etc/hosts' << EOF
+# Deep Work Mode
+127.0.0.1 twitter.com www.twitter.com
+127.0.0.1 facebook.com www.facebook.com
+127.0.0.1 reddit.com www.reddit.com
+127.0.0.1 youtube.com www.youtube.com
+127.0.0.1 news.ycombinator.com
+EOF
+
+    # Enter deep work state
+    notify-send "DUNST_COMMAND_PAUSE"
+    date +%s > "$STATUS_FILE"
+    echo -e "\n## Deep Work Session\nStarted: $(date +%Y-%m-%d\ %H:%M)" >> "$LOG_FILE"
+
+    echo -e "${GREEN}Deep Work Mode Active${NC}"
+    echo "Tips:"
+    echo "1. Close extra browser tabs"
+    echo "2. Phone in another room"
+    echo "3. Water nearby"
+    echo "4. g timer 45"
+}
+
+# End deep work session
+end_deep() {
+    if ! is_deep; then
+        echo -e "${YELLOW}Not in deep work mode${NC}"
+        return 1
+    fi
+
+    # Restore system state
+    sudo mv "$DEEP_DIR/hosts.bak" /etc/hosts
+    notify-send "DUNST_COMMAND_RESUME"
+
+    # Log session
+    local duration=$(get_duration)
+    echo "Ended: $(date +%Y-%m-%d\ %H:%M)" >> "$LOG_FILE"
+    echo "Duration: ${duration}min" >> "$LOG_FILE"
+    echo "$(date +%Y-%m-%d\ %H:%M) - Deep work: ${duration}min" >> "$DATA_DIR/stats/deep.log"
+
+    # Clear state
+    rm "$STATUS_FILE"
+
+    echo -e "${GREEN}Deep Work Complete - ${duration}min${NC}"
+    
+    # Show stats
+    show_stats
+}
+
+# Show current status
+show_status() {
+    if is_deep; then
+        local duration=$(get_duration)
+        echo -e "${GREEN}Deep Work Mode: Active${NC}"
+        echo "Duration: ${duration}min"
+    else
+        echo -e "${RED}Deep Work Mode: Inactive${NC}"
+    fi
+}
+
+# Show session log
+show_log() {
+    echo -e "\n${BLUE}Deep Work History:${NC}"
+    if [[ -f "$LOG_FILE" ]]; then
+        tail -n 10 "$LOG_FILE"
+    else
+        echo "No sessions recorded yet"
+    fi
+}
+
+# Show stats
+show_stats() {
+    echo -e "\n${BLUE}Deep Work Stats:${NC}"
+    
+    # Today's sessions
+    local today=$(date +%Y-%m-%d)
+    local sessions=$(grep "$today.*Deep work:" "$DATA_DIR/stats/deep.log" | wc -l)
+    local total=$(grep "$today" "$DATA_DIR/stats/deep.log" | awk '{sum += $NF} END {print sum}')
+    
+    echo "Today's sessions: $sessions"
+    echo "Total deep work: ${total:-0}min"
+    
+    # Weekly stats
+    local week_start=$(date -d 'last monday' +%Y-%m-%d)
+    local week_total=$(awk -v date="$week_start" '$0 >= date {sum += $NF} END {print sum}' "$DATA_DIR/stats/deep.log")
+    
+    echo -e "\n${BLUE}This Week:${NC}"
+    echo "Total deep work: ${week_total:-0}min"
+    echo "Daily average: $(( (week_total + 0) / 7 ))min"
+}
+
+# Handle commands
+case $1 in
+    start) start_deep ;;
+    end) end_deep ;;
+    status) show_status ;;
+    log) show_log ;;
+    stats) show_stats ;;
+    *) show_help ;;
+esac 

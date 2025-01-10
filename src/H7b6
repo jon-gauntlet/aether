@@ -1,0 +1,50 @@
+#!/bin/bash
+
+# Prevent potential recursion
+if [[ -n "${CURSOR_WRAPPER_ACTIVE}" ]]; then
+    echo "Error: Detected recursive wrapper call. Exiting."
+    exit 1
+fi
+export CURSOR_WRAPPER_ACTIVE=1
+
+# Store the original path and arguments
+ORIGINAL_PATH="$(pwd)"
+ARGS=("$@")
+
+# Convert relative paths to absolute
+for i in "${!ARGS[@]}"; do
+    if [[ "${ARGS[$i]}" != /* && "${ARGS[$i]}" != -* ]]; then
+        ARGS[$i]="$ORIGINAL_PATH/${ARGS[$i]}"
+    fi
+done
+
+# Set optimization environment variables
+export ELECTRON_ENABLE_LOGGING=1
+export ELECTRON_NO_ATTACH_CONSOLE=1
+export ELECTRON_NO_ASAR=1
+export NODE_OPTIONS="--max-old-space-size=8192"
+export CURSOR_OPTIMIZE=1
+
+# Set resource limits
+ulimit -n 524288 2>/dev/null  # File descriptors
+ulimit -v 16777216 2>/dev/null  # Virtual memory (16GB)
+ulimit -t unlimited 2>/dev/null  # CPU time
+ulimit -m 16777216 2>/dev/null  # Max memory size
+ulimit -l unlimited 2>/dev/null  # Max locked memory
+ulimit -i 16384 2>/dev/null  # Pending signals
+
+# Load user flags if they exist
+XDG_CONFIG_HOME=${XDG_CONFIG_HOME:-~/.config}
+if [[ -f $XDG_CONFIG_HOME/cursor-flags.conf ]]; then
+    CURSOR_USER_FLAGS="$(sed 's/#.*//' $XDG_CONFIG_HOME/cursor-flags.conf | tr '\n' ' ')"
+fi
+
+# Debug info if needed
+if [[ -n "$CURSOR_DEBUG" ]]; then
+    echo "Original path: $ORIGINAL_PATH"
+    echo "Launching Cursor AppImage with arguments: ${ARGS[@]} $CURSOR_USER_FLAGS"
+fi
+
+# Change to AppImage directory and launch
+cd /opt/cursor-bin
+exec ./cursor-bin.AppImage "${ARGS[@]}" $CURSOR_USER_FLAGS

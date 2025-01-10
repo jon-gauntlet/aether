@@ -1,0 +1,28 @@
+[Unit]
+Description=Cursor AI System Evolution Services
+Before=slices.target
+
+[Slice]
+# Resource Limits
+CPUWeight=40
+CPUQuota=40%
+MemoryHigh=4G
+MemoryMax=6G
+IOWeight=40
+TasksMax=128
+
+# Resource Accounting
+CPUAccounting=true
+MemoryAccounting=true
+IOAccounting=true
+TasksAccounting=true
+
+# Resource Distribution
+AllowedCPUs=0-3
+AllowedMemoryNodes=0
+
+# Slice Management
+Delegate=true
+ManagedOOMSwap=kill
+ManagedOOMMemoryPressure=kill
+ManagedOOMPreference=none 

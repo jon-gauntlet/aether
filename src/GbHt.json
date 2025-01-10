@@ -1,0 +1,162 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["id", "title", "source", "severity", "description", "finding_type"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for the finding"
+    },
+    "title": {
+      "type": "string",
+      "description": "Brief, descriptive title of the finding"
+    },
+    "source": {
+      "type": "object",
+      "required": ["tool", "type"],
+      "properties": {
+        "tool": {
+          "type": "string",
+          "enum": ["brakeman", "wapiti", "claude-3.5-sonnet", "bearer", "nikto", "zap", "snyk", "burpsuite"],
+          "description": "Tool that generated the finding"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["sast", "dast", "llm"],
+          "description": "Type of analysis that produced the finding"
+        },
+        "original_id": {
+          "type": "string",
+          "description": "Original ID/reference from the source tool"
+        }
+      }
+    },
+    "severity": {
+      "type": "object",
+      "required": ["level", "score"],
+      "properties": {
+        "level": {
+          "type": "string",
+          "enum": ["Critical", "High", "Medium", "Low", "Info"],
+          "description": "Severity level of the finding"
+        },
+        "score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10,
+          "description": "Normalized severity score (0-10)"
+        },
+        "justification": {
+          "type": "string",
+          "description": "Explanation of severity rating"
+        }
+      }
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed description of the finding"
+    },
+    "finding_type": {
+      "type": "string",
+      "enum": [
+        "vulnerable_code",
+        "misconfiguration",
+        "insecure_defaults",
+        "missing_security_control",
+        "information_disclosure",
+        "other"
+      ],
+      "description": "Category of the finding"
+    },
+    "security_category": {
+      "type": "string",
+      "description": "OWASP or custom security categorization"
+    },
+    "evidence": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string",
+          "description": "Affected file path"
+        },
+        "line": {
+          "type": "integer",
+          "description": "Line number in file"
+        },
+        "code": {
+          "type": "string",
+          "description": "Relevant code snippet"
+        },
+        "request": {
+          "type": "string",
+          "description": "HTTP request that triggered the finding (for DAST)"
+        },
+        "response": {
+          "type": "string",
+          "description": "HTTP response that confirmed the finding (for DAST)"
+        },
+        "reproduction": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Steps to reproduce the finding"
+        }
+      }
+    },
+    "remediation": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of remediation steps"
+    },
+    "references": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          }
+        }
+      },
+      "description": "Related documentation and references"
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "cwe_id": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Related CWE IDs"
+        },
+        "confidence": {
+          "type": "string",
+          "enum": ["High", "Medium", "Low"],
+          "description": "Confidence level in the finding"
+        },
+        "related_findings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "IDs of related findings"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Additional categorization tags"
+        }
+      }
+    }
+  }
+} 

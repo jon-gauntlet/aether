@@ -1,0 +1,82 @@
+# System Claude Optimization
+# Ensures system-level operation while reducing file count
+
+# Caches and Temporary
+/var/cache/**
+/tmp/**
+/var/tmp/**
+/home/*/.cache/**
+/home/*/.local/share/Trash/**
+
+# Runtime/Virtual Files
+/proc/**
+!/proc/cpuinfo
+!/proc/meminfo
+!/proc/loadavg
+!/proc/sys/vm/*
+!/proc/acpi/**
+/sys/**
+!/sys/class/power_supply/**
+!/sys/devices/system/cpu/**
+/dev/**
+!/dev/disk/**
+
+# Build & Development
+/home/**/node_modules/**
+/home/**/__pycache__/**
+/home/**/.venv/**
+/home/**/venv/**
+/home/**/.tox/**
+/home/**/.pytest_cache/**
+/home/**/.mypy_cache/**
+/home/**/target/**  # Rust
+/home/**/build/**
+/home/**/dist/**
+
+# Browser and Application Caches
+/home/*/.mozilla/firefox/*/Cache/**
+/home/*/.config/google-chrome/*/Cache/**
+/home/*/.config/chromium/*/Cache/**
+/home/*/.local/share/Steam/**
+/home/*/.wine/drive_c/users/*/Temp/**
+
+# AI and Development Tools
+/home/*/.ollama/models/**  # Large model files
+/home/*/.cache/yay/**      # Package build cache
+/home/*/.cargo/registry/** # Rust package cache
+/home/*/.local/share/containers/** # Container storage
+/home/*/.local/share/flatpak/**   # Flatpak installations
+/usr/share/doc/**         # Package documentation
+/usr/share/man/**         # Man pages (accessible via man command)
+
+# Preserve Critical Paths
+!/home/jon/.config/cursor/**
+!/home/jon/.config/systemd/**
+!/home/jon/scripts/**
+!/home/jon/ai_system_evolution/**
+!/home/jon/brainlifts/**
+!/home/jon/Downloads/**  # Preserve for resource integration
+!/home/jon/Documents/**  # May contain important references
+!/etc/**
+!/usr/lib/systemd/**
+!/var/log/journal/**
+!/var/lib/systemd/**
+!/usr/share/doc/arch-wiki/**  # Preserve Arch Wiki if installed
+
+# Version Control
+.git/objects/**
+.git/refs/**
+!/home/jon/ai_system_evolution/.git/**  # Preserve project git history
+
+# Package Management
+/var/lib/pacman/sync/**
+/var/lib/pacman/pkg/**
+!/var/lib/pacman/local/**  # Preserve installed package info
+
+# Media Directories (selective preservation)
+/home/*/Music/**
+!/home/jon/Music/focus/**  # Preserve focus-related audio if exists
+/home/*/Pictures/**
+!/home/jon/Pictures/screenshots/**  # Preserve system screenshots
+/home/*/Videos/**
+!/home/jon/Videos/screencasts/**  # Preserve system recordings 

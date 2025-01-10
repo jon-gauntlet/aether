@@ -1,0 +1,141 @@
+#!/usr/bin/env bash
+
+# Focus Knowledge Integrator
+# Harmonizes focus states with the knowledge network and invisible infrastructure
+
+set -euo pipefail
+
+# Core paths
+GAUNTLET_ROOT="${GAUNTLET_ROOT:-$HOME/.gauntlet}"
+CURSOR_CONFIG_DIR="${CURSOR_CONFIG_DIR:-$HOME/.config/cursor}"
+CURSOR_DATA_DIR="${CURSOR_DATA_DIR:-$HOME/.local/share/cursor}"
+BRAIN_DIR="${BRAIN_DIR:-$HOME/brain}"
+
+# Knowledge paths
+KNOWLEDGE_MAP="$BRAIN_DIR/KNOWLEDGE_MAP.md"
+INVIS_MAP="$BRAIN_DIR/invisible/INVISIBLE_MAP.md"
+AUTONOMIC_MAP="$BRAIN_DIR/autonomic/AUTONOMIC_MAP.md"
+SACRED_MAP="$BRAIN_DIR/sacred/SACRED_MAP.md"
+
+# State paths
+PATTERN_DB="$CURSOR_DATA_DIR/autonomic/patterns/pattern_database.json"
+CONTEXT_CACHE="$CURSOR_DATA_DIR/essence/context.cache"
+SESSION_DIR="$CURSOR_DATA_DIR/crystallized"
+FOCUS_STATE="$GAUNTLET_ROOT/state/focus_state"
+
+# Service integration
+META_LEARNER="$HOME/scripts/cursor/meta-learner"
+ESSENCE_HARM="$HOME/scripts/cursor/essence-harmonizer"
+FLOW_MGR="$HOME/scripts/cursor/flow-manager"
+CONTEXT_SVC="$HOME/scripts/cursor/setup_context_services.sh"
+
+# Initialize paths
+mkdir -p "$(dirname "$PATTERN_DB")" "$(dirname "$CONTEXT_CACHE")" "$SESSION_DIR"
+
+# Knowledge integration
+integrate_focus_state() {
+    local state="$1"
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    
+    # Update pattern database
+    "$META_LEARNER" --save-pattern "focus_knowledge:$state"
+    
+    # Update context cache
+    echo "{\"focus_state\": \"$state\", \"timestamp\": \"$timestamp\"}" > "$CONTEXT_CACHE.tmp"
+    mv "$CONTEXT_CACHE.tmp" "$CONTEXT_CACHE"
+    
+    # Integrate with essence harmonizer
+    "$ESSENCE_HARM" --integrate "focus:$state"
+    
+    # Record in session
+    mkdir -p "$SESSION_DIR/$(date +%Y%m%d)"
+    echo "$timestamp - Focus state $state integrated with knowledge network" >> "$SESSION_DIR/$(date +%Y%m%d)/integration.log"
+}
+
+# Pattern evolution
+evolve_patterns() {
+    # Get current focus state
+    local state=$(cat "$FOCUS_STATE" 2>/dev/null || echo "unknown")
+    
+    # Update meta-learner
+    "$META_LEARNER" --update-pattern "focus_evolution:$state"
+    
+    # Harmonize with essence
+    "$ESSENCE_HARM" --harmonize "patterns:focus"
+    
+    # Record evolution
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - Patterns evolved for state: $state" >> "$SESSION_DIR/evolution.log"
+}
+
+# Context preservation
+preserve_context() {
+    local state="$1"
+    
+    # Save to context cache
+    "$META_LEARNER" --save-context "focus_context:$state"
+    
+    # Integrate with flow manager
+    "$FLOW_MGR" --preserve-context "$state"
+    
+    # Record preservation
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - Context preserved for state: $state" >> "$SESSION_DIR/context.log"
+}
+
+# Knowledge synchronization
+sync_knowledge() {
+    # Verify knowledge maps
+    for map in "$KNOWLEDGE_MAP" "$INVIS_MAP" "$AUTONOMIC_MAP" "$SACRED_MAP"; do
+        if [[ ! -f "$map" ]]; then
+            echo "Warning: Missing knowledge map: $map"
+            continue
+        fi
+    done
+    
+    # Sync with meta-learner
+    "$META_LEARNER" --sync-knowledge
+    
+    # Harmonize essence
+    "$ESSENCE_HARM" --sync
+    
+    # Record sync
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - Knowledge network synchronized" >> "$SESSION_DIR/sync.log"
+}
+
+# System notification
+notify_systemd() {
+    if [ -n "${NOTIFY_SOCKET:-}" ]; then
+        echo "READY=1"
+        echo "STATUS=Knowledge integration active"
+        echo "WATCHDOG=1"
+    fi
+}
+
+# Main loop
+main() {
+    notify_systemd
+    
+    while true; do
+        # Get current focus state
+        local state=$(cat "$FOCUS_STATE" 2>/dev/null || echo "unknown")
+        
+        # Integrate knowledge
+        integrate_focus_state "$state"
+        
+        # Evolve patterns
+        evolve_patterns
+        
+        # Preserve context
+        preserve_context "$state"
+        
+        # Sync knowledge network
+        sync_knowledge
+        
+        # Notify systemd
+        notify_systemd
+        
+        # Wait before next cycle
+        sleep 300 # 5 minutes
+    done
+}
+
+main "$@" 

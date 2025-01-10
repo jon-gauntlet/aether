@@ -1,0 +1,40 @@
+[Unit]
+Description=AI System Evolution Context Service
+After=network.target
+PartOf=cursor.slice
+
+[Service]
+Type=notify
+ExecStart=/usr/bin/python3 /home/jon/ai_system_evolution/services/context_service.py
+Environment=PYTHONPATH=/home/jon/ai_system_evolution
+Environment=CURSOR_CONFIG_DIR=/home/jon/.config/cursor
+Environment=CURSOR_DATA_DIR=/home/jon/.local/share/cursor
+
+# Resource management
+CPUWeight=20
+CPUQuota=20%
+MemoryHigh=1G
+MemoryMax=2G
+IOWeight=20
+Nice=19
+
+# Restart configuration
+Restart=always
+RestartSec=5
+StartLimitInterval=1h
+StartLimitBurst=10
+
+# Security
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictRealtime=true
+
+[Install]
+WantedBy=default.target 

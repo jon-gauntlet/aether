@@ -1,0 +1,35 @@
+[Unit]
+Description=Context Optimization and Integration Service
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=exec
+ExecStart=/usr/bin/env bash -c 'while true; do \
+    # Context Optimization \
+    find ~/.hidden_context -type f \( -name "*.md" -o -name "*.txt" -o -name "*.pdf" \) -exec touch -a {} +; \
+    \
+    # Pattern Recognition \
+    find ~/.cache/cursor/patterns -type f -mtime +1 -delete; \
+    find ~/.cache/cursor/context -type f -mtime +7 -delete; \
+    \
+    # Cache Optimization \
+    find ~/.cache/cursor -type f -size +100M -mtime +1 -delete; \
+    \
+    # Context Integration \
+    find ~/.hidden_context -type f -name "*.md" -exec touch {} +; \
+    find projects/*/.context -type f -name "*.md" -exec touch {} +; \
+    \
+    # System Health \
+    journalctl --user -u context-optimization --since "1 hour ago" | grep -q "error" && notify-send "Context System Health Check Required"; \
+    \
+    # Gauntlet Optimization \
+    find ~/.hidden_context/gauntlet -type f -mtime -1 -exec touch {} +; \
+    \
+    sleep 300; \
+done'
+Restart=always
+RestartSec=1
+
+[Install]
+WantedBy=default.target 

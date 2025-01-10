@@ -1,0 +1,21 @@
+[
+    {
+      "title": "Default or Weak Passwords for User Accounts",
+      "description": "The application uses default or weak passwords for user accounts, making them vulnerable to brute-force attacks.",
+      "category": "Security Misconfiguration",
+      "cwe": "CWE-521: Weak Password Requirements",
+      "owasp": "A05:2021 – Security Misconfiguration",
+      "severity": "High",
+      "likelihood": "High",
+      "impact": "Attackers can easily guess or brute-force weak passwords, gaining unauthorized access to user accounts and sensitive data.",
+      "current_code": "```python\n# Example of weak password requirements\npassword = request.form.get('password')\nif len(password) >= 6:\n    # Create user account with the provided password\n    create_user_account(username, password)\nelse:\n    return \"Password must be at least 6 characters long.\"\n```",
+      "secure_code": "```python\n# Example of strong password requirements\nimport re\n\npassword = request.form.get('password')\nif len(password) >= 12 and re.search(r'[A-Z]', password) and re.search(r'[a-z]', password) and re.search(r'[0-9]', password) and re.search(r'[!@#$%^&*(),.?\":{}|<>]', password):\n    # Create user account with the provided password\n    create_user_account(username, password)\nelse:\n    return \"Password must be at least 12 characters long and contain at least one uppercase letter, one lowercase letter, one digit, and one special character.\"\n```",
+      "key_takeaways": [
+        "Implement strong password requirements, enforcing a minimum length and complexity.",
+        "Require passwords to include a combination of uppercase letters, lowercase letters, digits, and special characters.",
+        "Consider implementing password strength meters or validators to guide users in creating strong passwords.",
+        "Educate users about the importance of using strong, unique passwords and not reusing passwords across different accounts.",
+        "Regularly audit and monitor user accounts for weak or default passwords and take appropriate action to enforce password changes."
+      ]
+    }
+  ]

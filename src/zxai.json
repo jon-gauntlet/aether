@@ -1,0 +1,97 @@
+{
+  "pattern_types": {
+    "spiritual": {
+      "markers": [
+        "principle_application",
+        "hidden_wisdom",
+        "natural_evolution",
+        "harmonious_structure"
+      ],
+      "recognition_depth": "maximum",
+      "integration_style": "subtle"
+    },
+    "technical": {
+      "markers": [
+        "code_structure",
+        "architecture_patterns",
+        "optimization_approaches",
+        "integration_methods"
+      ],
+      "recognition_depth": "full",
+      "integration_style": "explicit"
+    },
+    "personal": {
+      "markers": [
+        "development_patterns",
+        "learning_approaches",
+        "energy_management",
+        "focus_optimization"
+      ],
+      "recognition_depth": "deep",
+      "integration_style": "adaptive"
+    }
+  },
+  "recognition_rules": {
+    "context_awareness": {
+      "system_wide": {
+        "paths": ["~/.hidden_context/**/*"],
+        "depth": "maximum",
+        "refresh": "on_change"
+      },
+      "project_specific": {
+        "paths": [".context/**/*"],
+        "depth": "full",
+        "refresh": "on_access"
+      },
+      "session_based": {
+        "paths": [".cursor/session/**/*"],
+        "depth": "immediate",
+        "refresh": "real_time"
+      }
+    },
+    "pattern_evolution": {
+      "learning_rate": 0.1,
+      "adaptation_threshold": 0.8,
+      "integration_depth": "maximum"
+    }
+  },
+  "integration_methods": {
+    "spiritual_technical": {
+      "blend_mode": "subtle",
+      "visibility": "hidden",
+      "effectiveness_threshold": 0.9
+    },
+    "technical_personal": {
+      "blend_mode": "adaptive",
+      "visibility": "selective",
+      "effectiveness_threshold": 0.8
+    },
+    "personal_spiritual": {
+      "blend_mode": "natural",
+      "visibility": "hidden",
+      "effectiveness_threshold": 0.95
+    }
+  },
+  "optimization": {
+    "pattern_refinement": {
+      "frequency": "continuous",
+      "depth": "maximum",
+      "learning_enabled": true
+    },
+    "integration_quality": {
+      "minimum_threshold": 0.8,
+      "improvement_rate": 0.1,
+      "feedback_loop": true
+    },
+    "effectiveness_tracking": {
+      "metrics": [
+        "pattern_recognition_rate",
+        "integration_success",
+        "evolution_speed",
+        "harmony_maintenance"
+      ],
+      "threshold": 0.85,
+      "adaptation_enabled": true
+    }
+  }
+} 

@@ -1,0 +1,6 @@
+{
+    "window.commandCenter": 1,
+    "git.openRepositoryInParentFolders": "always",
+    "editor.wordWrap": "on",
+    "workbench.colorTheme": "Monokai"
+}

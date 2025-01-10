@@ -1,0 +1,127 @@
+{
+  "indexing": {
+    "paths": {
+      "spiritual": {
+        "locations": ["~/.hidden_context/spiritual/**/*"],
+        "patterns": ["*.md", "*.txt", "*.pdf"],
+        "depth": "maximum",
+        "frequency": "on_change"
+      },
+      "technical": {
+        "locations": [
+          "~/.hidden_context/system/**/*",
+          "projects/**/.context/public/**/*"
+        ],
+        "patterns": ["*.md", "*.json", "*.yaml", "*.ts", "*.js"],
+        "depth": "full",
+        "frequency": "hourly"
+      },
+      "personal": {
+        "locations": ["~/.hidden_context/personal/**/*"],
+        "patterns": ["*.md", "*.txt"],
+        "depth": "deep",
+        "frequency": "daily"
+      }
+    },
+    "analysis": {
+      "pattern_extraction": {
+        "enabled": true,
+        "min_confidence": 0.8,
+        "learning_rate": 0.1
+      },
+      "semantic_linking": {
+        "enabled": true,
+        "threshold": 0.7,
+        "max_distance": 3
+      },
+      "context_mapping": {
+        "enabled": true,
+        "depth": "maximum",
+        "update_frequency": "real_time"
+      }
+    },
+    "optimization": {
+      "index_compression": {
+        "enabled": true,
+        "method": "incremental",
+        "retention": "7d"
+      },
+      "cache_management": {
+        "enabled": true,
+        "max_size": "1GB",
+        "pruning_strategy": "least_accessed"
+      },
+      "performance": {
+        "parallel_processing": true,
+        "max_threads": 4,
+        "io_priority": "low"
+      }
+    }
+  },
+  "integration": {
+    "cursor": {
+      "context_awareness": {
+        "enabled": true,
+        "depth": "maximum",
+        "refresh_rate": "real_time"
+      },
+      "pattern_recognition": {
+        "enabled": true,
+        "confidence_threshold": 0.8,
+        "learning_enabled": true
+      },
+      "suggestion_system": {
+        "enabled": true,
+        "max_suggestions": 5,
+        "relevance_threshold": 0.7
+      }
+    },
+    "project": {
+      "context_inheritance": {
+        "enabled": true,
+        "depth": "full",
+        "override_allowed": true
+      },
+      "pattern_application": {
+        "enabled": true,
+        "adaptation_rate": 0.1,
+        "feedback_loop": true
+      }
+    }
+  },
+  "monitoring": {
+    "metrics": {
+      "index_health": {
+        "check_frequency": "hourly",
+        "thresholds": {
+          "fragmentation": 0.2,
+          "staleness": "1d",
+          "coverage": 0.9
+        }
+      },
+      "pattern_effectiveness": {
+        "tracking_enabled": true,
+        "window_size": "7d",
+        "min_confidence": 0.8
+      },
+      "resource_usage": {
+        "tracking_enabled": true,
+        "max_cpu": 0.3,
+        "max_memory": "2GB",
+        "max_disk": "10GB"
+      }
+    },
+    "alerts": {
+      "health_issues": {
+        "enabled": true,
+        "threshold": 0.8,
+        "channels": ["log"]
+      },
+      "performance_degradation": {
+        "enabled": true,
+        "threshold": 0.7,
+        "channels": ["log"]
+      }
+    }
+  }
+} 

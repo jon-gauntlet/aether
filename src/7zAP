@@ -1,0 +1,92 @@
+#!/bin/bash
+set -euo pipefail
+
+# Check required dependencies
+check_dependency() {
+    if ! command -v "$1" >/dev/null 2>&1; then
+        echo "Error: Required dependency '$1' is not installed" >&2
+        exit 1
+    fi
+}
+
+check_dependency notify-send
+
+# Define paths
+STATS_DIR="$HOME/.cache/cursor/stats"
+FLOW_LOG="$HOME/.cache/cursor/energy/state.log"
+CONTEXT_DIR="$HOME/.cache/cursor/context"
+
+# Ensure directories exist
+for dir in "$STATS_DIR" "$(dirname "$FLOW_LOG")" "$CONTEXT_DIR"; do
+    if ! mkdir -p "$dir" 2>/dev/null; then
+        echo "Error: Failed to create directory: $dir" >&2
+        exit 1
+    fi
+done
+
+# Initialize stats file if it doesn't exist
+if [ ! -f "$STATS_DIR/focus_time" ]; then
+    echo "0" > "$STATS_DIR/focus_time"
+fi
+
+# Get flow state time safely
+get_flow_minutes() {
+    if [ -f "$FLOW_LOG" ]; then
+        local count
+        count=$(grep -c "flow_state_active" "$FLOW_LOG" 2>/dev/null || echo "0")
+        echo "${count:-0}"
+    else
+        echo "0"
+    fi
+}
+
+# Get commit count safely
+get_commit_count() {
+    if git rev-parse --git-dir >/dev/null 2>&1; then
+        local count
+        count=$(git log --since="00:00:00" --oneline 2>/dev/null | wc -l || echo "0")
+        echo "${count:-0}"
+    else
+        echo "0"
+    fi
+}
+
+# Get focus time safely
+get_focus_minutes() {
+    if [ -f "$STATS_DIR/focus_time" ]; then
+        local minutes
+        minutes=$(cat "$STATS_DIR/focus_time" 2>/dev/null || echo "0")
+        echo "${minutes:-0}"
+    else
+        echo "0"
+    fi
+}
+
+# Generate stats report
+generate_stats() {
+    local flow_minutes commit_count focus_minutes
+    flow_minutes=$(get_flow_minutes)
+    commit_count=$(get_commit_count)
+    focus_minutes=$(get_focus_minutes)
+    
+    # Calculate total productive time
+    local total_minutes=$((focus_minutes + flow_minutes))
+    local hours=$((total_minutes / 60))
+    local remaining_minutes=$((total_minutes % 60))
+    
+    # Display stats
+    {
+        echo "=== Today's Progress ==="
+        echo "Flow State: ${flow_minutes} minutes"
+        echo "Focus Time: ${focus_minutes} minutes"
+        echo "Total Time: ${hours}h ${remaining_minutes}m"
+        echo "Commits: ${commit_count}"
+        echo ""
+        echo "Context Integration:"
+        echo "- Notes: $(find "$CONTEXT_DIR" -name "notes.log" -mtime 0 | wc -l) today"
+        echo "- BrainLifts: $(find "$CONTEXT_DIR" -name "brainlifts.log" -mtime 0 | wc -l) today"
+    } | tee /dev/tty | notify-send "Today's Progress" -
+}
+
+# Main execution
+generate_stats 

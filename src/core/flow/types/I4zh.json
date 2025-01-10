@@ -1,0 +1,58 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2024-01-09T12:00:00Z",
+  "projectState": {
+    "core": {
+      "flowState": {
+        "depth": 0.5,
+        "resonance": 0.5,
+        "protection": {
+          "level": 0.5,
+          "type": "soft"
+        }
+      },
+      "patternMetrics": {
+        "coherence": 0.5,
+        "resonance": 0.5,
+        "evolution": 0.5,
+        "quality": 0.5
+      }
+    },
+    "testing": {
+      "status": "in_progress",
+      "lastFailure": "SyntaxError: Unexpected token 'export'",
+      "pendingFixes": [
+        "Update PredictiveValidation test timing assertions",
+        "Fix recordValidation method implementation",
+        "Resolve type mismatch in predictions.timing"
+      ]
+    },
+    "deployment": {
+      "status": "configured",
+      "files": [
+        "Dockerfile",
+        "nginx.conf",
+        ".github/workflows/deploy.yml"
+      ]
+    }
+  },
+  "contextPaths": {
+    "core": [
+      "src/core/autonomic",
+      "src/core/flow",
+      "src/core/patterns",
+      "src/core/energy",
+      "src/core/types"
+    ],
+    "components": [
+      "src/components/layout",
+      "src/components/FlowModeSelector.tsx",
+      "src/components/FlowStateIndicator.tsx"
+    ],
+    "tests": [
+      "src/core/hooks/__tests__",
+      "src/core/autonomic/__tests__",
+      "src/components/__tests__"
+    ]
+  }
+} 

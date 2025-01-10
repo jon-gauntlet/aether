@@ -1,0 +1,149 @@
+#!/usr/bin/env zsh
+
+# Deep Work Mode Manager (deep)
+# Usage: deep [command]
+#   deep start   # Enter deep work mode
+#   deep end     # Exit deep work mode
+#   deep status  # Check current mode
+
+# Exit if being sourced
+[[ $ZSH_EVAL_CONTEXT == *:file:* ]] && return 0
+
+# Colors
+[[ -z "$NO_COLOR" ]] && {
+    GREEN='\033[0;32m'
+    YELLOW='\033[1;33m'
+    BLUE='\033[0;34m'
+    RED='\033[0;31m'
+    NC='\033[0m'
+}
+
+# Data storage
+DATA_DIR="$HOME/.local/share/gauntlet"
+DEEP_DIR="$DATA_DIR/deep"
+STATUS_FILE="$DEEP_DIR/status"
+LOG_FILE="$DEEP_DIR/sessions.md"
+mkdir -p "$DEEP_DIR"
+touch "$STATUS_FILE" "$LOG_FILE"
+
+# Show help if needed
+[[ "$1" == "help" || $# -eq 0 ]] && {
+    cat << EOF
+Deep Work Mode Manager
+
+Quick Start:
+  deep start   Enter deep work mode
+  deep end     Exit deep work mode
+  deep status  Check current mode
+  deep log     View session log
+  deep stats   Show deep work stats
+
+Features:
+- Blocks distracting sites
+- Mutes notifications
+- Tracks deep work time
+- Respects Orthodox schedule
+EOF
+    exit 0
+}
+
+# Check if it's Sunday
+is_sunday() {
+    [[ $(date +%u) -eq 7 ]]
+}
+
+# Enter deep work mode
+start_deep() {
+    if is_sunday; then
+        echo -e "${YELLOW}Note: Today is Sunday. Consider your Orthodox observance.${NC}"
+        read -p "Continue? [y/N] " confirm
+        [[ "$confirm" != "y" ]] && return 1
+    fi
+
+    # Save current state
+    echo "active" > "$STATUS_FILE"
+    echo "$(date +%s)" >> "$STATUS_FILE"
+
+    # Block distracting sites
+    sudo sh -c 'cat >> /etc/hosts' << EOF
+# Deep Work Mode Blocks
+127.0.0.1 twitter.com www.twitter.com
+127.0.0.1 facebook.com www.facebook.com
+127.0.0.1 reddit.com www.reddit.com
+127.0.0.1 youtube.com www.youtube.com
+EOF
+
+    # Mute notifications
+    notify-send "DUNST_COMMAND_PAUSE"
+
+    # Start focus timer
+    focus 45 &
+
+    # Log session start
+    echo -e "\n## Deep Work Session\nStarted: $(date +%Y-%m-%d\ %H:%M)" >> "$LOG_FILE"
+
+    echo -e "${GREEN}Entered Deep Work Mode${NC}"
+    echo "Tips:"
+    echo "1. Close all unrelated browser tabs"
+    echo "2. Put phone in another room"
+    echo "3. Keep water nearby"
+    echo "4. Use 'deep status' to check time"
+}
+
+# Exit deep work mode
+end_deep() {
+    # Restore hosts file
+    sudo sed -i '/# Deep Work Mode Blocks/,$d' /etc/hosts
+
+    # Restore notifications
+    notify-send "DUNST_COMMAND_RESUME"
+
+    # Calculate duration
+    local start_time=$(tail -n 1 "$STATUS_FILE")
+    local duration=$(( ($(date +%s) - start_time) / 60 ))
+
+    # Log session end
+    echo -e "Ended: $(date +%Y-%m-%d\ %H:%M)\nDuration: ${duration}min\n" >> "$LOG_FILE"
+
+    # Clear status
+    echo "inactive" > "$STATUS_FILE"
+
+    echo -e "${GREEN}Exited Deep Work Mode${NC}"
+    echo "Session duration: ${duration}min"
+}
+
+# Check current status
+show_status() {
+    local status=$(head -n 1 "$STATUS_FILE")
+    if [[ "$status" == "active" ]]; then
+        local start_time=$(tail -n 1 "$STATUS_FILE")
+        local duration=$(( ($(date +%s) - start_time) / 60 ))
+        echo -e "${GREEN}Deep Work Mode: Active${NC}"
+        echo "Duration: ${duration}min"
+    else
+        echo -e "${RED}Deep Work Mode: Inactive${NC}"
+    fi
+}
+
+# Show session log
+show_log() {
+    echo -e "\n${BLUE}Recent Deep Work Sessions:${NC}"
+    tail -n 10 "$LOG_FILE"
+}
+
+# Show stats
+show_stats() {
+    echo -e "\n${BLUE}Deep Work Stats:${NC}"
+    echo "Today's sessions: $(grep -c "Started: $(date +%Y-%m-%d)" "$LOG_FILE")"
+    echo "Week's sessions: $(grep -c "Started: $(date -d 'last week' +%Y-%m-%d)" "$LOG_FILE")"
+}
+
+# Handle commands
+case $1 in
+    start) start_deep ;;
+    end) end_deep ;;
+    status) show_status ;;
+    log) show_log ;;
+    stats) show_stats ;;
+    *) show_help ;;
+esac 

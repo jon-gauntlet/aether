@@ -1,0 +1,170 @@
+# Minimal Gauntlet-focused configuration
+export ZSH="$HOME/.oh-my-zsh"
+ZSH_THEME="robbyrussell"
+plugins=(git)
+source $ZSH/oh-my-zsh.sh
+
+# Gauntlet Environment
+export GAUNTLET_START="2024-01-06"
+export WORK_HOURS=100
+export EDITOR="vim"
+export PATH="$HOME/scripts/gauntlet:$PATH"
+
+# Core Development
+alias gauntlet='cd ~/workspace/gauntlet && poetry shell'
+alias format='poetry run black . && poetry run isort .'
+alias test='poetry run pytest'
+alias types='poetry run mypy'
+
+# Git Essentials
+alias gs='git status'
+alias gc='git commit'
+alias gp='git push'
+alias gl='git pull'
+
+# System Health
+alias update='sudo pacman -Syu'
+alias clean='sudo paccache -rk1 && poetry cache clear --all pypi'
+alias optimize='sudo cpupower frequency-set -g performance'
+
+# Direct Gauntlet Commands
+alias deep='~/.local/bin/cursor/deep'      # Toggle deep work mode
+alias note='~/.local/bin/cursor/note'      # Quick note/insight capture
+alias brain='~/.local/bin/cursor/brain'    # Manage BrainLifts
+alias timer='~/.local/bin/cursor/timer'    # Focus timer
+alias stats='~/.local/bin/cursor/stats'    # Show progress
+alias flow='~/.local/bin/cursor/flow'      # Optimize for hyperfocus
+
+# Focus Tools
+alias focus='deep && flow'                 # Combine deep work and flow
+alias break='timer 5'                      # Quick 5-min break
+alias pomodoro='timer 25'                  # Standard pomodoro
+alias check='stats && health'              # Quick system check
+
+# Add cross-platform clipboard support (pbcopy/pbpaste)
+if command -v xclip >/dev/null 2>&1; then
+    alias pbcopy='xclip -selection c'
+    alias pbpaste='xclip -selection c -o'
+elif command -v xsel >/dev/null 2>&1; then
+    alias pbcopy='xsel --clipboard --input'
+    alias pbpaste='xsel --clipboard --output'
+fi
+
+# Gauntlet AI Development Aliases
+alias gauntlet='cd ~/workspace/gauntlet && poetry shell'
+alias jupyter='poetry run jupyter lab --no-browser'
+alias train='poetry run python train.py'
+alias test='poetry run pytest'
+alias gpu='nvtop'
+alias cpu='btop'
+alias dev='tmux new-session -A -s dev'
+alias temp='sensors | grep "Core"'
+alias fast='cd /mnt/ramdisk'
+alias format='poetry run black . && poetry run isort .'
+alias lint='poetry run pylint'
+alias types='poetry run mypy'
+alias gs='git status'
+alias gd='git diff'
+alias gc='git commit'
+alias gp='git push'
+alias gl='git pull'
+alias update='sudo pacman -Syu'
+alias cleanup='sudo pacman -Sc && sudo paccache -r'
+alias optimize='sudo cpupower frequency-set -g performance'
+alias pbcopy='xclip -selection clipboard'
+alias pbpaste='xclip -selection clipboard -o'
+alias health='~/workspace/gauntlet/scripts/health_check.sh'
+alias maintain='~/workspace/gauntlet/scripts/daily_maintenance.sh'
+alias clean='sudo paccache -rk1 && poetry cache clear --all pypi'
+
+# AI Development Aliases
+alias train='poetry run python train.py'
+alias evaluate='poetry run python evaluate.py'
+alias tensorboard='poetry run tensorboard --logdir logs'
+alias notebook='poetry run jupyter lab'
+alias gpu-stats='nvidia-smi -l 1'
+alias cpu-stats='btop'
+alias benchmark='poetry run pytest --benchmark-only'
+alias profile='poetry run python -m cProfile -o profile.stats'
+alias analyze='poetry run python -m pstats profile.stats'
+alias memory='poetry run memory_profiler'
+alias optimize='sudo cpupower frequency-set -g performance'
+
+# Node.js Development
+alias ndev='npm run dev'
+alias nbuild='npm run build'
+alias ntest='npm run test'
+alias nlint='npm run lint'
+alias nformat='npm run format'
+
+# Quick Navigation
+alias models='cd ~/workspace/gauntlet/models'
+alias data='cd ~/workspace/gauntlet/data'
+alias experiments='cd ~/workspace/gauntlet/experiments'
+alias notebooks='cd ~/workspace/gauntlet/notebooks'
+
+# Development Tools
+alias format-all='poetry run black . && poetry run isort . && npm run format'
+alias lint-all='poetry run pylint . && poetry run mypy . && npm run lint'
+alias test-all='poetry run pytest && npm run test'
+
+# Gauntlet AI Development Aliases
+alias gauntlet='cd ~/workspace/gauntlet && poetry shell'
+alias jupyter='poetry run jupyter lab --no-browser'
+alias train='poetry run python train.py'
+alias test='poetry run pytest'
+alias gpu='nvtop'
+alias cpu='btop'
+alias dev='tmux new-session -A -s dev'
+alias temp='sensors | grep "Core"'
+alias fast='cd /mnt/ramdisk'
+alias format='poetry run black . && poetry run isort .'
+alias lint='poetry run pylint'
+alias types='poetry run mypy'
+alias gs='git status'
+alias gd='git diff'
+alias gc='git commit'
+alias gp='git push'
+alias gl='git pull'
+alias update='sudo pacman -Syu'
+alias cleanup='sudo pacman -Sc && sudo paccache -r'
+alias optimize='sudo cpupower frequency-set -g performance'
+alias pbcopy='xclip -selection clipboard'
+alias pbpaste='xclip -selection clipboard -o'
+alias health='~/workspace/gauntlet/scripts/health_check.sh'
+alias maintain='~/workspace/gauntlet/scripts/daily_maintenance.sh'
+alias clean='sudo paccache -rk1 && poetry cache clear --all pypi'
+
+# AI Development Aliases
+alias train='poetry run python train.py'
+alias evaluate='poetry run python evaluate.py'
+alias tensorboard='poetry run tensorboard --logdir logs'
+alias notebook='poetry run jupyter lab'
+alias gpu-stats='nvidia-smi -l 1'
+alias cpu-stats='btop'
+alias benchmark='poetry run pytest --benchmark-only'
+alias profile='poetry run python -m cProfile -o profile.stats'
+alias analyze='poetry run python -m pstats profile.stats'
+alias memory='poetry run memory_profiler'
+alias optimize='sudo cpupower frequency-set -g performance'
+
+# Node.js Development
+alias ndev='npm run dev'
+alias nbuild='npm run build'
+alias ntest='npm run test'
+alias nlint='npm run lint'
+alias nformat='npm run format'
+
+# Quick Navigation
+alias models='cd ~/workspace/gauntlet/models'
+alias data='cd ~/workspace/gauntlet/data'
+alias experiments='cd ~/workspace/gauntlet/experiments'
+alias notebooks='cd ~/workspace/gauntlet/notebooks'
+
+# Development Tools
+alias format-all='poetry run black . && poetry run isort . && npm run format'
+alias lint-all='poetry run pylint . && poetry run mypy . && npm run lint'
+alias test-all='poetry run pytest && npm run test'
+
+# Maintenance status
+alias mstatus='~/workspace/gauntlet/scripts/maintenance_status.sh'

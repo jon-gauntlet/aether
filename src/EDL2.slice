@@ -1,0 +1,12 @@
+[Unit]
+Description=Cursor Services Slice
+Documentation=file:/home/jon/brain/systems/autonomic.md
+
+[Slice]
+CPUWeight=100
+MemoryHigh=4G
+MemoryMax=8G
+TasksMax=256
+
+IOWeight=100
+BlockIOWeight=100 

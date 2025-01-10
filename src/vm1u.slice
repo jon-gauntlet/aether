@@ -1,0 +1,10 @@
+[Unit]
+Description=Cursor AI Services
+Before=slices.target
+
+[Slice]
+CPUWeight=100
+MemoryHigh=8G
+MemoryMax=12G
+TasksMax=128
+IOWeight=100 

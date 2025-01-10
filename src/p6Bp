@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# Redirect all default cursor launches to our optimized version
+echo "Launching optimized Cursor version..."
+
+# Get the directory containing this script
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+# Call the launch-cursor script with any provided arguments
+exec "$SCRIPT_DIR/launch-cursor" --workspace "${1:-.}"

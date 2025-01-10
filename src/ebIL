@@ -1,0 +1,39 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+# Core Data Science and Computation
+numpy = "*"
+pandas = "*"
+scipy = "*"
+
+# Visualization (for understanding algorithms)
+matplotlib = "*"
+seaborn = "*"
+
+# Testing and Development
+pytest = "*"
+pytest-timeout = "*"  # For timing solutions
+black = "*"  # Code formatting
+pylint = "*"  # Code quality
+ipython = "*"  # Enhanced REPL
+
+# Data Structures and Algorithms
+heapq = "*"
+collections-extended = "*"
+sortedcontainers = "*"
+more-itertools = "*"
+
+# Utilities
+tqdm = "*"  # Progress bars
+memory-profiler = "*"  # Memory usage tracking
+python-dotenv = "*"
+jupyter = "*"  # For interactive practice
+
+[dev-packages]
+ipdb = "*"  # Enhanced debugger
+
+[requires]
+python_version = "3.8"

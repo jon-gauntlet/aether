@@ -1,0 +1,14 @@
+[Unit]
+Description=Gauntlet Optimizer Service
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+ExecStartPre=/bin/sh -c 'mkdir -p ${HOME}/.gauntlet/{contexts,metrics,cache,state}'
+ExecStart=${HOME}/workspace/system-ops/scripts/gauntlet_optimizer.sh
+
+[Install]
+WantedBy=default.target 

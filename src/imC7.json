@@ -1,0 +1,124 @@
+{
+  "session_management": {
+    "context_preservation": {
+      "system_context": {
+        "path": "~/.hidden_context",
+        "persistence": "permanent",
+        "evolution": "continuous"
+      },
+      "project_context": {
+        "path": ".context",
+        "persistence": "project_lifetime",
+        "evolution": "project_based"
+      },
+      "session_context": {
+        "path": ".cursor/session",
+        "persistence": "session",
+        "evolution": "real_time"
+      }
+    },
+    "state_tracking": {
+      "active_patterns": {
+        "storage": "~/.cache/cursor/patterns/active",
+        "update_frequency": "real_time",
+        "cleanup_policy": "session_end"
+      },
+      "context_stack": {
+        "storage": "~/.cache/cursor/context/stack",
+        "max_depth": 100,
+        "pruning_policy": "relevance_based"
+      },
+      "evolution_history": {
+        "storage": "~/.local/share/cursor/state/evolution",
+        "retention_policy": "permanent",
+        "compression": "incremental"
+      }
+    }
+  },
+  "context_optimization": {
+    "real_time": {
+      "pattern_recognition": {
+        "enabled": true,
+        "depth": "maximum",
+        "adaptation_rate": 0.1
+      },
+      "relevance_scoring": {
+        "enabled": true,
+        "threshold": 0.8,
+        "decay_rate": 0.05
+      },
+      "integration_quality": {
+        "monitoring": true,
+        "threshold": 0.9,
+        "improvement_rate": 0.1
+      }
+    },
+    "background": {
+      "pattern_analysis": {
+        "frequency": "continuous",
+        "depth": "maximum",
+        "resource_limit": 0.3
+      },
+      "context_refinement": {
+        "frequency": "hourly",
+        "depth": "full",
+        "resource_limit": 0.2
+      },
+      "knowledge_integration": {
+        "frequency": "daily",
+        "depth": "maximum",
+        "resource_limit": 0.4
+      }
+    }
+  },
+  "interaction_management": {
+    "context_awareness": {
+      "depth": "maximum",
+      "scope": "full",
+      "adaptation": "real_time"
+    },
+    "pattern_application": {
+      "recognition": "continuous",
+      "integration": "seamless",
+      "evolution": "natural"
+    },
+    "principle_integration": {
+      "visibility": "hidden",
+      "depth": "maximum",
+      "evolution": "continuous"
+    }
+  },
+  "health_monitoring": {
+    "metrics": {
+      "context_integrity": {
+        "check_frequency": "continuous",
+        "threshold": 0.95,
+        "auto_repair": true
+      },
+      "pattern_coherence": {
+        "check_frequency": "hourly",
+        "threshold": 0.9,
+        "auto_optimize": true
+      },
+      "integration_quality": {
+        "check_frequency": "daily",
+        "threshold": 0.85,
+        "auto_improve": true
+      }
+    },
+    "alerts": {
+      "integrity_issues": {
+        "threshold": 0.8,
+        "action": "auto_repair"
+      },
+      "coherence_issues": {
+        "threshold": 0.85,
+        "action": "optimize"
+      },
+      "quality_issues": {
+        "threshold": 0.8,
+        "action": "improve"
+      }
+    }
+  }
+} 

@@ -1,0 +1,62 @@
+[Unit]
+Description=Cursor Autonomic Resource Manager
+After=cursor-semantic-indexer.service
+Before=cursor-context.slice essence-integrator.service context-crystallizer.service
+PartOf=cursor-autonomic.slice
+Documentation=https://sre.google/sre-book/table-of-contents/
+StartLimitIntervalSec=0
+
+[Service]
+Type=notify
+ExecStart=%h/scripts/cursor/autonomic-manager
+Slice=cursor-autonomic.slice
+Environment=CURSOR_CONFIG_DIR=%h/.config/cursor
+Environment=CURSOR_STATE_DIR=%h/.local/state/cursor
+Environment=CURSOR_DATA_DIR=%h/.local/share/cursor
+Environment=ESSENCE_RESOURCES_DIR=%h/.config/cursor/contexts
+Environment=CURSOR_METRICS_DIR=%h/.local/share/cursor/metrics
+Restart=always
+RestartSec=1
+WatchdogSec=30
+NotifyAccess=all
+
+# Performance Settings
+CPUQuota=20%
+MemoryHigh=2G
+MemoryMax=3G
+TasksMax=16
+IOWeight=40
+Nice=0
+
+# Resource Management
+RuntimeDirectory=cursor-autonomic
+RuntimeDirectoryMode=0750
+LogsDirectory=cursor
+LogsDirectoryMode=0750
+StateDirectory=cursor
+StateDirectoryMode=0750
+CacheDirectory=cursor
+CacheDirectoryMode=0750
+
+# System Integration
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=yes
+NoNewPrivileges=yes
+RestrictRealtime=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictNamespaces=yes
+MemoryDenyWriteExecute=yes
+RestrictSUIDSGID=yes
+
+# Failure Recovery
+TimeoutStartSec=30
+TimeoutStopSec=30
+Restart=always
+RestartSec=1
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+[Install]
+WantedBy=default.target 

@@ -1,0 +1,10 @@
+{
+    "window.commandCenter": 1,
+    "git.openRepositoryInParentFolders": "always",
+    "editor.wordWrap": "on",
+    "workbench.statusBar.visible": false,
+    "workbench.editorAssociations": {
+        "*.log": "default"
+    },
+    "explorer.confirmDelete": false
+}

@@ -1,0 +1,8 @@
+# Allow cursor optimization without password
+jon ALL=(ALL) NOPASSWD: /home/jon/scripts/cursor/cursor-optimize *
+jon ALL=(ALL) NOPASSWD: /usr/bin/chrt
+jon ALL=(ALL) NOPASSWD: /usr/bin/renice
+jon ALL=(ALL) NOPASSWD: /usr/bin/ionice
+jon ALL=(ALL) NOPASSWD: /usr/bin/taskset
+jon ALL=(ALL) NOPASSWD: /usr/bin/cpupower
+jon ALL=(ALL) NOPASSWD: /usr/sbin/sysctl -w * 

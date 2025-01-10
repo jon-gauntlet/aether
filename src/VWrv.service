@@ -1,0 +1,31 @@
+[Unit]
+Description=Gauntlet Focus Mode Manager
+After=gauntlet-optimizer.service
+PartOf=gauntlet-focus.slice
+
+[Service]
+Type=notify
+ExecStart=/usr/local/bin/focus-mode-manager
+Slice=gauntlet-focus.slice
+Environment=GAUNTLET_CONFIG_DIR=/home/jon/.config/gauntlet
+Environment=GAUNTLET_STATE_DIR=/home/jon/.local/state/gauntlet
+Environment=GAUNTLET_DATA_DIR=/home/jon/.local/share/gauntlet
+Restart=on-failure
+User=jon
+Group=jon
+
+# Resource limits aligned with focus needs
+CPUQuota=50%
+MemoryHigh=2G
+TasksMax=32
+IOWeight=60
+
+# Security
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/jon/.local/state/gauntlet /home/jon/.local/share/gauntlet
+PrivateTmp=yes
+
+[Install]
+WantedBy=default.target 

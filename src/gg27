@@ -1,0 +1,19 @@
+#!/usr/bin/env python3
+
+import os
+import sys
+import json
+import hashlib
+from pathlib import Path
+from datetime import datetime
+from typing import Dict, Set, List
+
+# Absolute Paths
+HOME = Path('/home/jon')
+CONTEXT_ROOT = HOME / '.context'
+CACHE_ROOT = HOME / '.cache/cursor'
+CONFIG_ROOT = HOME / '.config/cursor'
+STATE_FILE = CACHE_ROOT / 'context/state.json'
+FILESYSTEM_STATE = CACHE_ROOT / 'context/filesystem.json'
+
+[Rest of file remains unchanged...] 

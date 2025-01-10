@@ -1,0 +1,43 @@
+# System and Shell
+.bash*
+.zsh*
+.profile
+.mkshrc
+.screenrc
+.eos*
+.oh-my-zsh/
+
+# Package Managers
+.yarnrc
+.bundle/
+.npm/
+.pyenv/
+.nvm/
+node_modules/
+
+# Application Config
+.config/
+.local/
+.cache/
+.pki/
+.gnupg/
+.ssh/
+.librewolf/
+.zoom/
+.cursor/
+.ollama/
+.vscode/
+.mozilla/
+
+# Temporary Files
+.wget-hsts
+.zcompdump*
+
+# Keep Project Files
+!.gitignore
+!.env*
+!.eslintrc*
+!.prettier*
+!.docker*
+!.kube*
+!workspace/ 

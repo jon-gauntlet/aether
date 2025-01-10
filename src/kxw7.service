@@ -1,0 +1,62 @@
+[Unit]
+Description=Cursor Focus Enhancement System
+After=cursor-autonomic.slice meta-learner.service essence-harmonizer.service
+Before=cursor-context.slice
+PartOf=cursor-autonomic.slice
+Documentation=https://sre.google/sre-book/table-of-contents/
+StartLimitIntervalSec=0
+
+[Service]
+Type=notify
+ExecStart=%h/scripts/cursor/focus-enhancer
+Slice=cursor-autonomic.slice
+Environment=CURSOR_CONFIG_DIR=%h/.config/cursor
+Environment=CURSOR_STATE_DIR=%h/.local/state/cursor
+Environment=CURSOR_DATA_DIR=%h/.local/share/cursor
+Environment=CURSOR_METRICS_DIR=%h/.local/share/cursor/metrics
+Environment=ESSENCE_RESOURCES_DIR=%h/.config/cursor/contexts
+Restart=always
+RestartSec=1
+WatchdogSec=30
+NotifyAccess=all
+
+# Performance Settings
+CPUQuota=50%
+MemoryHigh=6G
+MemoryMax=8G
+TasksMax=32
+IOWeight=80
+Nice=0
+
+# Resource Management
+RuntimeDirectory=cursor-focus
+RuntimeDirectoryMode=0750
+LogsDirectory=cursor
+LogsDirectoryMode=0750
+StateDirectory=cursor
+StateDirectoryMode=0750
+CacheDirectory=cursor
+CacheDirectoryMode=0750
+
+# System Integration
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=yes
+NoNewPrivileges=yes
+RestrictRealtime=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictNamespaces=yes
+MemoryDenyWriteExecute=yes
+RestrictSUIDSGID=yes
+
+# Failure Recovery
+TimeoutStartSec=30
+TimeoutStopSec=30
+Restart=always
+RestartSec=1
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+[Install]
+WantedBy=default.target 
