@@ -1,17 +1,20 @@
 import { Observable } from 'rxjs';
 import type { Stream as FlowStream } from './stream';
 import type { PresenceType } from './stream';
-import type { EnergyState } from './energy';
-import {
-  FlowMetrics,
+import type { EnergyState } from '../energy/state';
+import type { FlowMetrics } from '../../../types/base';
+import type { 
   FlowState,
-  NaturalFlow,
+  NaturalFlow
+} from './state';
+import type {
   Field,
   Wave,
   Resonance,
-  Protection,
   Connection
-} from './base';
+} from './core';
+import type { Protection } from './types';
+import { ProtectionLevel } from '../protection/protection';
 
 // Extended metrics for advanced flow states
 export interface AdvancedFlowMetrics extends FlowMetrics {
@@ -100,11 +103,11 @@ export type {
   Resonance,
   Protection,
   Connection
-}
+};
 
 // Type guards
 export const isProtected = (state: ConsciousnessState): boolean => {
-  return !!state.protection && state.protection.strength > 0.5;
+  return !!state.protection && state.protection.level > ProtectionLevel.Low;
 };
 
 export const isCoherent = (state: ConsciousnessState): boolean => {
@@ -113,3 +116,4 @@ export const isCoherent = (state: ConsciousnessState): boolean => {
 
 export const isFlowing = (state: ConsciousnessState): boolean => {
   return state.flow && state.coherence > 0.8;
+};

@@ -1,8 +1,23 @@
-import { FlowState, FlowMetrics, Protection, Pattern, DevelopmentPhase } from './base';
+import { FlowState, FlowMetrics } from '../../../types/base';
+import { ProtectionState as Protection } from '../protection/protection';
+import { Pattern } from '../patterns/pattern';
 import { Observable } from 'rxjs';
 
 export type FlowType = 'natural' | 'guided' | 'autonomous';
 export type PresenceType = 'deep' | 'light' | 'surface';
+
+// Development phase type
+export enum DevelopmentPhase {
+  Initial = 'initial',
+  Learning = 'learning',
+  Practicing = 'practicing',
+  Mastering = 'mastering',
+  Teaching = 'teaching',
+  Evolving = 'evolving'
+}
+
+// Re-export imported types
+export type { Protection, Pattern };
 
 export interface Flow {
   id: string;

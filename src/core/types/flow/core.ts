@@ -23,6 +23,16 @@ export interface Resonance {
   essence: number;
 }
 
+export interface Connection {
+  id: string;
+  source: string;
+  target: string;
+  strength: number;
+  type: string;
+  resonance: Resonance;
+  field: Field;
+}
+
 export interface SystemMeta {
   baseFrequency: number;
   baseAmplitude: number;
