@@ -1,6 +1,3 @@
-import { Field } from '../flow/types';
-import { FlowState } from '../flow/types';
-
 // Protection level enumeration
 export enum ProtectionLevel {
   None = 0,
@@ -12,23 +9,25 @@ export enum ProtectionLevel {
 
 // Protection state interface
 export interface ProtectionState {
-  level: ProtectionLevel;
   active: boolean;
-  field?: Field;
-  timestamp: string;
+  metrics: ProtectionMetrics;
+  lastCheck: number;
+  violations: number;
+  flowShieldActive: boolean;
 }
 
 // Protection configuration
 export interface ProtectionConfig {
   autoActivate: boolean;
-  threshold: number;
+  thresholds: {
+    stability: number;
+    resilience: number;
+    integrity: number;
+    immunity: number;
+  };
   recovery: {
     rate: number;
-    delay: number;
-  };
-  fields: {
-    strength: number;
-    radius: number;
+    interval: number;
   };
 }
 
@@ -38,27 +37,26 @@ export interface ProtectionEvent {
   type: 'breach' | 'recovery' | 'strengthen' | 'weaken';
   timestamp: string;
   level: ProtectionLevel;
-  flowState: FlowState;
   duration?: number;
 }
 
 // Protection metrics
 export interface ProtectionMetrics {
-  uptime: number;
-  breaches: number;
-  recoveries: number;
-  averageStrength: number;
   stability: number;
+  resilience: number;
+  integrity: number;
+  immunity: number;
 }
 
 // Type guards
 export const isProtectionState = (state: any): state is ProtectionState => {
   return (
     typeof state === 'object' &&
-    typeof state.level === 'number' &&
     typeof state.active === 'boolean' &&
-    typeof state.timestamp === 'string' &&
-    (!state.field || typeof state.field === 'object')
+    typeof state.metrics === 'object' &&
+    typeof state.lastCheck === 'number' &&
+    typeof state.violations === 'number' &&
+    typeof state.flowShieldActive === 'boolean'
   );
 };
 
@@ -70,3 +68,4 @@ export const isProtectionEvent = (event: any): event is ProtectionEvent => {
     typeof event.timestamp === 'string' &&
     typeof event.level === 'number'
   );
+};
