@@ -1,0 +1,170 @@
+.information-flow {
+  position: relative;
+  min-height: 100vh;
+  background: var(--background-color, #ffffff);
+  transition: all 0.3s ease-in-out;
+}
+
+/* Resonance Layer */
+.resonance-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  opacity: 0.1;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.depth-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--depth, 0%);
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.05),
+    rgba(0, 0, 0, 0.1)
+  );
+  transition: height 0.3s ease-in-out;
+}
+
+.patterns {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.pattern {
+  padding: 0.25rem 0.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
+/* Coherence Layer */
+.coherence-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 4px;
+  pointer-events: none;
+}
+
+.coherence-indicator {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--coherence, 0%);
+  background: linear-gradient(
+    to top,
+    var(--coherence-color-low, #748ffc),
+    var(--coherence-color-high, #4c6ef5)
+  );
+  transition: height 0.3s ease-in-out;
+}
+
+/* Protection Layer */
+.protection-layer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 4px;
+  pointer-events: none;
+}
+
+.protection-indicator {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--protection, 0%);
+  background: linear-gradient(
+    to top,
+    var(--protection-color-low, #51cf66),
+    var(--protection-color-high, #37b24d)
+  );
+  transition: height 0.3s ease-in-out;
+}
+
+/* Content Layer */
+.content-layer {
+  position: relative;
+  z-index: 1;
+  padding: 2rem;
+}
+
+/* Resonance States */
+.information-flow[data-resonance="deep"] {
+  --coherence-color-low: #4c6ef5;
+  --coherence-color-high: #364fc7;
+}
+
+.information-flow[data-resonance="steady"] {
+  --coherence-color-low: #748ffc;
+  --coherence-color-high: #4c6ef5;
+}
+
+.information-flow[data-resonance="reflective"] {
+  --coherence-color-low: #91a7ff;
+  --coherence-color-high: #748ffc;
+}
+
+.information-flow[data-resonance="analytical"] {
+  --coherence-color-low: #bac8ff;
+  --coherence-color-high: #91a7ff;
+}
+
+/* Flow States */
+.information-flow[data-flow="natural"] {
+  --protection-color-low: #51cf66;
+  --protection-color-high: #37b24d;
+}
+
+.information-flow[data-flow="guided"] {
+  --protection-color-low: #69db7c;
+  --protection-color-high: #51cf66;
+}
+
+.information-flow[data-flow="protected"] {
+  --protection-color-low: #8ce99a;
+  --protection-color-high: #69db7c;
+}
+
+/* Protected Elements */
+.protected-pattern,
+.protected-state {
+  padding: 0.25rem 0.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  font-size: 0.8rem;
+  margin: 0.25rem;
+}
+
+/* Depth Effects */
+@media (min-width: 768px) {
+  .information-flow {
+    perspective: 1000px;
+  }
+
+  .depth-indicator {
+    transform: translateZ(calc(var(--depth) * -100px));
+    transition: transform 0.3s ease-in-out;
+  }
+}
+
+/* Natural Transitions */
+.information-flow * {
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+} 

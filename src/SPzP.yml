@@ -1,0 +1,26 @@
+---
+Guardrails findings (guardrails.io)
+date: 2024-12-26
+author: "Jon Dycaico"
+repo: binti-app
+scanners_with_findings:
+  - rubocop
+  - semgrep 
+
+summary:
+  total_findings: 13
+  medium_findings: 7
+  high_findings: 6
+
+findings:
+  - id: GR-001
+    title: "User Controlled Method Invocation"
+    severity: medium
+    path: config/initializers/active_admin.rb
+    line: 385
+    scanner: rubocop
+    category: "Insecure Use of Language/Framework API"
+    remediation_link: https://docs.guardrails.io/docs/vulnerabilities/ruby/insecure_use_of_language_framework_api.html#GitlabSecurity/PublicSend
+    
+    
+

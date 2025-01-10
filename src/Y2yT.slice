@@ -1,0 +1,8 @@
+[Slice]
+Description=Project Claude Optimization Slice
+CPUWeight=80
+MemoryHigh=6G
+IOWeight=90
+
+[Install]
+WantedBy=cursor.slice 

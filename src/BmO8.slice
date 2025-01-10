@@ -1,0 +1,24 @@
+[Unit]
+Description=Project Claude Slice - Optimized for Development Focus
+Documentation=man:systemd.slice(5)
+Before=slices.target
+
+[Slice]
+# Optimize for focused project work
+CPUWeight=80
+# Balanced memory for development
+MemoryHigh=4G
+MemoryMax=6G
+# Prevent excessive swapping
+MemorySwapMax=2G
+# Balanced IO for development
+IOWeight=80
+# CPU scheduling optimization
+CPUSchedulingPolicy=batch
+CPUSchedulingPriority=0
+# Improve responsiveness
+IOSchedulingClass=best-effort
+IOSchedulingPriority=4
+
+[Install]
+WantedBy=cursor.slice 

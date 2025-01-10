@@ -1,0 +1,51 @@
+{
+    "explorer.excludeGitIgnore": true,
+    "explorer.excludeHome": true,
+    "explorer.hideHomeDirectory": true,
+    "explorer.hideSystemFiles": true,
+    "files.exclude": {
+        ".*": true,
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/.DS_Store": true,
+        "**/.bash*": true,
+        "**/.zsh*": true,
+        "**/.profile": true,
+        "**/.local/**": true,
+        "**/.config/**": true,
+        "**/.cache/**": true,
+        "**/.npm/**": true,
+        "**/.yarn*": true,
+        "**/.nvm/**": true,
+        "**/.ssh/**": true,
+        "**/.gnupg/**": true,
+        "**/.mozilla/**": true,
+        "**/.vscode/**": true,
+        "**/.cursor/**": true,
+        "**/node_modules/**": true
+    },
+    "files.watcherExclude": {
+        "**/.git/objects/**": true,
+        "**/.git/subtree-cache/**": true,
+        "**/node_modules/**": true,
+        "**/.hg/store/**": true,
+        "**/.cache/**": true,
+        "**/.local/**": true
+    },
+    "search.exclude": {
+        "**/node_modules": true,
+        "**/bower_components": true,
+        "**/*.code-search": true,
+        "**/.cache/**": true,
+        "**/.local/**": true
+    },
+    "workbench.editor.enablePreview": false,
+    "workbench.editor.enablePreviewFromQuickOpen": false,
+    "explorer.autoReveal": true,
+    "explorer.confirmDelete": true,
+    "explorer.confirmDragAndDrop": false,
+    "explorer.compactFolders": false,
+    "explorer.incrementalNaming": "smart",
+    "explorer.sortOrder": "type"
+} 

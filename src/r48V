@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# Progress Stats Display
+STATS_DIR="$HOME/.cache/cursor/stats"
+FLOW_LOG="$HOME/.cache/cursor/energy/state.log"
+
+mkdir -p "$STATS_DIR"
+
+# Calculate flow state time today
+flow_minutes=0
+if [ -f "$FLOW_LOG" ]; then
+    flow_minutes=$(grep "flow_state_active" "$FLOW_LOG" | wc -l)
+fi
+
+# Get commit count today
+commit_count=$(git log --since="00:00:00" --oneline | wc -l)
+
+# Calculate focus time
+focus_minutes=0
+if [ -f "$STATS_DIR/focus_time" ]; then
+    focus_minutes=$(cat "$STATS_DIR/focus_time")
+fi
+
+# Display stats
+echo "=== Today's Progress ==="
+echo "Flow State: ${flow_minutes} minutes"
+echo "Focus Time: ${focus_minutes} minutes"
+echo "Commits: ${commit_count}"
+
+# Optional: Show in notification
+notify-send "Today's Progress" "Flow: ${flow_minutes}m\nFocus: ${focus_minutes}m\nCommits: ${commit_count}" 

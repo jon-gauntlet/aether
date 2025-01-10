@@ -1,0 +1,29 @@
+{
+    "resource_limits": {
+        "cpu_max": 80,
+        "memory_max": 70,
+        "io_max": 50
+    },
+    "scheduling": {
+        "active_hours": {
+            "start": "09:00",
+            "end": "23:00"
+        },
+        "task_priorities": {
+            "evolution": 10,
+            "optimize_patterns": 20,
+            "enhance_context": 30,
+            "update_models": 40,
+            "improve_integration": 50
+        }
+    },
+    "monitoring": {
+        "metrics_retention_hours": 24,
+        "update_interval_seconds": 60,
+        "alert_thresholds": {
+            "cpu_sustained": 90,
+            "memory_sustained": 85,
+            "io_sustained": 60
+        }
+    }
+} 

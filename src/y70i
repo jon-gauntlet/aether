@@ -1,0 +1,40 @@
+#!/usr/bin/env python3
+
+import os
+import sys
+import json
+from pathlib import Path
+from datetime import datetime
+
+# Paths
+CONTEXT_ROOT = Path.home() / '.context'
+CACHE_ROOT = Path.home() / '.cache/cursor'
+STATE_FILE = CACHE_ROOT / 'context/state.json'
+
+def prepare_context():
+    """Prepare the context system for loading"""
+    
+    # Ensure directories exist
+    for path in [CONTEXT_ROOT, CACHE_ROOT]:
+        path.mkdir(parents=True, exist_ok=True)
+    
+    # Load previous state if exists
+    state = {}
+    if STATE_FILE.exists():
+        with open(STATE_FILE) as f:
+            state = json.load(f)
+    
+    # Update state
+    state['last_load'] = datetime.now().isoformat()
+    state['load_count'] = state.get('load_count', 0) + 1
+    
+    # Save state
+    STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with open(STATE_FILE, 'w') as f:
+        json.dump(state, f, indent=2)
+    
+    # Return success
+    return 0
+
+if __name__ == '__main__':
+    sys.exit(prepare_context()) 

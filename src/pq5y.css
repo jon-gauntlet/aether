@@ -1,0 +1,203 @@
+.flow-monitor {
+  width: 100%;
+  max-width: 400px;
+}
+
+.flow-monitor-header {
+  padding: 1rem;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.flow-monitor-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.flow-monitor-content {
+  padding: 1rem;
+}
+
+.flow-section {
+  margin-bottom: 1.5rem;
+}
+
+.flow-section label {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+.flow-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.flow-analytics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.analytics-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.analytics-item span {
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.analytics-value {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--color-text);
+  transition: color 0.3s ease;
+}
+
+.entropy-indicator {
+  height: 4px;
+  background: var(--color-background);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.entropy-bar {
+  height: 100%;
+  transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+/* Session Metrics */
+.session-metrics {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.metrics-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.metrics-header h4 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.session-count {
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1rem;
+}
+
+.metric-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: var(--color-background-elevated);
+  border-radius: 6px;
+}
+
+.metric-item span {
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.metric-value {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+/* Flow State Variations */
+.flow-monitor.flow-state-focus {
+  --flow-accent: var(--color-focus);
+}
+
+.flow-monitor.flow-state-flow {
+  --flow-accent: var(--color-flow);
+}
+
+.flow-monitor.flow-state-rest {
+  --flow-accent: var(--color-rest);
+}
+
+.flow-monitor.flow-state-focus .flow-monitor-header {
+  border-bottom-color: var(--flow-accent);
+}
+
+.flow-monitor.flow-state-focus .analytics-value {
+  color: var(--flow-accent);
+}
+
+/* Protected State */
+.flow-monitor.protected {
+  box-shadow: 0 0 0 2px var(--flow-accent);
+}
+
+.flow-monitor.protected .flow-monitor-header {
+  background: var(--flow-accent);
+  color: var(--color-text-on-primary);
+}
+
+.flow-monitor.protected .flow-monitor-header h3 {
+  color: inherit;
+}
+
+/* Analytics Variations */
+.analytics-item:nth-child(1) .analytics-value {
+  color: var(--color-primary);
+}
+
+.analytics-item:nth-child(2) .analytics-value {
+  color: var(--color-secondary);
+}
+
+.analytics-item:nth-child(4) .analytics-value {
+  color: var(--color-success);
+}
+
+.analytics-item:nth-child(5) .analytics-value {
+  color: var(--color-info);
+}
+
+/* Metric Item Variations */
+.metric-item:nth-child(1) .metric-value {
+  color: var(--color-success);
+}
+
+.metric-item:nth-child(2) .metric-value {
+  color: var(--color-info);
+}
+
+.metric-item:nth-child(3) .metric-value {
+  color: var(--color-warning);
+}
+
+.metric-item:nth-child(4) .metric-value {
+  color: var(--color-primary);
+} 

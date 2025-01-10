@@ -1,0 +1,163 @@
+---
+Guardrails findings (guardrails.io)
+date: 2024-12-26
+author: "Jon Dycaico"
+repo: binti-app
+
+summary:
+  findings:
+    total_findings: 13
+    medium_findings: 7
+    high_findings: 6
+
+  scanners_used:
+    - rubocop
+    - semgrep 
+
+  categories_found:
+    - "Insecure Processing of Data"
+    - "Insecure Use of Language/Framework API"
+    - "Insecure Use of Dangerous Function"
+  
+findings:
+  "Insecure Processing of Data":
+    - id: GR-001 
+      category: Insecure Processing of Data
+      title: Potential XSS (link_to)
+      scanner: semgrep
+      location:
+        path: app/views/devise/mailer/unlock_instructions.html.erb
+        line: 7
+      link: https://docs.guardrails.io/docs/vulnerabilities/ruby/insecure_processing_of_data.html#dangerous-link-to
+      severity: medium
+
+    - id: GR-002 
+      category: Insecure Processing of Data
+      title: Potential XSS (unquoted template variable)
+      scanner: semgrep
+      location:
+        path: app/views/active_storage/blobs/_blob.html.erb
+        line: 1
+      link: https://docs.guardrails.io/docs/vulnerabilities/ruby/insecure_processing_of_data.html#unquoted-attribute
+      severity: medium
+
+    - id: GR-003
+      category: Insecure Processing of Data
+      title: Potential XSS (html_safe)
+      scanner: semgrep
+      location:
+        path: app/admin/emails.rb
+        line: 56
+      link: https://docs.guardrails.io/docs/vulnerabilities/ruby/insecure_processing_of_data.html#avoid-html-safe
+      severity: medium
+
+    - id: GR-004
+      category: Insecure Processing of Data
+      title: Potential XSS (link_to)
+      scanner: semgrep
+      location:
+        path: app/views/devise/mailer/confirmation_instructions.html.erb
+        line: 5
+      link: https://docs.guardrails.io/docs/vulnerabilities/ruby/insecure_processing_of_data.html#dangerous-link-to
+      severity: medium
+    
+    - id: GR-005
+      category: Insecure Processing of Data
+      title: Potential XSS (link_to)
+      scanner: semgrep
+      location:
+        path: app/views/devise/mailer/reset_password_instructions.html.erb
+        line: 5
+      link: https://docs.guardrails.io/docs/vulnerabilities/ruby/insecure_processing_of_data.html#dangerous-link-to
+      severity: medium
+
+  "Insecure Use of Language/Framework API":
+    - id: GR-006
+      category: Insecure Use of Language/Framework API
+      title: User Controlled Method Invocation
+      scanner: rubocop
+      location:
+        path: config/initializers/active_admin.rb
+        line: 385
+      link: https://docs.guardrails.io/docs/vulnerabilities/ruby/insecure_use_of_language_framework_api.html#GitlabSecurity/PublicSend
+      severity: medium
+
+    - id: GR-007
+      category: Insecure Use of Language/Framework API
+      title: User Controlled Method Invocation
+      scanner: rubocop
+      location:
+        path: config/initializers/active_admin.rb
+        line: 384
+      link: https://docs.guardrails.io/docs/vulnerabilities/ruby/insecure_use_of_language_framework_api.html#GitlabSecurity/PublicSend
+      severity: medium
+  
+  "Insecure Use of Dangerous Function":
+    - id: GR-008
+      category: Insecure Use of Dangerous Function
+      title: Non-static OS command execution
+      scanner: semgrep
+      location:
+        path: bin/yarn
+        line: 12
+      link: https://docs.guardrails.io/docs/vulnerabilities/ruby/insecure_use_of_dangerous_function.html#non-static-os-command-execution
+      severity: high
+
+    - id: GR-009
+      category: Insecure Use of Dangerous Function
+      title: Non-static OS command execution
+      scanner: semgrep
+      location:
+        path: bin/dev
+        line: 11
+      link: https://docs.guardrails.io/docs/vulnerabilities/ruby/insecure_use_of_dangerous_function.html#non-static-os-command-execution
+      severity: high
+
+    - id: GR-010
+      category: Insecure Use of Dangerous Function  
+      title: Non-static OS command execution
+      scanner: semgrep
+      location:
+        path: bin/setup
+        line: 8
+      link: https://docs.guardrails.io/docs/vulnerabilities/ruby/insecure_use_of_dangerous_function.html#non-static-os-command-execution
+      severity: high
+
+    - id: GR-011
+      category: Insecure Use of Dangerous Function
+      title: Non-static OS command execution
+      scanner: semgrep
+      location:
+        path: bin/dev-static
+        line: 11
+      link: https://docs.guardrails.io/docs/vulnerabilities/ruby/insecure_use_of_dangerous_function.html#non-static-os-command-execution
+      severity: high
+
+    - id: GR-012
+      category: Insecure Use of Dangerous Function
+      title: Non-static OS command execution
+      scanner: semgrep
+      location:
+        path: bin/dev-static
+        line: 5
+      link: https://docs.guardrails.io/docs/vulnerabilities/ruby/insecure_use_of_dangerous_function.html#non-static-os-command-execution
+      severity: high
+
+    - id: GR-013
+      category: Insecure Use of Dangerous Function
+      title: Non-static OS command execution
+      scanner: semgrep
+      location:
+        path: bin/dev
+        line: 5
+      link: https://docs.guardrails.io/docs/vulnerabilities/ruby/insecure_use_of_dangerous_function.html#non-static-os-command-execution
+      severity: high
+
+    
+
+    
+      
+
+
+    
+

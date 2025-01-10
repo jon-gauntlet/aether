@@ -1,0 +1,49 @@
+#!/bin/bash
+set -euo pipefail
+
+# Check required dependencies
+check_dependency() {
+    if ! command -v "$1" >/dev/null 2>&1; then
+        echo "Error: Required dependency '$1' is not installed" >&2
+        exit 1
+    fi
+}
+
+check_dependency notify-send
+check_dependency dunstctl
+
+# Deep Work Mode Toggle
+DEEP_STATE_FILE="$HOME/.cache/cursor/deep_mode"
+CACHE_DIR="$(dirname "$DEEP_STATE_FILE")"
+
+# Ensure cache directory exists
+if ! mkdir -p "$CACHE_DIR" 2>/dev/null; then
+    echo "Error: Failed to create cache directory: $CACHE_DIR" >&2
+    exit 1
+fi
+
+toggle_deep_mode() {
+    if [ -f "$DEEP_STATE_FILE" ]; then
+        if ! rm "$DEEP_STATE_FILE" 2>/dev/null; then
+            echo "Error: Failed to remove deep mode state file" >&2
+            exit 1
+        fi
+        notify-send "Deep Work Mode Disabled" "Regular workflow restored"
+        dunstctl set-paused false
+    else
+        if ! touch "$DEEP_STATE_FILE" 2>/dev/null; then
+            echo "Error: Failed to create deep mode state file" >&2
+            exit 1
+        fi
+        notify-send "Deep Work Mode Enabled" "Minimizing distractions"
+        dunstctl set-paused true
+        
+        # Optional: Enable do-not-disturb if available
+        if command -v dnd >/dev/null 2>&1; then
+            dnd on
+        fi
+    fi
+}
+
+# Main execution
+toggle_deep_mode 

@@ -1,0 +1,38 @@
+[Unit]
+Description=AI System Evolution LLM Service
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=notify
+User=jon
+Group=jon
+WorkingDirectory=/home/jon/ai_system_evolution
+Environment=PYTHONPATH=/home/jon/ai_system_evolution
+ExecStart=/usr/bin/python3 -m services.llm_service
+Restart=always
+RestartSec=1
+WatchdogSec=30
+
+# Resource limits
+CPUWeight=50
+CPUQuota=80%
+MemoryHigh=6G
+MemoryMax=8G
+TasksMax=32
+IOWeight=40
+
+# Security
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+
+[Install]
+WantedBy=default.target 

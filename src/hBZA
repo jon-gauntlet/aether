@@ -1,0 +1,17 @@
+# System Operations Workspace Rules
+editor.formatOnSave: true
+search.exclude:
+  "**/*.log": true
+  "**/proc/**": true
+  "**/sys/**": true
+  "**/dev/**": true
+  "**/run/**": true
+  "**/tmp/**": true
+  "**/var/cache/**": true
+  "**/var/tmp/**": true
+  "**/lost+found": true
+index.include:
+  - "/etc/systemd/**"
+  - "/etc/gauntlet/**"
+  - "/home/jon/scripts/**"
+  - "/usr/lib/systemd/system/**"

@@ -1,0 +1,12 @@
+[Unit]
+Description=Context Optimization Service
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/env bash -c 'find ~/.hidden_context -type f -name "*.md" -o -name "*.txt" | while read file; do touch -a "$file"; done'
+ExecStart=/usr/bin/env bash -c 'find ~/.cache/cursor/context -type f -mtime +7 -delete'
+ExecStart=/usr/bin/env bash -c 'find ~/.cache/cursor/patterns -type f -mtime +1 -delete'
+
+[Install]
+WantedBy=default.target 

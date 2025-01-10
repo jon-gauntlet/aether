@@ -1,0 +1,21 @@
+[Unit]
+Description=System Claude Slice - Optimized for AI System Evolution
+Documentation=man:systemd.slice(5)
+Before=slices.target
+
+[Slice]
+# Higher CPU priority for system-level operations
+CPUWeight=85
+# More memory for system analysis
+MemoryHigh=6G
+MemoryMax=8G
+# Prevent excessive swapping
+MemorySwapMax=2G
+# Higher IO priority for system access
+IOWeight=90
+# CPU scheduling optimization
+CPUSchedulingPolicy=fifo
+CPUSchedulingPriority=50
+
+[Install]
+WantedBy=cursor.slice 

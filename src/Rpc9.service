@@ -1,0 +1,19 @@
+[Unit]
+Description=AI System Evolution Context Service
+After=cursor-context.slice
+PartOf=ai-evolution.slice
+
+[Service]
+Type=notify
+ExecStart=/usr/bin/python3 /home/jon/ai_system_evolution/services/context_service.py
+Nice=19
+CPUQuota=20%
+MemoryHigh=1G
+IOWeight=10
+Restart=always
+RestartSec=5
+Environment=PYTHONPATH=/home/jon/ai_system_evolution
+Environment=CURSOR_CONFIG_DIR=/home/jon/.config/cursor
+
+[Install]
+WantedBy=default.target 

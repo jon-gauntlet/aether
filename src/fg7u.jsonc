@@ -1,0 +1,18 @@
+{
+    "_id": "ObjectId",  // MongoDB's unique identifier
+    "finding_id": "string",  // Unique identifier for the finding
+    "source": "string",  // Origin of the finding (e.g., "skipfish", "manual", "sast")
+    "title": "string",  // Brief title describing the finding
+    "description": "string",  // Detailed description of the finding
+    "severity": "string",  // Initial severity level (e.g., "low", "medium", "high")
+    "recommendations": "string",  // Suggested actions to remediate the finding
+    "location": {
+      "file": "string",  // File where the issue was found
+      "line": "number"  // Line number of the issue
+    },
+    "category": "string",  // General category of the finding (e.g., Injection, Authentication)
+    "tool": "string",  // Tool or method used to discover the finding
+    "references": ["string"],  // List of references or links for more information
+    "timestamp": "string",  // Timestamp of when the finding was recorded
+    "additional_data": "object"  // Extra fields specific to the source
+  }

@@ -1,0 +1,88 @@
+#!/usr/bin/env zsh
+
+# AI Pair Programming Helper (pair)
+# Usage: pair [command] [args]
+#   pair start   # Start pair session
+#   pair log     # View session log
+#   pair help    # Show help
+
+# Exit if being sourced
+[[ $ZSH_EVAL_CONTEXT == *:file:* ]] && return 0
+
+# Colors
+[[ -z "$NO_COLOR" ]] && {
+    GREEN='\033[0;32m'
+    YELLOW='\033[1;33m'
+    BLUE='\033[0;34m'
+    NC='\033[0m'
+}
+
+# Data storage (minimal)
+DATA_DIR="$HOME/.local/share/gauntlet"
+PAIR_DIR="$DATA_DIR/pair"
+LOG_FILE="$PAIR_DIR/sessions.md"
+mkdir -p "$PAIR_DIR"
+touch "$LOG_FILE"
+
+# Show help if needed
+[[ "$1" == "help" || $# -eq 0 ]] && {
+    cat << EOF
+AI Pair Programming Helper
+
+Quick Start:
+  pair start   Start pair session
+  pair log     View session log
+  pair stats   Show pair stats
+
+Tips shown during use!
+EOF
+    exit 0
+}
+
+# Start pair session
+start_pair() {
+    local session_file="$PAIR_DIR/$(date +%Y-%m-%d_%H%M%S).md"
+    
+    # Create session file
+    cat > "$session_file" << EOF
+# Pair Session
+Started: $(date +%Y-%m-%d\ %H:%M)
+
+## Goals
+What do you want to accomplish?
+
+## Progress
+Track key decisions and insights
+
+## Next Steps
+What to do next?
+EOF
+    
+    # Open in editor
+    ${EDITOR:-vim} "$session_file"
+    
+    # Log completion
+    echo -e "\n## $(date +%Y-%m-%d\ %H:%M)\nCompleted pair session" >> "$LOG_FILE"
+    echo -e "${GREEN}✓ Completed pair session${NC}"
+}
+
+# View session log
+view_log() {
+    echo -e "\n${BLUE}Recent Sessions:${NC}"
+    tail -n 10 "$LOG_FILE"
+}
+
+# Show stats
+show_stats() {
+    echo -e "\n${BLUE}Pair Stats:${NC}"
+    echo "Today: $(find "$PAIR_DIR" -name "$(date +%Y-%m-%d)*" | wc -l) sessions"
+    echo "Week: $(find "$PAIR_DIR" -mtime -7 | wc -l) sessions"
+}
+
+# Handle commands
+case $1 in
+    start) start_pair ;;
+    log) view_log ;;
+    stats) show_stats ;;
+    *) show_help ;;
+esac 

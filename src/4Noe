@@ -1,0 +1,78 @@
+#!/bin/bash
+
+# Usage function
+usage() {
+    echo "Usage: $0 [--workspace PATH]"
+    echo "Launch Cursor with optimized resource settings"
+    echo
+    echo "Options:"
+    echo "  --workspace PATH    Set the workspace path (default: current directory)"
+    exit 1
+}
+
+# Parse arguments
+WORKSPACE="$(pwd)"
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --workspace)
+            WORKSPACE="$2"
+            shift 2
+            ;;
+        -h|--help)
+            usage
+            ;;
+        *)
+            echo "Unknown option: $1"
+            usage
+            ;;
+    esac
+done
+
+# Ensure workspace exists
+mkdir -p "$WORKSPACE"
+
+# Set resource limits
+ulimit -n 524288  # File descriptors
+ulimit -v 16777216  # Virtual memory (16GB)
+ulimit -t unlimited  # CPU time
+ulimit -m 16777216  # Max memory size
+ulimit -l unlimited  # Max locked memory
+ulimit -i 16384  # Pending signals
+
+# Set process priority
+renice -n -10 $$ > /dev/null 2>&1
+
+# Set CPU governor to performance
+if command -v cpupower >/dev/null 2>&1; then
+    sudo cpupower frequency-set -g performance > /dev/null 2>&1
+fi
+
+# Optimize kernel parameters for the session
+sudo sysctl -w vm.swappiness=10 > /dev/null 2>&1
+sudo sysctl -w kernel.sched_autogroup_enabled=0 > /dev/null 2>&1
+sudo sysctl -w kernel.sched_latency_ns=6000000 > /dev/null 2>&1
+sudo sysctl -w kernel.sched_min_granularity_ns=100000 > /dev/null 2>&1
+sudo sysctl -w kernel.sched_wakeup_granularity_ns=500000 > /dev/null 2>&1
+
+# Set process scheduling
+sudo chrt -f -p 50 $$ > /dev/null 2>&1
+
+# Clear caches if memory pressure is high
+free_mem=$(free | awk '/^Mem:/ {print $4}')
+total_mem=$(free | awk '/^Mem:/ {print $2}')
+mem_percent=$((free_mem * 100 / total_mem))
+
+if [ $mem_percent -lt 20 ]; then
+    sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches'
+    sudo sh -c 'echo 1 > /proc/sys/vm/compact_memory'
+fi
+
+# Export optimization environment variables
+export CURSOR_WORKSPACE="$WORKSPACE"
+export ELECTRON_ENABLE_LOGGING=1
+export ELECTRON_NO_ATTACH_CONSOLE=1
+export ELECTRON_NO_ASAR=1
+export NODE_OPTIONS="--max-old-space-size=8192"
+
+# Launch Cursor with optimized environment
+exec cursor 

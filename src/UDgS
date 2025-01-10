@@ -1,0 +1,61 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Testing
+.coverage
+htmlcov/
+.tox/
+.pytest_cache/
+.mypy_cache/
+
+# Project specific
+data/metrics/*
+data/patterns/*
+data/knowledge/*
+data/logs/*
+!data/metrics/.gitkeep
+!data/patterns/.gitkeep
+!data/knowledge/.gitkeep
+!data/logs/.gitkeep
+
+# Config
+config/autonomic.json
+config/*.local.json
+
+# Logs
+*.log
+*.log.*
+
+# System
+.DS_Store
+Thumbs.db 

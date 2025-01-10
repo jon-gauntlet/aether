@@ -1,0 +1,26 @@
+[Unit]
+Description=Cursor Context Crystallization Service
+After=cursor-semantic-indexer.service
+PartOf=cursor-context.slice
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/context-crystallizer
+Slice=cursor-context.slice
+Environment=CURSOR_CONFIG_DIR=/home/jon/.config/cursor
+Environment=CURSOR_STATE_DIR=/home/jon/.local/state/cursor
+Environment=CURSOR_DATA_DIR=/home/jon/.local/share/cursor
+Restart=on-failure
+RestartSec=5
+User=jon
+Group=jon
+
+# Resource Management
+CPUQuota=15%
+MemoryHigh=1G
+TasksMax=8
+IOWeight=20
+Nice=19
+
+[Install]
+WantedBy=default.target 

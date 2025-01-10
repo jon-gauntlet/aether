@@ -1,0 +1,31 @@
+[Unit]
+Description=Cursor Context Crystallization Service
+After=cursor-semantic-indexer.service
+PartOf=cursor-context.slice
+
+[Service]
+Type=notify
+ExecStart=/usr/local/bin/context-crystallizer
+Slice=cursor-context.slice
+Environment=CURSOR_CONFIG_DIR=/home/jon/.config/cursor
+Environment=CURSOR_STATE_DIR=/home/jon/.local/state/cursor
+Environment=CURSOR_DATA_DIR=/home/jon/.local/share/cursor
+Restart=on-failure
+User=jon
+Group=jon
+
+# Resource Management
+CPUQuota=30%
+MemoryHigh=4G
+TasksMax=16
+IOWeight=40
+
+# Security
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/jon/.config/cursor/contexts /home/jon/.local/state/cursor
+PrivateTmp=yes
+
+[Install]
+WantedBy=default.target 

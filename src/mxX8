@@ -1,0 +1,37 @@
+# System and Shell Configuration
+.zsh*
+.bash*
+.profile
+.mkshrc
+.screenrc
+.eos*
+
+# Package Managers
+.yarnrc
+.bundle/
+.npm/
+.pyenv/
+
+# Application Config
+.config/
+.local/
+.cache/
+.pki/
+.gnupg/
+.ssh/
+.librewolf/
+.zoom/
+.cursor/
+.ollama/
+
+# Temporary and Cache Files
+.wget-hsts
+.zcompdump*
+
+# Keep Project Dotfiles Visible
+!.gitignore
+!.env*
+!.eslintrc*
+!.prettier*
+!.docker*
+!.kube* 

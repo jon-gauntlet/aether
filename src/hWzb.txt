@@ -1,0 +1,37 @@
+# Core Data Science and Computation
+numpy
+pandas
+scipy
+
+# Visualization
+matplotlib
+seaborn
+
+# Testing and Development
+pytest
+pytest-timeout
+pytest-watch
+pytest-benchmark
+pytest-cov
+black
+pylint
+ipython
+mypy
+
+# Data Structures and Algorithms
+sortedcontainers
+more-itertools
+
+# Interactive Development
+jupyter
+ipywidgets
+ipdb
+
+# Utilities
+tqdm
+memory-profiler
+python-dotenv
+rich
+typer
+pydantic
+pre-commit

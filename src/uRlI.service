@@ -1,0 +1,13 @@
+[Unit]
+Description=Gauntlet AI Success Optimization Service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/home/jon/scripts/gauntlet/optimize start
+Restart=always
+RestartSec=10
+Environment=DISPLAY=:0
+
+[Install]
+WantedBy=default.target 

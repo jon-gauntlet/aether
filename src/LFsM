@@ -1,0 +1,84 @@
+#!/bin/bash
+
+# Focus Mode Manager
+# Manages system-wide focus state and coordinates with other services
+
+set -euo pipefail
+
+# Configuration
+GAUNTLET_CONFIG_DIR="${GAUNTLET_CONFIG_DIR:-$HOME/.config/gauntlet}"
+GAUNTLET_STATE_DIR="${GAUNTLET_STATE_DIR:-$HOME/.local/state/gauntlet}"
+GAUNTLET_DATA_DIR="${GAUNTLET_DATA_DIR:-$HOME/.local/share/gauntlet}"
+
+# State files
+DEEP_MODE_STATE="$GAUNTLET_STATE_DIR/deep_mode"
+FLOW_MODE_STATE="$GAUNTLET_STATE_DIR/flow_mode"
+FOCUS_SESSION_FILE="$GAUNTLET_STATE_DIR/focus_session.json"
+
+# Ensure directories exist
+mkdir -p "$GAUNTLET_CONFIG_DIR" "$GAUNTLET_STATE_DIR" "$GAUNTLET_DATA_DIR"
+
+# Notify systemd we're ready
+systemd-notify --ready
+
+# Initialize session tracking
+initialize_session() {
+    echo "{\"start_time\": \"$(date -Iseconds)\", \"deep_mode\": false, \"flow_mode\": false}" > "$FOCUS_SESSION_FILE"
+}
+
+# Update session state
+update_session() {
+    local key=$1
+    local value=$2
+    local temp_file=$(mktemp)
+    jq --arg key "$key" --arg value "$value" '.[$key] = ($value | test("true"))' "$FOCUS_SESSION_FILE" > "$temp_file"
+    mv "$temp_file" "$FOCUS_SESSION_FILE"
+}
+
+# Handle deep mode changes
+handle_deep_mode() {
+    if [[ -f "$DEEP_MODE_STATE" ]]; then
+        update_session "deep_mode" "true"
+        systemctl --user mask dunst.service
+        killall -SIGUSR1 dunst 2>/dev/null || true
+    else
+        update_session "deep_mode" "false"
+        systemctl --user unmask dunst.service
+        killall -SIGUSR2 dunst 2>/dev/null || true
+    fi
+}
+
+# Handle flow mode changes
+handle_flow_mode() {
+    if [[ -f "$FLOW_MODE_STATE" ]]; then
+        update_session "flow_mode" "true"
+        # Coordinate with gauntlet-optimizer for performance mode
+        systemctl kill -s SIGUSR1 gauntlet-optimizer.service
+    else
+        update_session "flow_mode" "false"
+        # Return to normal operation
+        systemctl kill -s SIGUSR2 gauntlet-optimizer.service
+    fi
+}
+
+# Watch for state changes
+watch_states() {
+    initialize_session
+    
+    while true; do
+        inotifywait -e create,delete -q "$GAUNTLET_STATE_DIR" |
+        while read -r directory events filename; do
+            case "$filename" in
+                "deep_mode")
+                    handle_deep_mode
+                    ;;
+                "flow_mode")
+                    handle_flow_mode
+                    ;;
+            esac
+        done
+    done
+}
+
+# Main
+watch_states 

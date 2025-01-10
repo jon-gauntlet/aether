@@ -1,0 +1,17 @@
+[Unit]
+Description=Gauntlet Continuous Optimization Service
+After=cursor-context.slice
+PartOf=cursor-context.slice
+
+[Service]
+Type=notify
+NotifyAccess=all
+Environment=GAUNTLET_DATA_DIR=%h/.local/share/gauntlet
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+ExecStart=/home/jon/scripts/cursor/gauntlet-optimizer
+Restart=always
+RestartSec=30
+WatchdogSec=600
+
+[Install]
+WantedBy=default.target

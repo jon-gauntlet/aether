@@ -1,0 +1,31 @@
+{
+    "files.exclude": {
+        "/home/jon/.*": true,
+        "/home/jon/workspace/**/.git": true,
+        "/home/jon/workspace/**/.gitignore": true,
+        "/home/jon/workspace/**/.env*": true,
+        "/home/jon/workspace/**/.eslintrc*": true,
+        "/home/jon/workspace/**/.prettier*": true,
+        "/home/jon/workspace/**/.docker*": true,
+        "/home/jon/workspace/**/.kube*": true,
+        "**/.DS_Store": true,
+        "**/Thumbs.db": true,
+        "**/node_modules": true
+    },
+    "files.watcherExclude": {
+        "**/.git/objects/**": true,
+        "**/.git/subtree-cache/**": true,
+        "**/node_modules/**": true,
+        "**/.hg/store/**": true
+    },
+    "search.exclude": {
+        "**/node_modules": true,
+        "**/bower_components": true,
+        "**/*.code-search": true
+    },
+    "workbench.editor.enablePreview": false,
+    "workbench.editor.enablePreviewFromQuickOpen": false,
+    "explorer.autoReveal": true,
+    "explorer.confirmDelete": true,
+    "explorer.confirmDragAndDrop": false
+} 

@@ -1,0 +1,62 @@
+#!/usr/bin/env zsh
+
+# Focus Timer (focus)
+# Usage: focus [minutes]
+#   focus 25    # Start 25min focus block
+#   focus       # Start default block
+
+# Exit if being sourced
+[[ $ZSH_EVAL_CONTEXT == *:file:* ]] && return 0
+
+# Colors
+[[ -z "$NO_COLOR" ]] && {
+    GREEN='\033[0;32m'
+    YELLOW='\033[1;33m'
+    BLUE='\033[0;34m'
+    NC='\033[0m'
+}
+
+# Data storage (minimal)
+DATA_DIR="$HOME/.local/share/gauntlet"
+FOCUS_DIR="$DATA_DIR/focus"
+mkdir -p "$FOCUS_DIR"
+
+# Show help if needed
+[[ "$1" == "help" || "$1" == "-h" ]] && {
+    cat << EOF
+Focus Timer
+
+Quick Start:
+  focus 25    Start 25min focus block
+  focus       Start default block (25min)
+  focus -s    Show focus stats
+
+Tips shown during use!
+EOF
+    exit 0
+}
+
+# Default duration
+DURATION=${1:-25}
+
+# Show stats
+[[ "$1" == "-s" ]] && {
+    echo -e "\n${BLUE}Focus Stats:${NC}"
+    echo "Today: $(find "$FOCUS_DIR" -name "$(date +%Y-%m-%d)*" | wc -l) blocks"
+    echo "Week: $(find "$FOCUS_DIR" -mtime -7 | wc -l) blocks"
+    exit 0
+}
+
+# Log focus block
+log_focus() {
+    local file="$FOCUS_DIR/$(date +%Y-%m-%d_%H%M%S)"
+    echo "$DURATION" > "$file"
+}
+
+# Start timer
+echo -e "\n${YELLOW}Starting ${DURATION}min focus block${NC}"
+sleep "${DURATION}m" && {
+    log_focus
+    notify-send "Focus Block Complete!" "${DURATION}min block finished"
+    echo -e "${GREEN}✓ Completed ${DURATION}min focus block${NC}"
+} 

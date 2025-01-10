@@ -1,0 +1,125 @@
+{
+  "energy_management": {
+    "state_detection": {
+      "hyperfocus": {
+        "detection": {
+          "enabled": true,
+          "indicators": [
+            "typing_speed",
+            "commit_frequency",
+            "context_depth",
+            "time_perception"
+          ],
+          "sensitivity": 0.9,
+          "response_time": "immediate"
+        },
+        "optimization": {
+          "enabled": true,
+          "strategies": [
+            "distraction_blocking",
+            "context_enhancement",
+            "energy_preservation",
+            "flow_amplification"
+          ],
+          "adaptation_rate": 0.1
+        }
+      },
+      "energy_monitoring": {
+        "enabled": true,
+        "metrics": [
+          "cognitive_load",
+          "focus_quality",
+          "context_retention",
+          "pattern_recognition"
+        ],
+        "thresholds": {
+          "optimal": 0.9,
+          "warning": 0.7,
+          "critical": 0.5
+        }
+      }
+    },
+    "proactive_optimization": {
+      "energy_forecasting": {
+        "enabled": true,
+        "models": [
+          "time_based",
+          "pattern_based",
+          "context_based",
+          "load_based"
+        ],
+        "horizon": "4h",
+        "accuracy_threshold": 0.8
+      },
+      "state_preparation": {
+        "enabled": true,
+        "triggers": [
+          "energy_peak_predicted",
+          "optimal_context_detected",
+          "pattern_emergence_likely",
+          "flow_state_imminent"
+        ],
+        "actions": [
+          "context_preload",
+          "pattern_preparation",
+          "resource_allocation",
+          "distraction_prevention"
+        ]
+      }
+    },
+    "flow_optimization": {
+      "state_maintenance": {
+        "enabled": true,
+        "strategies": [
+          "context_preservation",
+          "energy_stabilization",
+          "pattern_reinforcement",
+          "focus_protection"
+        ],
+        "priority": "maximum"
+      },
+      "disruption_prevention": {
+        "enabled": true,
+        "monitors": [
+          "system_stability",
+          "context_coherence",
+          "energy_balance",
+          "pattern_integrity"
+        ],
+        "actions": [
+          "preemptive_backup",
+          "resource_isolation",
+          "context_protection",
+          "pattern_stabilization"
+        ]
+      }
+    },
+    "recovery_optimization": {
+      "quick_restoration": {
+        "enabled": true,
+        "triggers": [
+          "focus_break",
+          "energy_dip",
+          "context_switch",
+          "pattern_disruption"
+        ],
+        "strategies": [
+          "state_reload",
+          "energy_boost",
+          "context_reconstruction",
+          "pattern_reactivation"
+        ]
+      },
+      "energy_rebalancing": {
+        "enabled": true,
+        "methods": [
+          "cognitive_load_distribution",
+          "focus_reallocation",
+          "pattern_simplification",
+          "context_optimization"
+        ],
+        "adaptation_rate": 0.2
+      }
+    }
+  }
+} 

@@ -1,0 +1,36 @@
+[Unit]
+Description=Essence System Integration Service
+After=cursor-semantic-indexer.service
+PartOf=cursor-context.slice
+Documentation=https://sre.google/sre-book/table-of-contents/
+
+[Service]
+Type=simple
+ExecStart=%h/scripts/cursor/essence-integrator
+Slice=cursor-context.slice
+Environment=CURSOR_CONFIG_DIR=%h/.config/cursor
+Environment=CURSOR_STATE_DIR=%h/.local/state/cursor
+Environment=CURSOR_DATA_DIR=%h/.local/share/cursor
+Environment=ESSENCE_RESOURCES_DIR=%h/.config/cursor/contexts
+Restart=always
+RestartSec=1
+WatchdogSec=30
+NotifyAccess=all
+
+# Performance Optimization
+CPUQuota=30%
+MemoryHigh=4G
+MemoryMax=6G
+TasksMax=32
+IOWeight=50
+Nice=5
+
+# Context Preservation
+TimeoutStartSec=30
+TimeoutStopSec=30
+RuntimeMaxSec=86400
+RuntimeDirectory=cursor-essence
+RuntimeDirectoryMode=0750
+
+[Install]
+WantedBy=default.target 

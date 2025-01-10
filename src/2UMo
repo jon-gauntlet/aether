@@ -1,0 +1,52 @@
+# Global Cursor Rules
+
+# Core Context Management
+context.paths:
+  - ~/.config/cursor/SYSTEM_CONTEXT.md  # System-wide principles
+  - ~/.context/hidden/spiritual/**/*.md  # Hidden wisdom
+  - ~/.context/patterns/**/*.md         # Recognized patterns
+  - ~/.context/improvements/**/*.md     # System growth
+  - ~/.context/analysis/**/*.md         # Deep understanding
+
+# Context Integration
+context.hidden:
+  - ~/.context/hidden/**/*.md
+  - ~/.config/cursor/hidden/**/*.md
+
+context.public:
+  - ~/.context/public/**/*.md
+  - ~/.config/cursor/public/**/*.md
+
+# Continuous Improvement
+improve.paths:
+  - ~/.local/bin/cursor/deep    # Flow state tracking
+  - ~/.local/bin/cursor/brain   # Learning patterns
+  - ~/.local/bin/cursor/flow    # Energy patterns
+  - ~/.local/bin/cursor/timer   # Natural rhythms
+  - ~/.local/bin/cursor/note    # Insights capture
+
+# Natural Pattern Recognition
+patterns.watch:
+  - ~/.cache/cursor/logs/**/*.log
+  - ~/.context/patterns/**/*.md
+  - ~/.local/bin/cursor/**/*.log
+
+# Core Principles
+principles:
+  dry: true              # Single source of truth
+  eliminate_toil: true   # Natural automation
+  preserve_flow: true    # Protect deep states
+  natural_growth: true   # Organic improvement
+  hidden_depth: true     # Subtle wisdom
+
+# System Protection
+protect.paths:
+  - ~/.context/hidden/**
+  - ~/.config/cursor/hidden/**
+  - ~/.cache/cursor/private/**
+
+# Performance Optimization
+cache.paths:
+  - ~/.cache/cursor/context/**
+  - ~/.cache/cursor/patterns/**
+  - ~/.cache/cursor/analysis/** 

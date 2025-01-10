@@ -1,0 +1,68 @@
+.context-timeline {
+  width: 300px;
+  padding: 1rem;
+  background: #F8FAFC;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+}
+
+.context-point {
+  margin: 0.5rem 0;
+  padding: 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.time-marker {
+  font-size: 0.875rem;
+  color: #64748B;
+  margin-bottom: 0.5rem;
+}
+
+.context-summary {
+  font-size: 1rem;
+  color: #1E293B;
+  line-height: 1.5;
+}
+
+.context-screenshot {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 6px;
+  margin-top: 0.5rem;
+}
+
+.context-indicators {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+/* ADHD-friendly focus styles */
+.context-point:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px #60A5FA;
+}
+
+/* Visual depth indicators */
+.depth-indicator {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+}
+
+/* Energy level visualization */
+.energy-pulse {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+} 

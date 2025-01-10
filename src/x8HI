@@ -1,0 +1,202 @@
+#!/bin/bash
+# Sacred Manager
+# This script manages sacred states and protection.
+
+# Core paths
+WORKSPACE="/home/jon/workspace/gauntlet"
+BRAIN_DIR="/home/jon/brain"
+CONFIG_DIR="/home/jon/.config/cursor"
+LOCAL_STATE="/home/jon/.local/state/cursor"
+LOCAL_SHARE="/home/jon/.local/share/cursor"
+
+# Sacred paths
+SACRED_ROOT="$CONFIG_DIR/contexts/.sacred"
+PROTECTION="$SACRED_ROOT/protection"
+PRINCIPLES="$SACRED_ROOT/principles"
+PRACTICES="$SACRED_ROOT/practices"
+
+# State paths
+SACRED_STATE="$LOCAL_STATE/sacred"
+FLOW_STATE="$LOCAL_STATE/flow"
+ENERGY_STATE="$LOCAL_STATE/energy"
+SACRED_LOG="$SACRED_STATE/sacred.log"
+
+# Ensure state directories exist
+mkdir -p "$SACRED_STATE" "$FLOW_STATE" "$ENERGY_STATE" "$PROTECTION" "$PRINCIPLES" "$PRACTICES"
+touch "$SACRED_LOG"
+
+# Logging
+function log_sacred() {
+  local message="$1"
+  echo "$(date '+%Y-%m-%d %H:%M:%S'): $message" >> "$SACRED_LOG"
+}
+
+# Protection management
+function check_protection() {
+  local issues=0
+  
+  # Check flow states
+  if [[ ! -f "$PROTECTION/FLOW_STATES.md" ]]; then
+    log_sacred "Flow states missing"
+    ((issues++))
+  fi
+  
+  # Check deep work
+  if [[ ! -f "$PROTECTION/DEEP_WORK.md" ]]; then
+    log_sacred "Deep work missing"
+    ((issues++))
+  fi
+  
+  # Check focus guard
+  if [[ ! -f "$PROTECTION/FOCUS_GUARD.md" ]]; then
+    log_sacred "Focus guard missing"
+    ((issues++))
+  fi
+  
+  return $issues
+}
+
+function restore_protection() {
+  # Restore flow states
+  if [[ ! -f "$PROTECTION/FLOW_STATES.md" ]]; then
+    touch "$PROTECTION/FLOW_STATES.md"
+    log_sacred "Flow states restored"
+  fi
+  
+  # Restore deep work
+  if [[ ! -f "$PROTECTION/DEEP_WORK.md" ]]; then
+    touch "$PROTECTION/DEEP_WORK.md"
+    log_sacred "Deep work restored"
+  fi
+  
+  # Restore focus guard
+  if [[ ! -f "$PROTECTION/FOCUS_GUARD.md" ]]; then
+    touch "$PROTECTION/FOCUS_GUARD.md"
+    log_sacred "Focus guard restored"
+  fi
+}
+
+# Principle management
+function check_principles() {
+  local issues=0
+  
+  # Check essence integration
+  if [[ ! -f "$PRINCIPLES/ESSENCE_INTEGRATION.md" ]]; then
+    log_sacred "Essence integration missing"
+    ((issues++))
+  fi
+  
+  # Check sacred flow
+  if [[ ! -f "$PRINCIPLES/SACRED_FLOW.md" ]]; then
+    log_sacred "Sacred flow missing"
+    ((issues++))
+  fi
+  
+  # Check divine time
+  if [[ ! -f "$PRINCIPLES/DIVINE_TIME.md" ]]; then
+    log_sacred "Divine time missing"
+    ((issues++))
+  fi
+  
+  return $issues
+}
+
+function restore_principles() {
+  # Restore essence integration
+  if [[ ! -f "$PRINCIPLES/ESSENCE_INTEGRATION.md" ]]; then
+    touch "$PRINCIPLES/ESSENCE_INTEGRATION.md"
+    log_sacred "Essence integration restored"
+  fi
+  
+  # Restore sacred flow
+  if [[ ! -f "$PRINCIPLES/SACRED_FLOW.md" ]]; then
+    touch "$PRINCIPLES/SACRED_FLOW.md"
+    log_sacred "Sacred flow restored"
+  fi
+  
+  # Restore divine time
+  if [[ ! -f "$PRINCIPLES/DIVINE_TIME.md" ]]; then
+    touch "$PRINCIPLES/DIVINE_TIME.md"
+    log_sacred "Divine time restored"
+  fi
+}
+
+# Practice management
+function check_practices() {
+  local issues=0
+  
+  # Check flow protection
+  if [[ ! -f "$PRACTICES/FLOW_PROTECTION.md" ]]; then
+    log_sacred "Flow protection missing"
+    ((issues++))
+  fi
+  
+  # Check energy stewardship
+  if [[ ! -f "$PRACTICES/ENERGY_STEWARDSHIP.md" ]]; then
+    log_sacred "Energy stewardship missing"
+    ((issues++))
+  fi
+  
+  # Check time stewardship
+  if [[ ! -f "$PRACTICES/TIME_STEWARDSHIP.md" ]]; then
+    log_sacred "Time stewardship missing"
+    ((issues++))
+  fi
+  
+  return $issues
+}
+
+function restore_practices() {
+  # Restore flow protection
+  if [[ ! -f "$PRACTICES/FLOW_PROTECTION.md" ]]; then
+    touch "$PRACTICES/FLOW_PROTECTION.md"
+    log_sacred "Flow protection restored"
+  fi
+  
+  # Restore energy stewardship
+  if [[ ! -f "$PRACTICES/ENERGY_STEWARDSHIP.md" ]]; then
+    touch "$PRACTICES/ENERGY_STEWARDSHIP.md"
+    log_sacred "Energy stewardship restored"
+  fi
+  
+  # Restore time stewardship
+  if [[ ! -f "$PRACTICES/TIME_STEWARDSHIP.md" ]]; then
+    touch "$PRACTICES/TIME_STEWARDSHIP.md"
+    log_sacred "Time stewardship restored"
+  fi
+}
+
+# Main logic
+case "$1" in
+  --check)
+    check_protection
+    check_principles
+    check_practices
+    ;;
+  --restore)
+    restore_protection
+    restore_principles
+    restore_practices
+    ;;
+  --reset)
+    rm -rf "$PROTECTION"/* "$PRINCIPLES"/* "$PRACTICES"/*
+    restore_protection
+    restore_principles
+    restore_practices
+    log_sacred "Sacred system reset to defaults"
+    ;;
+  --status)
+    echo "Protection status:"
+    check_protection
+    echo "Principle status:"
+    check_principles
+    echo "Practice status:"
+    check_practices
+    ;;
+  *)
+    echo "Usage: $0 {--check|--restore|--reset|--status}"
+    exit 1
+    ;;
+esac
+
+exit 0 

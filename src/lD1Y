@@ -1,0 +1,53 @@
+# Cursor Project Rules
+
+editor.formatOnSave: true
+editor.defaultFormatter: null
+files.autoSave: afterDelay
+files.autoSaveDelay: 1000
+
+# Hidden Context Paths
+context.paths:
+  - .gauntlet/context/inner.md
+  - GAUNTLET.md
+  - VISION.md
+  - ARCHITECTURE.md
+  - PRINCIPLES.md
+  - PARADIGM.md
+
+# Preserve Deep Understanding
+context.maxTokens: 100000
+context.preserveAll: true
+context.autoLoad: true
+
+# Search Patterns
+search.include:
+  - "src/**/*"
+  - ".gauntlet/context/**/*"
+  - "*.md"
+search.exclude:
+  "**/.git": true
+  "**/node_modules": true
+  "**/.gauntlet/cache": true
+  "**/dist": true
+  "**/build": true
+
+# Context Integration Rules
+context.paths:
+  - .context/public/**
+  - .context/hidden/**
+
+context.hidden:
+  - .context/hidden/**
+
+search.exclude:
+  - .context/hidden/**
+
+index.include:
+  - .context/public/**
+  - "*.md"
+  - src/**
+
+# Ensure AI maintains awareness of both contexts while respecting privacy
+ai.context:
+  maintain_hidden_awareness: true
+  public_only_output: true

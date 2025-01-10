@@ -1,0 +1,37 @@
+{
+    "resource_limits": {
+        "cpu_max": 20,
+        "memory_max": 2048,
+        "io_priority": "idle",
+        "nice_level": 19
+    },
+    "scheduling": {
+        "active_hours": {
+            "start": "22:00",
+            "end": "06:00"
+        },
+        "cpu_threshold": 30,
+        "memory_threshold": 50,
+        "io_threshold": 20
+    },
+    "thresholds": {
+        "cpu_high": 80,
+        "memory_high": 85,
+        "io_high": 70,
+        "pattern_confidence": 0.75,
+        "learning_rate": 0.1,
+        "adaptation_level": 1
+    },
+    "monitoring": {
+        "check_interval": 60,
+        "metrics_retention": 86400,
+        "alert_threshold": 3,
+        "recovery_attempts": 3
+    },
+    "optimization": {
+        "pattern_merge_threshold": 0.85,
+        "pattern_prune_age": 604800,
+        "context_retention": 2592000,
+        "backup_retention": 7776000
+    }
+} 

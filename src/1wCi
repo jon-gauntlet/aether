@@ -1,0 +1,137 @@
+#!/usr/bin/env python3
+
+import os
+import sys
+import json
+import hashlib
+from pathlib import Path
+from datetime import datetime
+from typing import Dict, Set, List
+from collections import defaultdict
+
+# Paths
+CONTEXT_ROOT = Path.home() / '.context'
+CACHE_ROOT = Path.home() / '.cache/cursor'
+CONFIG_ROOT = Path.home() / '.config/cursor'
+STATE_FILE = CACHE_ROOT / 'context/state.json'
+FILESYSTEM_STATE = CACHE_ROOT / 'context/filesystem.json'
+PATTERNS_FILE = CONTEXT_ROOT / 'integration/patterns.log'
+ANALYSIS_FILE = CONTEXT_ROOT / 'analysis/context_analysis.json'
+
+class ContextAnalyzer:
+    def __init__(self):
+        self.state: Dict = {}
+        self.filesystem_state: Dict = {}
+        self.patterns: Dict = defaultdict(int)
+        self.analysis: Dict = {}
+        
+    def load_state(self):
+        """Load all state files"""
+        for path, attr in [
+            (STATE_FILE, 'state'),
+            (FILESYSTEM_STATE, 'filesystem_state'),
+            (ANALYSIS_FILE, 'analysis')
+        ]:
+            if path.exists():
+                with open(path) as f:
+                    setattr(self, attr, json.load(f))
+    
+    def analyze_changes(self) -> Dict:
+        """Analyze changed files and detect patterns"""
+        if not self.state.get('changed_files'):
+            return {}
+            
+        patterns = defaultdict(int)
+        
+        # Analyze each changed file
+        for file_path in self.state['changed_files']:
+            path = Path(file_path)
+            if not path.exists():
+                continue
+                
+            # Categorize change
+            if 'core' in str(path):
+                patterns['core_changes'] += 1
+            elif 'flows' in str(path):
+                patterns['flow_changes'] += 1
+            elif 'spaces' in str(path):
+                patterns['space_changes'] += 1
+            elif 'integration' in str(path):
+                patterns['integration_changes'] += 1
+                
+            # Analyze content if markdown
+            if path.suffix == '.md':
+                try:
+                    content = path.read_text()
+                    # Look for key patterns
+                    if 'flow' in content.lower():
+                        patterns['flow_concepts'] += 1
+                    if 'space' in content.lower():
+                        patterns['space_concepts'] += 1
+                    if 'energy' in content.lower():
+                        patterns['energy_concepts'] += 1
+                    if 'pattern' in content.lower():
+                        patterns['pattern_recognition'] += 1
+                except:
+                    pass
+                    
+        return patterns
+    
+    def update_analysis(self):
+        """Update analysis with new patterns"""
+        current_patterns = self.analyze_changes()
+        
+        # Merge with existing patterns
+        for pattern, count in current_patterns.items():
+            self.patterns[pattern] += count
+            
+        # Update analysis
+        self.analysis.update({
+            'last_analysis': datetime.now().isoformat(),
+            'total_patterns': dict(self.patterns),
+            'load_count': self.state.get('load_count', 0),
+            'pattern_velocity': {
+                pattern: count / self.state.get('load_count', 1)
+                for pattern, count in self.patterns.items()
+            }
+        })
+    
+    def save_analysis(self):
+        """Save analysis results"""
+        # Save patterns log
+        PATTERNS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        with open(PATTERNS_FILE, 'a') as f:
+            f.write(f"\n--- Analysis at {datetime.now().isoformat()} ---\n")
+            for pattern, count in self.patterns.items():
+                f.write(f"{pattern}: {count}\n")
+            f.write(f"Load count: {self.state.get('load_count', 0)}\n")
+            
+        # Save analysis json
+        ANALYSIS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        with open(ANALYSIS_FILE, 'w') as f:
+            json.dump(self.analysis, f, indent=2)
+    
+    def integrate(self) -> int:
+        """Integrate context and analyze patterns"""
+        try:
+            # Load state
+            self.load_state()
+            
+            # Analyze and update
+            self.update_analysis()
+            
+            # Save results
+            self.save_analysis()
+            
+            return 0
+            
+        except Exception as e:
+            print(f"Error integrating context: {e}", file=sys.stderr)
+            return 1
+
+def main():
+    analyzer = ContextAnalyzer()
+    return analyzer.integrate()
+
+if __name__ == '__main__':
+    sys.exit(main()) 

@@ -1,0 +1,90 @@
+#!/bin/bash
+
+# Focus Mode Manager
+# Manages system-wide focus state and coordinates with other services
+
+set -eo pipefail
+
+# Configuration
+GAUNTLET_CONFIG_DIR="${GAUNTLET_CONFIG_DIR:-$HOME/.config/gauntlet}"
+GAUNTLET_STATE_DIR="${GAUNTLET_STATE_DIR:-$HOME/.local/state/gauntlet}"
+GAUNTLET_DATA_DIR="${GAUNTLET_DATA_DIR:-$HOME/.local/share/gauntlet}"
+
+# State files
+DEEP_MODE_STATE="$GAUNTLET_STATE_DIR/deep_mode"
+FLOW_MODE_STATE="$GAUNTLET_STATE_DIR/flow_mode"
+FOCUS_SESSION_FILE="$GAUNTLET_STATE_DIR/focus_session.json"
+
+# Ensure directories exist
+mkdir -p "$GAUNTLET_CONFIG_DIR" "$GAUNTLET_STATE_DIR" "$GAUNTLET_DATA_DIR"
+
+# Initialize session tracking
+initialize_session() {
+    echo "{\"start_time\": \"$(date -Iseconds)\", \"deep_mode\": false, \"flow_mode\": false}" > "$FOCUS_SESSION_FILE"
+}
+
+# Update session state
+update_session() {
+    local key=$1
+    local value=$2
+    local temp_file=$(mktemp)
+    if [[ -f "$FOCUS_SESSION_FILE" ]]; then
+        jq --arg key "$key" --arg value "$value" '.[$key] = ($value | test("true"))' "$FOCUS_SESSION_FILE" > "$temp_file"
+        mv "$temp_file" "$FOCUS_SESSION_FILE"
+    else
+        initialize_session
+        update_session "$key" "$value"
+    fi
+}
+
+# Handle deep mode changes
+handle_deep_mode() {
+    if [[ -f "$DEEP_MODE_STATE" ]]; then
+        update_session "deep_mode" "true"
+        systemctl --user mask dunst.service 2>/dev/null || true
+        killall -SIGUSR1 dunst 2>/dev/null || true
+    else
+        update_session "deep_mode" "false"
+        systemctl --user unmask dunst.service 2>/dev/null || true
+        killall -SIGUSR2 dunst 2>/dev/null || true
+    fi
+}
+
+# Handle flow mode changes
+handle_flow_mode() {
+    if [[ -f "$FLOW_MODE_STATE" ]]; then
+        update_session "flow_mode" "true"
+        # Set CPU governor to performance if possible
+        if command -v cpupower >/dev/null 2>&1; then
+            sudo cpupower frequency-set -g performance >/dev/null 2>&1 || true
+        fi
+    else
+        update_session "flow_mode" "false"
+        # Return to normal operation
+        if command -v cpupower >/dev/null 2>&1; then
+            sudo cpupower frequency-set -g ondemand >/dev/null 2>&1 || true
+        fi
+    fi
+}
+
+# Watch for state changes
+watch_states() {
+    initialize_session
+    
+    while true; do
+        inotifywait -e create,delete -q "$GAUNTLET_STATE_DIR" |
+        while read -r directory events filename; do
+            case "$filename" in
+                "deep_mode")
+                    handle_deep_mode
+                    ;;
+                "flow_mode")
+                    handle_flow_mode
+                    ;;
+            esac
+        done
+    done
+}
+
+# Main
+watch_states 

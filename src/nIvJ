@@ -1,0 +1,143 @@
+#!/bin/bash
+# Meta Learner
+# This script manages pattern learning and evolution.
+
+# Core paths
+WORKSPACE="/home/jon/workspace/gauntlet"
+BRAIN_DIR="/home/jon/brain"
+CONFIG_DIR="/home/jon/.config/cursor"
+LOCAL_STATE="/home/jon/.local/state/cursor"
+LOCAL_SHARE="/home/jon/.local/share/cursor"
+
+# State paths
+PATTERN_DB="$LOCAL_SHARE/autonomic/patterns/pattern_database.json"
+CONTEXT_CACHE="$LOCAL_SHARE/essence/context.cache"
+SESSION_DIR="$LOCAL_SHARE/crystallized"
+META_LOG="$LOCAL_STATE/meta/meta.log"
+
+# Ensure state directories exist
+mkdir -p "$LOCAL_STATE/meta" "$(dirname "$PATTERN_DB")" "$(dirname "$CONTEXT_CACHE")" "$SESSION_DIR"
+touch "$META_LOG"
+
+# Logging
+function log_meta() {
+  local message="$1"
+  echo "$(date '+%Y-%m-%d %H:%M:%S'): $message" >> "$META_LOG"
+}
+
+# Pattern management
+function save_pattern() {
+  local pattern="$1"
+  if [[ -f "$PATTERN_DB" ]]; then
+    local patterns=$(cat "$PATTERN_DB")
+    echo "$patterns" | jq ". + {\"$pattern\": {\"count\": 1, \"last_seen\": \"$(date -Iseconds)\"}}" > "$PATTERN_DB"
+  else
+    echo "{\"$pattern\": {\"count\": 1, \"last_seen\": \"$(date -Iseconds)\"}}" > "$PATTERN_DB"
+  fi
+  log_meta "Pattern saved: $pattern"
+}
+
+function update_pattern() {
+  local pattern="$1"
+  if [[ -f "$PATTERN_DB" ]]; then
+    local count=$(cat "$PATTERN_DB" | jq ".[\"$pattern\"].count // 0")
+    ((count++))
+    cat "$PATTERN_DB" | jq ".[\"$pattern\"].count = $count | .[\"$pattern\"].last_seen = \"$(date -Iseconds)\"" > "$PATTERN_DB.tmp"
+    mv "$PATTERN_DB.tmp" "$PATTERN_DB"
+    log_meta "Pattern updated: $pattern (count: $count)"
+  else
+    save_pattern "$pattern"
+  fi
+}
+
+function get_patterns() {
+  if [[ -f "$PATTERN_DB" ]]; then
+    cat "$PATTERN_DB" | jq -r 'to_entries | sort_by(.value.count) | reverse | .[0:10] | .[] | "\(.key): \(.value.count)"'
+  fi
+}
+
+# Context management
+function save_context() {
+  local context="$1"
+  if [[ -f "$CONTEXT_CACHE" ]]; then
+    local contexts=$(cat "$CONTEXT_CACHE")
+    echo "$contexts" | jq ". + {\"$context\": {\"last_seen\": \"$(date -Iseconds)\"}}" > "$CONTEXT_CACHE"
+  else
+    echo "{\"$context\": {\"last_seen\": \"$(date -Iseconds)\"}}" > "$CONTEXT_CACHE"
+  fi
+  log_meta "Context saved: $context"
+}
+
+function get_contexts() {
+  if [[ -f "$CONTEXT_CACHE" ]]; then
+    cat "$CONTEXT_CACHE" | jq -r 'to_entries | sort_by(.value.last_seen) | reverse | .[0:10] | .[] | "\(.key): \(.value.last_seen)"'
+  fi
+}
+
+# Session management
+function start_session() {
+  local session_id=$(date +%Y%m%d_%H%M%S)
+  local session_dir="$SESSION_DIR/$session_id"
+  mkdir -p "$session_dir"
+  cp "$PATTERN_DB" "$session_dir/patterns.json"
+  cp "$CONTEXT_CACHE" "$session_dir/context.json"
+  echo "$session_id" > "$SESSION_DIR/current"
+  log_meta "Session started: $session_id"
+}
+
+function end_session() {
+  if [[ -f "$SESSION_DIR/current" ]]; then
+    local session_id=$(cat "$SESSION_DIR/current")
+    local session_dir="$SESSION_DIR/$session_id"
+    cp "$PATTERN_DB" "$session_dir/patterns.final.json"
+    cp "$CONTEXT_CACHE" "$session_dir/context.final.json"
+    rm "$SESSION_DIR/current"
+    log_meta "Session ended: $session_id"
+  fi
+}
+
+# Main logic
+case "$1" in
+  --save-pattern)
+    save_pattern "$2"
+    ;;
+  --update-pattern)
+    update_pattern "$2"
+    ;;
+  --get-patterns)
+    get_patterns
+    ;;
+  --save-context)
+    save_context "$2"
+    ;;
+  --get-contexts)
+    get_contexts
+    ;;
+  --start-session)
+    start_session
+    ;;
+  --end-session)
+    end_session
+    ;;
+  --status)
+    echo "Pattern database: $PATTERN_DB"
+    echo "Context cache: $CONTEXT_CACHE"
+    echo "Current session: $(cat "$SESSION_DIR/current" 2>/dev/null)"
+    echo "Recent patterns:"
+    get_patterns
+    echo "Recent contexts:"
+    get_contexts
+    ;;
+  --reset)
+    echo "{}" > "$PATTERN_DB"
+    echo "{}" > "$CONTEXT_CACHE"
+    rm -f "$SESSION_DIR/current"
+    log_meta "State reset to defaults"
+    ;;
+  *)
+    echo "Usage: $0 {--save-pattern|--update-pattern|--get-patterns|--save-context|--get-contexts|--start-session|--end-session|--status|--reset}"
+    exit 1
+    ;;
+esac
+
+exit 0 

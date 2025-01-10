@@ -1,0 +1,178 @@
+#!/usr/bin/env python3
+
+"""
+Autonomic Manager Service
+Orchestrates the AI-First Autonomic Agile system components
+"""
+
+import argparse
+import json
+import logging
+import os
+import signal
+import sys
+import time
+from datetime import datetime
+from pathlib import Path
+from typing import Dict, List, Optional, Union
+
+# Environment setup
+CURSOR_CONFIG_DIR = os.getenv('CURSOR_CONFIG_DIR', os.path.expanduser('~/.config/cursor'))
+CURSOR_DATA_DIR = os.getenv('CURSOR_DATA_DIR', os.path.expanduser('~/.local/share/cursor'))
+BRAIN_DIR = os.getenv('BRAIN_DIR', os.path.expanduser('~/brain'))
+
+# Core paths
+PATTERN_DB = Path(CURSOR_DATA_DIR) / 'autonomic' / 'patterns' / 'pattern_database.json'
+CONTEXT_CACHE = Path(CURSOR_DATA_DIR) / 'essence' / 'context.cache'
+SESSION_DIR = Path(CURSOR_DATA_DIR) / 'crystallized'
+AUTONOMIC_STATE = Path(CURSOR_DATA_DIR) / 'autonomic' / 'state.json'
+
+# Knowledge paths
+KNOWLEDGE_MAP = Path(BRAIN_DIR) / 'KNOWLEDGE_MAP.md'
+AUTONOMIC_MAP = Path(BRAIN_DIR) / 'autonomic' / 'AUTONOMIC_MAP.md'
+INVISIBLE_MAP = Path(BRAIN_DIR) / 'invisible' / 'INVISIBLE_MAP.md'
+
+# Service paths
+META_LEARNER = Path.home() / 'scripts' / 'cursor' / 'meta-learner'
+ESSENCE_HARMONIZER = Path.home() / 'scripts' / 'cursor' / 'essence-harmonizer'
+
+# Ensure directories exist
+for path in [PATTERN_DB.parent, CONTEXT_CACHE.parent, SESSION_DIR, AUTONOMIC_STATE.parent]:
+    path.mkdir(parents=True, exist_ok=True)
+
+# Logging setup
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(SESSION_DIR / 'autonomic-manager.log'),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+logger = logging.getLogger('autonomic-manager')
+
+class AutonomicManager:
+    def __init__(self):
+        self.state: Dict = self._load_state()
+        self.running = True
+        signal.signal(signal.SIGTERM, self._handle_sigterm)
+        
+    def _load_state(self) -> Dict:
+        """Load autonomic manager state."""
+        if AUTONOMIC_STATE.exists():
+            with open(AUTONOMIC_STATE) as f:
+                return json.load(f)
+        return {
+            'last_check': None,
+            'system_status': 'initializing',
+            'service_health': {},
+            'integration_status': {}
+        }
+    
+    def _save_state(self):
+        """Save autonomic manager state."""
+        with open(AUTONOMIC_STATE, 'w') as f:
+            json.dump(self.state, f, indent=2)
+            
+    def _handle_sigterm(self, signum, frame):
+        """Handle termination signal."""
+        logger.info('Received SIGTERM - shutting down gracefully')
+        self.running = False
+            
+    def check_service_health(self):
+        """Check health of core services."""
+        services = {
+            'meta-learner': META_LEARNER,
+            'essence-harmonizer': ESSENCE_HARMONIZER
+        }
+        
+        for name, path in services.items():
+            if not path.exists():
+                logger.error(f'Service not found: {name}')
+                self.state['service_health'][name] = 'missing'
+            elif not os.access(path, os.X_OK):
+                logger.error(f'Service not executable: {name}')
+                self.state['service_health'][name] = 'not_executable'
+            else:
+                self.state['service_health'][name] = 'healthy'
+                
+    def verify_integration(self):
+        """Verify system integration."""
+        maps = {
+            'knowledge': KNOWLEDGE_MAP,
+            'autonomic': AUTONOMIC_MAP,
+            'invisible': INVISIBLE_MAP
+        }
+        
+        for name, path in maps.items():
+            if not path.exists():
+                logger.warning(f'Map not found: {name}')
+                self.state['integration_status'][name] = 'missing'
+            else:
+                self.state['integration_status'][name] = 'integrated'
+                
+    def check_state_integrity(self):
+        """Check integrity of state files."""
+        state_files = {
+            'patterns': PATTERN_DB,
+            'context': CONTEXT_CACHE,
+            'session': SESSION_DIR
+        }
+        
+        for name, path in state_files.items():
+            if not path.exists():
+                logger.error(f'State file missing: {name}')
+                self.state['system_status'] = 'degraded'
+                return
+                
+        self.state['system_status'] = 'healthy'
+        
+    def run_maintenance_cycle(self):
+        """Run system maintenance cycle."""
+        try:
+            self.check_service_health()
+            self.verify_integration()
+            self.check_state_integrity()
+            
+            self.state['last_check'] = datetime.now().isoformat()
+            self._save_state()
+            
+            logger.info(f"System status: {self.state['system_status']}")
+        except Exception as e:
+            logger.error(f'Maintenance cycle failed: {str(e)}')
+            self.state['system_status'] = 'error'
+            self._save_state()
+            
+    def run(self):
+        """Run the autonomic manager service."""
+        logger.info('Starting Autonomic Manager')
+        
+        while self.running:
+            self.run_maintenance_cycle()
+            
+            if self.state['system_status'] == 'error':
+                logger.error('System in error state - attempting recovery')
+                time.sleep(60)  # More frequent checks during error
+            else:
+                time.sleep(300)  # Normal 5-minute cycle
+                
+        logger.info('Autonomic Manager shutting down')
+
+def main():
+    parser = argparse.ArgumentParser(description='Autonomic Manager Service')
+    parser.add_argument('--check', action='store_true', help='Run single maintenance check')
+    
+    args = parser.parse_args()
+    manager = AutonomicManager()
+    
+    try:
+        if args.check:
+            manager.run_maintenance_cycle()
+        else:
+            manager.run()
+    except Exception as e:
+        logger.error(f'Error: {str(e)}')
+        sys.exit(1)
+
+if __name__ == '__main__':
+    main() 

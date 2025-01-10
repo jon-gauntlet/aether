@@ -1,0 +1,114 @@
+#!/bin/bash
+
+# One-shot setup script for Dual Claude system
+# Just run this once and everything will be ready
+
+set -euo pipefail
+
+CURSOR_CONFIG="/home/jon/.config/cursor"
+CURSOR_SHARE="/home/jon/.local/share/cursor"
+SYSTEMD_USER_DIR="/home/jon/.config/systemd/user"
+
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
+}
+
+setup_directories() {
+    log "Creating required directories..."
+    mkdir -p \
+        "$CURSOR_SHARE/"{contexts/{project,system,.sacred},logs,metrics/claude,state} \
+        "$CURSOR_CONFIG/contexts/patterns"
+}
+
+stop_existing() {
+    log "Stopping existing services..."
+    systemctl --user stop cursor-startup.service 2>/dev/null || true
+    systemctl --user stop claude-autonomic-manager.service 2>/dev/null || true
+    systemctl --user stop cursor-claude-project.slice 2>/dev/null || true
+    systemctl --user stop cursor-claude-system.slice 2>/dev/null || true
+    
+    log "Cleaning up existing processes..."
+    pkill -f "cursor.*projects/aether" || true
+    pkill -f "cursor.*/" || true
+}
+
+reload_systemd() {
+    log "Reloading systemd..."
+    systemctl --user daemon-reload
+}
+
+enable_services() {
+    log "Enabling services..."
+    systemctl --user enable cursor-startup.service
+    systemctl --user enable claude-autonomic-manager.service
+}
+
+start_services() {
+    log "Starting services..."
+    systemctl --user start claude-autonomic-manager.service
+    systemctl --user start cursor-startup.service
+}
+
+verify_setup() {
+    log "Verifying setup..."
+    local services=(
+        "cursor-startup.service"
+        "claude-autonomic-manager.service"
+    )
+    
+    local slices=(
+        "cursor-claude-project.slice"
+        "cursor-claude-system.slice"
+    )
+    
+    # Check services
+    for svc in "${services[@]}"; do
+        if ! systemctl --user is-active "$svc" >/dev/null 2>&1; then
+            log "ERROR: Service $svc failed to start"
+            return 1
+        fi
+    done
+    
+    # Check slices
+    for slice in "${slices[@]}"; do
+        if ! systemctl --user is-active "$slice" >/dev/null 2>&1; then
+            log "ERROR: Slice $slice not active"
+            return 1
+        fi
+    done
+    
+    # Check processes
+    if ! pgrep -f "cursor.*projects/aether" >/dev/null; then
+        log "ERROR: Project Claude not running"
+        return 1
+    fi
+    
+    if ! pgrep -f "cursor.*/" >/dev/null; then
+        log "ERROR: System Claude not running"
+        return 1
+    fi
+    
+    return 0
+}
+
+main() {
+    log "Starting Dual Claude setup..."
+    
+    setup_directories
+    stop_existing
+    reload_systemd
+    enable_services
+    start_services
+    
+    if verify_setup; then
+        log "Setup completed successfully!"
+        log "Both Claudes are running and managed autonomically"
+        log "You can now close this terminal and start working"
+    else
+        log "Setup encountered issues, please check the logs"
+        return 1
+    fi
+}
+
+# Run setup
+main 

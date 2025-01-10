@@ -1,0 +1,59 @@
+[Unit]
+Description=Cursor Autonomic Manager Service
+Documentation=https://sre.google/sre-book/table-of-contents/
+After=cursor-context.slice
+PartOf=cursor-context.slice
+
+[Service]
+Type=simple
+ExecStart=/home/jon/scripts/cursor/autonomic-manager
+Slice=cursor-context.slice
+Environment=CURSOR_CONFIG_DIR=/home/jon/.config/cursor
+Environment=CURSOR_STATE_DIR=/home/jon/.local/state/cursor
+Environment=CURSOR_DATA_DIR=/home/jon/.local/share/cursor
+Environment=AUTONOMIC_LOG_LEVEL=info
+
+# Resource Management
+CPUQuota=30%
+MemoryHigh=2G
+MemoryMax=3G
+TasksMax=32
+IOWeight=20
+Nice=10
+
+# Restart Management
+Restart=on-failure
+RestartSec=30
+StartLimitBurst=3
+StartLimitInterval=300
+
+# Watchdog Integration
+WatchdogSec=0
+NotifyAccess=all
+
+# Resource Management
+LogsDirectory=cursor
+LogsDirectoryMode=0750
+StateDirectory=cursor
+StateDirectoryMode=0750
+RuntimeDirectory=cursor-autonomic
+RuntimeDirectoryMode=0750
+
+# System Integration
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=yes
+NoNewPrivileges=yes
+RestrictRealtime=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictNamespaces=mnt
+MemoryDenyWriteExecute=no
+RestrictSUIDSGID=yes
+
+# Directory Access
+ReadWritePaths=/home/jon/scripts/cursor /home/jon/.local/state/cursor /home/jon/.local/share/cursor /home/jon/.config/cursor
+ReadOnlyPaths=/home/jon/.config/systemd
+
+[Install]
+WantedBy=default.target 

@@ -1,0 +1,48 @@
+{
+  "patterns": {
+    "cursor_protection": {
+      "type": "sacred",
+      "priority": "highest",
+      "rules": [
+        {
+          "id": "cursor_availability",
+          "description": "Protect Cursor availability at all costs",
+          "triggers": ["process_management", "service_operations", "system_changes"],
+          "actions": [
+            "verify_instances",
+            "specific_targeting",
+            "rolling_updates",
+            "preserve_debug"
+          ]
+        },
+        {
+          "id": "cursor_enhancement",
+          "description": "Services enhance but never replace core functionality",
+          "triggers": ["service_creation", "system_integration", "automation"],
+          "actions": [
+            "maintain_independence",
+            "preserve_core_paths",
+            "enable_recovery",
+            "protect_configuration"
+          ]
+        },
+        {
+          "id": "cursor_recovery",
+          "description": "Maintain ability to recover and debug",
+          "triggers": ["system_failure", "service_error", "process_crash"],
+          "actions": [
+            "preserve_cli_access",
+            "maintain_logs",
+            "protect_debug_paths",
+            "enable_inspection"
+          ]
+        }
+      ],
+      "validation": {
+        "required": true,
+        "frequency": "always",
+        "scope": "system-wide"
+      }
+    }
+  }
+} 

@@ -1,0 +1,62 @@
+[Unit]
+Description=Cursor Autonomic Manager Service
+Documentation=https://sre.google/sre-book/table-of-contents/
+After=cursor-context.slice
+PartOf=cursor-context.slice
+CollectMode=inactive-or-failed
+
+[Service]
+Type=notify
+ExecStart=%h/scripts/cursor/autonomic-manager
+Slice=cursor-context.slice
+Environment=CURSOR_CONFIG_DIR=%h/.config/cursor
+Environment=CURSOR_STATE_DIR=%h/.local/state/cursor
+Environment=CURSOR_DATA_DIR=%h/.local/share/cursor
+Environment=ESSENCE_RESOURCES_DIR=%h/.config/cursor/contexts
+Environment=AUTONOMIC_LOG_LEVEL=info
+
+# Restart Management
+Restart=always
+RestartSec=1
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+# Watchdog Integration
+WatchdogSec=30
+NotifyAccess=all
+
+# Performance Optimization
+CPUQuota=20%
+MemoryHigh=2G
+MemoryMax=3G
+TasksMax=32
+IOWeight=40
+Nice=10
+
+# Resource Management
+LogsDirectory=cursor
+LogsDirectoryMode=0750
+StateDirectory=cursor
+StateDirectoryMode=0750
+RuntimeDirectory=cursor-autonomic
+RuntimeDirectoryMode=0750
+
+# System Integration
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=yes
+NoNewPrivileges=yes
+RestrictRealtime=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictNamespaces=yes
+MemoryDenyWriteExecute=yes
+RestrictSUIDSGID=yes
+
+# Failure Recovery
+TimeoutStartSec=30
+TimeoutStopSec=30
+RuntimeMaxSec=86400
+
+[Install]
+WantedBy=default.target 

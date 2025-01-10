@@ -1,0 +1,38 @@
+[Unit]
+Description=Cursor Context Crystallization Service
+After=cursor-semantic-indexer.service
+PartOf=cursor-context.slice
+Documentation=https://sre.google/sre-book/table-of-contents/
+
+[Service]
+Type=simple
+ExecStart=%h/scripts/cursor/context-crystallizer
+Slice=cursor-context.slice
+Environment=CURSOR_CONFIG_DIR=%h/.config/cursor
+Environment=CURSOR_STATE_DIR=%h/.local/state/cursor
+Environment=CURSOR_DATA_DIR=%h/.local/share/cursor
+Environment=ESSENCE_RESOURCES_DIR=%h/.config/cursor/contexts
+Restart=on-failure
+RestartSec=30
+StartLimitIntervalSec=300
+StartLimitBurst=3
+WatchdogSec=60
+NotifyAccess=all
+
+# Performance Optimization
+CPUQuota=30%
+MemoryHigh=4G
+MemoryMax=6G
+TasksMax=32
+IOWeight=50
+Nice=5
+
+# Context Preservation
+TimeoutStartSec=60
+TimeoutStopSec=60
+RuntimeMaxSec=86400
+RuntimeDirectory=cursor-context
+RuntimeDirectoryMode=0750
+
+[Install]
+WantedBy=default.target 

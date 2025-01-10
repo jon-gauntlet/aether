@@ -1,0 +1,96 @@
+#!/bin/bash
+
+# Guard against sourcing
+if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
+    return 0
+fi
+
+set -euo pipefail
+
+# Check required dependencies
+check_dependency() {
+    if ! command -v "$1" >/dev/null 2>&1; then
+        echo "Error: Required dependency '$1' is not installed" >&2
+        exit 1
+    fi
+}
+
+check_dependency kdialog
+
+# Validate input
+if [ $# -gt 0 ] && ! [[ "$1" =~ ^[0-9]+$ ]]; then
+    echo "Error: Duration must be a positive number" >&2
+    echo "Usage: $(basename "$0") [minutes]" >&2
+    exit 1
+fi
+
+# Focus Timer
+duration=${1:-25}  # Default to 25 minutes if no argument provided
+TIMER_STATE="$HOME/.cache/cursor/timer_state"
+CACHE_DIR="$(dirname "$TIMER_STATE")"
+
+# Ensure cache directory exists
+if ! mkdir -p "$CACHE_DIR" 2>/dev/null; then
+    echo "Error: Failed to create cache directory: $CACHE_DIR" >&2
+    exit 1
+fi
+
+# Convert minutes to seconds
+seconds=$((duration * 60))
+
+# Cleanup function for interrupts
+cleanup() {
+    rm -f "$TIMER_STATE"
+    kdialog --passivepopup "Timer stopped at $(date +%H:%M)" 3 --title "Timer Interrupted"
+    if command -v qdbus >/dev/null 2>&1; then
+        qdbus org.kde.plasmashell /org/kde/osd showText "timer-stopped" "Timer Interrupted"
+    fi
+    exit 0
+}
+
+trap cleanup INT TERM
+
+# Start timer
+echo "$(date +%s):$seconds" > "$TIMER_STATE"
+kdialog --passivepopup "${duration} minutes" 3 --title "Focus Timer Started"
+if command -v qdbus >/dev/null 2>&1; then
+    qdbus org.kde.plasmashell /org/kde/osd showText "timer-started" "Focus Timer: ${duration}m"
+fi
+
+# Main timer loop
+while [ $seconds -gt 0 ]; do
+    # Update state file
+    echo "$(date +%s):$seconds" > "$TIMER_STATE"
+    
+    # Show progress every 5 minutes
+    if [ $((seconds % 300)) -eq 0 ]; then
+        minutes=$((seconds / 60))
+        kdialog --passivepopup "${minutes} minutes remaining" 3 --title "Focus Timer"
+        if command -v qdbus >/dev/null 2>&1; then
+            qdbus org.kde.plasmashell /org/kde/osd showText "timer-progress" "${minutes}m remaining"
+        fi
+    fi
+    
+    sleep 60 || break  # Break loop if sleep is interrupted
+    seconds=$((seconds - 60))
+done
+
+# Timer complete
+rm -f "$TIMER_STATE"
+kdialog --passivepopup "Time for a break!" 3 --title "Focus Timer Complete"
+if command -v qdbus >/dev/null 2>&1; then
+    qdbus org.kde.plasmashell /org/kde/osd showText "timer-complete" "Focus Timer Complete"
+fi
+
+# Play completion sound if available
+if command -v paplay >/dev/null 2>&1; then
+    for sound in \
+        "/usr/share/sounds/freedesktop/stereo/complete.oga" \
+        "/usr/share/sounds/freedesktop/stereo/bell.oga" \
+        "/usr/share/sounds/freedesktop/stereo/alarm.oga"
+    do
+        if [ -f "$sound" ]; then
+            paplay "$sound" 2>/dev/null && break
+        fi
+    done
+fi 

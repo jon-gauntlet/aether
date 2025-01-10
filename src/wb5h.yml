@@ -1,0 +1,46 @@
+guardrails:
+  - id: 1
+    name: SQL Injection 
+    description: >
+      Injection flaws occur when untrusted data is sent to an 
+      interpreter as part of a command or query.
+    prevention:
+      - Use parameterized queries or prepared statements
+      - Validate and sanitize all user input 
+      - Use ORM tools and query builders
+      - Limit database permissions and access
+
+  - id: 2
+    name: Broken Authentication
+    description: >
+      Flaws in authentication and session management allow attackers
+      to compromise credentials or exploit implementation gaps.
+    prevention: 
+      - Implement multi-factor authentication
+      - Avoid default or weak credentials
+      - Properly invalidate session tokens on logout
+      - Protect against brute force and credential stuffing
+  
+  - id: 3
+    name: Sensitive Data Exposure
+    description: >
+      Applications that don't adequately protect sensitive data 
+      enable data theft and fraud.
+    prevention:
+      - Encrypt sensitive data at rest and in transit
+      - Minimize storage of sensitive data
+      - Use strong encryption algorithms and keys 
+      - Disable caching for sensitive responses
+
+  # ... Entries 4-9 skipped ...
+  
+  - id: 10 
+    name: Insufficient Logging & Monitoring
+    description: >
+      Lack of proper logging, monitoring and incident response 
+      allows attackers to maintain access and cover tracks.
+    prevention:
+      - Log all authentication and access control events
+      - Ensure logs are detailed enough for investigations
+      - Monitor proactively for suspicious activities 
+      - Have an incident response and recovery plan

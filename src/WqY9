@@ -1,0 +1,24 @@
+# Existing zshrc content...
+
+# Add cross-platform clipboard support (pbcopy/pbpaste)
+if command -v xclip >/dev/null 2>&1; then
+    alias pbcopy='xclip -selection c'
+    alias pbpaste='xclip -selection c -o'
+elif command -v xsel >/dev/null 2>&1; then
+    alias pbcopy='xsel --clipboard --input'
+    alias pbpaste='xsel --clipboard --output'
+fi
+
+# AI-First Development context loader for Cursor
+cursor_load_context() {
+  if [ -f "./ai_first_development.md" ]; then
+    export CURSOR_CONTEXT_FILE="./ai_first_development.md"
+    echo "Loaded AI-First Development context"
+  fi
+}
+
+# Add to chpwd hook to run when changing directories
+autoload -U add-zsh-hook
+add-zsh-hook chpwd cursor_load_context
+
+# Remaining zshrc content... 

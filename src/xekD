@@ -1,0 +1,16 @@
+# Existing zshrc content...
+
+# Add cross-platform clipboard support (pbcopy/pbpaste)
+if [[ $(uname) == "Linux" ]]; then
+    # Check if xclip is installed, otherwise use xsel
+    if command -v xclip >/dev/null 2>&1; then
+        alias pbcopy='xclip -selection clipboard'
+        alias pbpaste='xclip -selection clipboard -o'
+    elif command -v xsel >/dev/null 2>&1; then
+        alias pbcopy='xsel --clipboard --input'
+        alias pbpaste='xsel --clipboard --output'
+    fi
+fi
+# If on macOS, pbcopy/pbpaste are already available natively
+
+# Remaining zshrc content... 

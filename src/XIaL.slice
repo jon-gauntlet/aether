@@ -1,0 +1,14 @@
+[Unit]
+Documentation=man:systemd.slice(5)
+Before=slices.target
+
+[Slice]
+# Optimize for focused project work
+CPUWeight=85
+MemoryHigh=6G
+MemoryMax=10G
+# Lower IO priority but still responsive
+IOWeight=75
+
+[Install]
+WantedBy=cursor.slice 

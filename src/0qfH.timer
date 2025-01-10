@@ -1,0 +1,12 @@
+[Unit]
+Description=AI System Cleanup Timer
+Requires=ai-system-cleanup.service
+
+[Timer]
+OnBootSec=15min
+OnUnitInactiveSec=12h
+RandomizedDelaySec=300
+Persistent=true
+
+[Install]
+WantedBy=timers.target 

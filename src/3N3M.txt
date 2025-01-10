@@ -1,0 +1,8 @@
+aiohttp>=3.8.0
+beautifulsoup4>=4.9.3
+lxml>=4.9.0
+aiofiles>=0.8.0
+python-dateutil>=2.8.2
+tenacity>=8.0.1  # For retries
+loguru>=0.6.0    # Better logging
+pydantic>=1.9.0  # Data validation 

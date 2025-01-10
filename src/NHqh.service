@@ -1,0 +1,64 @@
+[Unit]
+Description=AI System Evolution Service
+Documentation=file:/home/jon/ai_system_evolution/README.md
+After=cursor-context.slice
+PartOf=cursor-context.slice
+
+[Service]
+Type=notify
+ExecStart=/home/jon/ai_system_evolution/services/evolve.sh
+Slice=cursor-context.slice
+Environment=EVOLUTION_ROOT=/home/jon/ai_system_evolution
+Environment=CURSOR_CONFIG_DIR=/home/jon/.config/cursor
+Environment=CURSOR_STATE_DIR=/home/jon/.local/state/cursor
+Environment=CURSOR_DATA_DIR=/home/jon/.local/share/cursor
+
+# Resource Management
+CPUQuota=20%
+MemoryHigh=2G
+MemoryMax=3G
+TasksMax=32
+IOWeight=10
+Nice=19
+
+# Restart Management
+Restart=on-failure
+RestartSec=60
+StartLimitBurst=5
+StartLimitInterval=600
+
+# Watchdog Integration
+WatchdogSec=60
+NotifyAccess=all
+
+# Resource Management
+LogsDirectory=cursor
+LogsDirectoryMode=0750
+StateDirectory=cursor
+StateDirectoryMode=0750
+RuntimeDirectory=cursor-evolution
+RuntimeDirectoryMode=0750
+
+# System Integration
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=yes
+NoNewPrivileges=yes
+RestrictRealtime=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictNamespaces=~mnt
+MemoryDenyWriteExecute=no
+RestrictSUIDSGID=yes
+
+# Directory Access
+ReadWritePaths=/home/jon/ai_system_evolution /home/jon/.local/state/cursor /home/jon/.local/share/cursor /home/jon/.config/cursor /home/jon/.local/state/cursor/logs
+ReadOnlyPaths=/home/jon/.config/systemd
+
+# Timeouts
+TimeoutStartSec=300
+TimeoutStopSec=90
+RuntimeMaxSec=86400
+
+[Install]
+WantedBy=default.target 

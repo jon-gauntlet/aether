@@ -1,0 +1,12 @@
+[Unit]
+Description=Cursor Editor and Composer Agent Priority Service
+After=network.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/sudo /home/jon/scripts/cursor-priority.sh
+Restart=on-failure
+
+[Install]
+WantedBy=default.target 

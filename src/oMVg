@@ -1,0 +1,30 @@
+#!/bin/bash
+
+# Flow State Optimization
+FLOW_STATE_FILE="$HOME/.cache/cursor/flow_state"
+ENERGY_LOG="$HOME/.cache/cursor/energy/state.log"
+
+# Ensure directories exist
+mkdir -p "$(dirname "$FLOW_STATE_FILE")" "$(dirname "$ENERGY_LOG")"
+
+# Check current system state
+CPU_USAGE=$(ps aux | grep -i "cursor" | awk '{print $3}' | awk '{s+=$1} END {print s}')
+COMMIT_FREQUENCY=$(git log --since="30 minutes ago" --oneline | wc -l)
+
+# Detect potential flow state
+if [ "$CPU_USAGE" -gt 20 ] || [ "$COMMIT_FREQUENCY" -gt 3 ]; then
+    echo "flow_state_detected" > "$FLOW_STATE_FILE"
+    echo "$(date +%s) flow_state_active" >> "$ENERGY_LOG"
+    
+    # Optimize system for flow
+    sudo cpupower frequency-set -g performance >/dev/null 2>&1
+    notify-send "Flow State Detected" "Optimizing system for deep work"
+    
+    # Preserve state
+    mkdir -p "$HOME/.cache/cursor/recovery/snapshots/$(date +%Y%m%d)"
+    cp "$HOME/.cache/cursor/context/"*.json "$HOME/.cache/cursor/recovery/snapshots/$(date +%Y%m%d)/" 2>/dev/null
+else
+    echo "monitoring" > "$FLOW_STATE_FILE"
+    echo "$(date +%s) flow_monitoring" >> "$ENERGY_LOG"
+    notify-send "Flow State Monitoring" "Watching for optimal conditions"
+fi 

@@ -1,0 +1,53 @@
+{
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/CVS": true,
+        "**/.DS_Store": true,
+        "**/Thumbs.db": true,
+        "/.zsh*": true,
+        "/.bash*": true,
+        "/.profile": true,
+        "/.mkshrc": true,
+        "/.screenrc": true,
+        "/.eos*": true,
+        "/.yarnrc": true,
+        "/.bundle/": true,
+        "/.npm/": true,
+        "/.pyenv/": true,
+        "/.config/": true,
+        "/.local/": true,
+        "/.cache/": true,
+        "/.pki/": true,
+        "/.gnupg/": true,
+        "/.ssh/": true,
+        "/.librewolf/": true,
+        "/.zoom/": true,
+        "/.cursor/": true,
+        "/.ollama/": true,
+        "/.wget-hsts": true,
+        "/.zcompdump*": true,
+        "/.oh-my-zsh/": true
+    },
+    "files.watcherExclude": {
+        "**/.git/objects/**": true,
+        "**/.git/subtree-cache/**": true,
+        "**/node_modules/**": true,
+        "**/.hg/store/**": true
+    },
+    "search.exclude": {
+        "**/node_modules": true,
+        "**/bower_components": true,
+        "**/*.code-search": true
+    },
+    "files.associations": {
+        ".cursorignore": "gitignore"
+    },
+    "files.globalIgnoreFile": "~/.cursorignore",
+    "workbench.editor.enablePreview": false,
+    "workbench.editor.enablePreviewFromQuickOpen": false,
+    "explorer.autoReveal": true,
+    "explorer.confirmDelete": true,
+    "explorer.confirmDragAndDrop": false
+} 

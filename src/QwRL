@@ -1,0 +1,48 @@
+#!/bin/bash
+
+# Optimization script for Cursor processes
+# This script is designed to be called with sudo without password
+
+ACTION="$1"
+PID="$2"
+PARAM="$3"
+
+case "$ACTION" in
+    "optimize")
+        # Set process priorities
+        renice -n -10 "$PID" 2>/dev/null
+        chrt -f -p 50 "$PID" 2>/dev/null
+        ionice -c 1 -n 0 -p "$PID" 2>/dev/null
+        taskset -pc 0-7 "$PID" 2>/dev/null
+        ;;
+        
+    "sysctl")
+        # Set system parameters
+        sysctl -w "$PARAM" > /dev/null 2>&1
+        ;;
+        
+    "cpupower")
+        # Set CPU governor
+        cpupower frequency-set -g performance > /dev/null 2>&1
+        ;;
+        
+    "verify")
+        # Verify process optimization
+        NICE=$(ps -o nice= -p "$PID")
+        SCHED=$(ps -o cls= -p "$PID")
+        AFFINITY=$(taskset -pc "$PID" 2>/dev/null | awk '{print $NF}')
+        IO=$(ionice -p "$PID" 2>/dev/null)
+        
+        [[ "$NICE" -le "-10" ]] && \
+        [[ "$SCHED" == "FF" ]] && \
+        [[ "$IO" == *"realtime"* ]] && \
+        [[ "$AFFINITY" == *"0-7"* ]] && exit 0
+        
+        exit 1
+        ;;
+        
+    *)
+        echo "Invalid action: $ACTION"
+        exit 1
+        ;;
+esac 

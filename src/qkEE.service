@@ -1,0 +1,19 @@
+[Unit]
+Description=Aether Development Environment
+After=network.target
+ConditionPathExists=/etc/gauntlet/aether.env
+ConditionPathExists=/usr/local/bin/aether-monitor
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=jon
+Group=jon
+EnvironmentFile=/etc/gauntlet/aether.env
+WorkingDirectory=/home/jon/projects/aether
+ExecStartPre=/bin/mkdir -p /home/jon/projects/aether/.gauntlet/logs
+ExecStart=/usr/local/bin/aether-monitor
+
+[Install]
+WantedBy=multi-user.target

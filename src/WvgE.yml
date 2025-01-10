@@ -1,0 +1,62 @@
+name: Natural Flow
+
+# Like a regular workday
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # Morning setup
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Begin workday
+        uses: actions/checkout@v3
+      
+      - name: Set up desk
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Organize tools
+        run: npm install
+
+  # Focused work period
+  build:
+    needs: prepare
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create
+        run: npm run build
+      
+      - name: Review work
+        run: npm test
+      
+      - name: Share with team
+        uses: actions/upload-artifact@v3
+        with:
+          name: workspace
+          path: dist
+
+  # Afternoon delivery
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Prepare delivery
+        uses: actions/download-artifact@v3
+        with:
+          name: workspace
+      
+      - name: Share with everyone
+        run: |
+          echo "🚀 Making the new version available"
+          # Add deployment commands here
+      
+      - name: Take a break
+        run: |
+          echo "✨ Well done! New version is ready"
+          echo "☕️ Time for a refreshing break" 

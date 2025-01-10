@@ -1,0 +1,186 @@
+# Minimal Gauntlet-focused configuration
+export ZSH="$HOME/.oh-my-zsh"
+ZSH_THEME="robbyrussell"
+
+# Enable completion system
+autoload -Uz compinit
+compinit
+
+# Basic completion settings
+zstyle ':completion:*' menu select
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}' # Case insensitive completion
+zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"   # Colored completion
+zstyle ':completion:*' verbose yes
+zstyle ':completion:*' group-name ''
+zstyle ':completion:*:descriptions' format '%F{green}-- %d --%f'
+
+plugins=(git)
+source $ZSH/oh-my-zsh.sh
+
+#net
+alias paw='ping archwiki.org'
+alias nvc='nordvpn connect'
+alias nvd='nordvpn disconnect'
+alias nvr='nvd && nvc'
+
+# Unalias g to prevent git conflict
+unalias g 2>/dev/null
+
+alias code='cursor'
+alias vi='nvim'
+alias vim='nvim'
+
+# Gauntlet Environment
+export GAUNTLET_START="2024-01-06"
+export WORK_HOURS=100
+export EDITOR="vim"
+
+# Focus Command Suite - Direct Commands
+alias deep='~/.local/bin/cursor/deep'      # Toggle deep work mode
+alias note='~/.local/bin/cursor/note'      # Quick note/insight capture
+alias brain='~/.local/bin/cursor/brain'    # Manage BrainLifts
+alias stats='~/.local/bin/cursor/stats'    # Show progress
+alias flow='~/.local/bin/cursor/flow'      # Optimize for hyperfocus
+
+# Focus Functions - Protected Execution
+timer() {
+    if [[ "$0" == "-zsh" ]]; then
+        command ~/.local/bin/cursor/timer "$@"
+    fi
+}
+
+focus() {
+    if [[ "$0" == "-zsh" ]]; then
+        deep && flow
+    fi
+}
+
+break() {
+    if [[ "$0" == "-zsh" ]]; then
+        command ~/.local/bin/cursor/timer 5
+    fi
+}
+
+pomodoro() {
+    if [[ "$0" == "-zsh" ]]; then
+        command ~/.local/bin/cursor/timer 25
+    fi
+}
+
+check() {
+    if [[ "$0" == "-zsh" ]]; then
+        stats && health
+    fi
+}
+
+# Git Essentials
+alias gs='git status'
+alias gc='git commit'
+alias gp='git push'
+alias gl='git pull'
+alias gd='git diff'
+
+# System Health
+alias update='sudo pacman -Syu'
+alias clean='sudo paccache -rk1 && poetry cache clear --all pypi'
+alias optimize='sudo cpupower frequency-set -g performance'
+alias health='~/workspace/gauntlet/scripts/health_check.sh'
+alias maintain='~/workspace/gauntlet/scripts/daily_maintenance.sh'
+alias mstatus='~/workspace/gauntlet/scripts/maintenance_status.sh'
+
+# Development Tools
+alias format='poetry run black . && poetry run isort .'
+alias lint='poetry run pylint'
+alias types='poetry run mypy'
+alias test='poetry run pytest'
+alias benchmark='poetry run pytest --benchmark-only'
+alias profile='poetry run python -m cProfile -o profile.stats'
+alias analyze='poetry run python -m pstats profile.stats'
+alias memory='poetry run memory_profiler'
+
+# Node.js Development
+alias ndev='npm run dev'
+alias nbuild='npm run build'
+alias ntest='npm run test'
+alias nlint='npm run lint'
+alias nformat='npm run format'
+
+# System Monitoring
+alias gpu='nvtop'
+alias cpu='btop'
+alias temp='sensors | grep "Core"'
+alias gpu-stats='nvidia-smi -l 1'
+alias cpu-stats='btop'
+
+# Quick Navigation
+alias gauntlet='cd ~/workspace/gauntlet && poetry shell'
+alias models='cd ~/workspace/gauntlet/models'
+alias data='cd ~/workspace/gauntlet/data'
+alias experiments='cd ~/workspace/gauntlet/experiments'
+alias notebooks='cd ~/workspace/gauntlet/notebooks'
+alias fast='cd /mnt/ramdisk'
+
+# Development Environment
+alias dev='tmux new-session -A -s dev'
+alias jupyter='poetry run jupyter lab --no-browser'
+alias tensorboard='poetry run tensorboard --logdir logs'
+alias notebook='poetry run jupyter lab'
+
+# Cross-platform clipboard support
+if command -v xclip >/dev/null 2>&1; then
+    alias pbcopy='xclip -selection clipboard'
+    alias pbpaste='xclip -selection clipboard -o'
+elif command -v xsel >/dev/null 2>&1; then
+    alias pbcopy='xsel --clipboard --input'
+    alias pbpaste='xsel --clipboard --output'
+fi
+
+# Cursor window hooks - with proper checks
+if [[ -n "${CURSOR_WINDOW_ID:-}" ]]; then
+  if [[ -f ~/.cursor/hooks/cursor_window_hooks.sh ]]; then
+    source ~/.cursor/hooks/cursor_window_hooks.sh
+    load_window_context "$CURSOR_WINDOW_ID"
+    trap 'save_window_context "$CURSOR_WINDOW_ID"' EXIT
+  fi
+fi
+
+# Ensure PATH is properly set
+typeset -U path  # Remove duplicates in PATH
+path=(
+  /usr/local/bin
+  /usr/bin
+  $HOME/.local/bin
+  $path
+)
+
+# Source g command if it exists
+[[ -f /usr/local/bin/g ]] && source /usr/local/bin/g
+
+# Rehash completions periodically
+zstyle ':completion:*' rehash true
+export PATH="$HOME/.local/bin:$PATH"
+
+# Cursor Context-Aware Function - Optimized for Gauntlet
+cursor() {
+    local dir="${1:-.}"
+    local abs_path=$(realpath "$dir")
+    
+    # Set context based on path
+    if [[ "$abs_path" == "/" ]] || [[ "$abs_path" =~ ^/home/jon/ai_system_evolution ]]; then
+        export CURSOR_CONTEXT_TYPE="system"
+        export CURSOR_SLICE="cursor-claude-system.slice"
+        export CURSOR_FOCUS="system_evolution"
+    else
+        export CURSOR_CONTEXT_TYPE="project"
+        export CURSOR_SLICE="cursor-claude-project.slice"
+        export CURSOR_FOCUS="project_optimization"
+    fi
+    
+    export CURSOR_WORKSPACE="$abs_path"
+    
+    # Ensure slice exists and is optimized
+    systemctl --user start "$CURSOR_SLICE" >/dev/null 2>&1 || true
+    
+    # Launch cursor with focus hints
+    CURSOR_OPTIMIZATION="gauntlet" command cursor "$@"
+}

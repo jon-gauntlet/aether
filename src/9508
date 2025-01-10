@@ -1,0 +1,46 @@
+#!/bin/bash
+
+# BrainLifts Management
+BRAIN_DIR="$HOME/.hidden_context/personal/brainlifts"
+mkdir -p "$BRAIN_DIR"
+
+# Function to list BrainLifts
+list_brainlifts() {
+    echo "=== Active BrainLifts ==="
+    ls -t "$BRAIN_DIR"/*.md 2>/dev/null | while read -r file; do
+        echo "- $(basename "$file" .md): $(head -n 1 "$file" | sed 's/# //')"
+    done
+}
+
+# Function to create new BrainLift
+new_brainlift() {
+    timestamp=$(date +"%Y%m%d_%H%M%S")
+    filename="$BRAIN_DIR/brainlift_${timestamp}.md"
+    
+    echo "# BrainLift ($timestamp)" > "$filename"
+    echo "" >> "$filename"
+    echo "## Focus" >> "$filename"
+    echo "- " >> "$filename"
+    echo "" >> "$filename"
+    echo "## Progress" >> "$filename"
+    echo "- [ ] " >> "$filename"
+    
+    $EDITOR "$filename"
+    
+    # Update context
+    touch "$BRAIN_DIR"/*
+    echo "$(date +%s) brainlift_created $filename" >> "$HOME/.cache/cursor/context/brainlifts.log"
+}
+
+# Parse arguments
+case "$1" in
+    "new"|"n")
+        new_brainlift
+        ;;
+    "list"|"l"|"")
+        list_brainlifts
+        ;;
+    *)
+        echo "Usage: brain [new|list]"
+        ;;
+esac 

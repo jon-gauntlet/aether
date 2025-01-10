@@ -1,0 +1,11 @@
+{
+    "window.commandCenter": 1,
+    "git.openRepositoryInParentFolders": "always",
+    "editor.wordWrap": "on",
+    "workbench.colorTheme": "Tomorrow Night Blue",
+    "workbench.statusBar.visible": false,
+    "workbench.editorAssociations": {
+        "*.log": "default"
+    },
+    "explorer.confirmDelete": false
+}

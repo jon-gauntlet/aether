@@ -1,0 +1,108 @@
+---
+# Parser configurations for security findings ETL
+
+# Common settings
+defaults: &defaults
+  skip_on_error: false
+  preserve_fields:
+    - original_id
+    - original_severity
+    - original_category
+    - tool_specific_data
+
+# SAST parser configurations
+bearer:
+  <<: *defaults
+  source_dir: findings/sast
+  file_pattern: "bearer.json"
+  required_fields:
+    - id
+    - title
+    - description
+    - severity
+  preserve_fields:
+    - rule_id
+    - categories
+    - tags
+    - documentation_url
+
+brakeman:
+  <<: *defaults
+  source_dir: findings/sast
+  file_pattern: "brakeman.json"
+  required_fields:
+    - warning_type
+    - message
+    - file
+    - line
+    - code
+  preserve_fields:
+    - warning_code
+    - fingerprint
+    - confidence
+    - user_input
+    - render_path
+
+# DAST parser configurations
+nikto:
+  <<: *defaults
+  source_dir: findings/dast
+  file_pattern: "nikto.json"
+  required_fields:
+    - id
+    - message
+    - uri
+  preserve_fields:
+    - osvdb
+    - method
+    - port
+    - ssl
+
+wapiti:
+  <<: *defaults
+  source_dir: findings/dast
+  file_pattern: "wapiti.json"
+  required_fields:
+    - type
+    - description
+    - solution
+    - references
+  preserve_fields:
+    - module
+    - parameter
+    - info
+    - http_request
+
+zap:
+  <<: *defaults
+  source_dir: findings/dast/zaproxy
+  file_pattern: "*.json"
+  required_fields:
+    - alert
+    - risk
+    - confidence
+    - url
+  preserve_fields:
+    - pluginid
+    - other
+    - attack
+    - evidence
+    - instances
+
+# LLM parser configurations
+claude:
+  <<: *defaults
+  source_dir: findings/claude-3.5-sonnet
+  file_pattern: "*.json"
+  required_fields:
+    - id
+    - title
+    - description
+    - security_category
+    - severity
+    - finding_type
+  preserve_fields:
+    - evidence
+    - remediation
+    - related_findings
+    - metadata 
