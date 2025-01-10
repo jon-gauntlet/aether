@@ -1,6 +1,6 @@
 {
   "semi": true,
-  "trailingComma": "all",
+  "trailingComma": "none",
   "singleQuote": true,
   "printWidth": 100,
   "tabWidth": 2,
@@ -8,7 +8,9 @@
   "bracketSpacing": true,
   "arrowParens": "avoid",
   "endOfLine": "lf",
+  "bracketSameLine": false,
   "quoteProps": "as-needed",
+  "jsxSingleQuote": false,
   "proseWrap": "preserve",
   "htmlWhitespaceSensitivity": "css",
   "embeddedLanguageFormatting": "auto"

@@ -1,136 +1,63 @@
-# Aether - Flow State Optimization System
+# Aether Core
 
-A React TypeScript application designed to optimize development workflow through energy and flow state management.
-
-## Core Features
-
-### Energy Management
-- Track and optimize mental, physical, emotional, and creative energy
-- Flow state detection and enhancement
-- Automatic energy decay and recovery mechanisms
-- Visual energy state indicators
-
-### Pattern Recognition
-- Development pattern identification
-- Pattern-based optimization suggestions
-- Learning accumulation tracking
-- Interactive pattern activation
-
-### Autonomic Development
-- Task-specific energy management
-- Flow state optimization
-- Pattern-guided development
-- Performance metrics tracking
-
-## Project Goals
-1. Support 80-100 hours/week of focused development
-2. Optimize for ADHD hyperfocus states
-3. Maintain code quality through exhaustion
-4. Build with AI effectively and ethically
-5. Win the Gauntlet through sustained excellence
-
-## Architecture
-
-### Core Systems
-1. **Energy System**
-   - Energy type management (mental, physical, emotional)
-   - Flow state tracking and transitions
-   - Recovery mechanisms and optimization
-   - Performance metrics and monitoring
-
-2. **Pattern System**
-   - Development pattern recognition
-   - Pattern visualization and activation
-   - Confidence-based pattern matching
-   - Interactive pattern management
-
-3. **Autonomic System**
-   - State management integration
-   - Performance monitoring
-   - Adaptive development flow
-   - Energy-aware execution
-
-4. **Integration Layer**
-   - Component communication
-   - State synchronization
-   - Event handling
-   - System coordination
+Core functionality for the Aether project, focused on autonomous development and natural flow systems.
 
 ## Project Structure
-```
-src/
-├── core/
-│   ├── energy/          # Energy management system
-│   │   ├── useEnergy.ts
-│   │   └── __tests__/
-│   ├── autonomic/       # Autonomic system
-│   │   ├── useAutonomic.ts
-│   │   └── __tests__/
-│   ├── types/           # TypeScript definitions
-│   └── integration/     # System integration
-├── components/          # React components
-│   ├── AutonomicDevelopment.tsx
-│   ├── PatternVisualization.tsx
-│   └── __tests__/
-└── styles/             # Global styles and themes
-```
 
-## Getting Started
+The codebase is organized into the following key directories:
 
-### Prerequisites
-- Node.js (v16+)
-- npm (v7+)
-- TypeScript (v4.9+)
+### `/src/core`
 
-### Installation
-```bash
-# Clone the repository
-git clone [repository-url]
+- `/energy` - Energy system implementations and utilities
+- `/evolution` - Pattern and repository evolution functionality
+- `/flow` - Flow state and system management
+- `/integration` - System integration components
+- `/js` - JavaScript utilities and helpers
+- `/natural` - Natural system implementations
+- `/pattern` - Pattern recognition and management
+- `/patterns` - Pattern implementations and utilities
+- `/protection` - System protection and guardians
+- `/services` - Core services and implementations
+- `/space` - Mind space and spatial system components
+- `/system` - Core system implementations
+- `/test` - Test setup and utilities
+- `/types` - Type definitions and interfaces
+  - `/autonomic` - Autonomic system types
+  - `/context` - Context management types
+  - `/energy` - Energy system types
+  - `/flow` - Flow system types
+  - `/patterns` - Pattern system types
+  - `/protection` - Protection system types
+  - `/space` - Space system types
+  - `/utils` - Utility types
+  - `/validation` - Validation system types
 
-# Install dependencies
-npm install
+## Key Components
 
-# Start development server
-npm start
-```
+- **Energy System**: Manages system energy states and flow
+- **Flow System**: Handles state transitions and natural flow
+- **Pattern System**: Pattern recognition and management
+- **Space System**: Mind space and spatial management
+- **Protection System**: System protection and validation
+- **Integration System**: Component integration and interaction
 
-### Development
-```bash
-# Start development server
-npm start
+## Development Guidelines
 
-# Run tests
-npm test
-
-# Build for production
-npm run build
-```
-
-## Type Safety
-The project uses strict TypeScript configuration. All files should:
-- Have explicit type annotations
-- Avoid using `any`
-- Maintain proper interface definitions
-- Follow the type-safe patterns in core modules
-
-## Recovery Status
-The project is currently being recovered from a data loss incident. See `RECOVERY.md` for:
-- Current recovery status
-- List of recovered files
-- Known issues
-- Next steps
-- Protection measures
+1. Follow TypeScript best practices
+2. Maintain clean directory structure
+3. Use descriptive file names
+4. Keep related functionality together
+5. Document type definitions
+6. Write tests for core functionality
 
 ## Contributing
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Open a pull request
+
+1. Follow the established directory structure
+2. Use appropriate naming conventions
+3. Add necessary type definitions
+4. Include tests for new functionality
+5. Document changes and additions
 
 ## License
-This project is private and confidential.
 
-## Acknowledgments
-- React Team
-- TypeScript Team
-- Styled Components Team 
+[License information to be added] 
