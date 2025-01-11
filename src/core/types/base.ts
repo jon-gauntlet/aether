@@ -1,21 +1,51 @@
-import { Energy } from '../energy/types';
+// Base types for the system
 
-export enum FlowState {
-  FLOW = 'FLOW',
-  FOCUS = 'FOCUS',
-  RECOVERING = 'RECOVERING',
-  TRANSITIONING = 'TRANSITIONING'
+// Space
+export interface Space {
+  id?: string;
+  type?: string;
 }
 
-export interface IWave {
+// Connection
+export interface Connection {
+  id: string;
+  from: string;
+  to: string;
+  strength: number;
+}
+
+// Energy
+export interface EnergyState {
+  mental: number;
+  physical: number;
+  emotional: number;
+}
+
+// Protection
+export interface Protection {
+  level: number;
+  type: string;
+  shields: number;
+}
+
+// Flow
+export interface NaturalFlow {
+  intensity: number;
+  stability: number;
+  coherence: number;
+  energy: number;
+}
+
+// Resonance
+export interface ResonanceWave {
   frequency: number;
   amplitude: number;
   phase: number;
 }
 
-export interface IResonance {
-  primary: IWave;
-  harmonics: IWave[];
+export interface Resonance {
+  primary: ResonanceWave;
+  harmonics: ResonanceWave[];
   frequency: number;
   amplitude: number;
   phase: number;
@@ -23,6 +53,7 @@ export interface IResonance {
   harmony: number;
 }
 
+// Field
 export interface IField {
   id: string;
   center: {
@@ -34,41 +65,8 @@ export interface IField {
   strength: number;
   coherence: number;
   stability: number;
-  resonance: IResonance;
-  protection: {
-    level: number;
-    type: string;
-    shields: number;
-  };
-  energy: Energy;
-  waves: IWave[];
+  resonance: Resonance;
+  protection: Protection;
+  energy: EnergyState;
+  waves: ResonanceWave[];
 }
-
-export const createDefaultField = (): IField => ({
-  id: '',
-  center: { x: 0, y: 0, z: 0 },
-  radius: 1,
-  strength: 1,
-  coherence: 1,
-  stability: 1,
-  resonance: {
-    primary: { frequency: 1, amplitude: 1, phase: 0 },
-    harmonics: [],
-    frequency: 1,
-    amplitude: 1,
-    phase: 0,
-    coherence: 1,
-    harmony: 1
-  },
-  protection: {
-    level: 1,
-    type: 'standard',
-    shields: 1
-  },
-  energy: {
-    mental: 1,
-    physical: 1,
-    emotional: 1
-  },
-  waves: []
-});

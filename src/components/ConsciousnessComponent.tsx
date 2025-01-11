@@ -3,6 +3,13 @@ import styled from 'styled-components';
 import { IField } from '../core/types/base';
 import { ConsciousnessState } from '../core/types/consciousness/consciousness';
 import { useConsciousness } from '../core/consciousness/useConsciousness';
+import { 
+  StyledContainerProps, 
+  StyledButtonProps, 
+  StyledStatusProps,
+  CoherentProps,
+  StyledProps 
+} from './shared/types';
 
 interface IConsciousnessComponentProps {
   consciousness: ConsciousnessState;
@@ -10,19 +17,20 @@ interface IConsciousnessComponentProps {
   isCoherent: boolean;
 }
 
-const ConsciousnessContainer = styled.div<{ isCoherent: boolean }>`
+const ConsciousnessContainer = styled.div<CoherentProps>`
   padding: 30px;
   border-radius: 15px;
-  background: ${(props) =>
-    props.isCoherent
+  background: ${({ isCoherent }) =>
+    isCoherent
       ? 'linear-gradient(135deg, rgba(168, 237, 234, 0.95) 0%, rgba(254, 214, 227, 0.95) 100%)'
       : 'linear-gradient(135deg, rgba(230, 233, 240, 0.95) 0%, rgba(238, 241, 245, 0.95) 100%)'};
-  color: ${(props) => (props.isCoherent ? '#2a2a2a' : '#666')};
+  color: ${({ isCoherent }) => (isCoherent ? '#2a2a2a' : '#666')};
   transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(10px);
   position: relative;
   overflow: hidden;
+  transform: scale(${({ isCoherent }) => isCoherent ? 1.02 : 1});
 
   &::before {
     content: '';
@@ -32,8 +40,36 @@ const ConsciousnessContainer = styled.div<{ isCoherent: boolean }>`
     right: 0;
     bottom: 0;
     background: radial-gradient(circle at center, transparent 0%, rgba(255, 255, 255, 0.1) 100%);
-    opacity: ${(props) => (props.isCoherent ? 1 : 0)};
+    opacity: ${({ isCoherent }) => (isCoherent ? 1 : 0)};
     transition: opacity 0.5s ease;
+    animation: ${({ isCoherent }) => isCoherent ? 'breathe 4s ease-in-out infinite' : 'none'};
+  }
+
+  @keyframes breathe {
+    0%, 100% { transform: scale(1); opacity: 0.7; }
+    50% { transform: scale(1.03); opacity: 1; }
+  }
+`;
+
+const EnergyField = styled.div<CoherentProps>`
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at center, 
+    rgba(168, 237, 234, 0.2) 0%,
+    rgba(254, 214, 227, 0.2) 50%,
+    transparent 100%
+  );
+  opacity: ${({ isCoherent }) => isCoherent ? 0.8 : 0};
+  transform-origin: center;
+  animation: ${({ isCoherent }) => isCoherent ? 'energyPulse 3s ease-in-out infinite' : 'none'};
+
+  @keyframes energyPulse {
+    0%, 100% { transform: scale(1); filter: hue-rotate(0deg); }
+    50% { transform: scale(1.1); filter: hue-rotate(30deg); }
   }
 `;
 
@@ -42,43 +78,58 @@ const MetricsGrid = styled.div`
   grid-template-columns: repeat(2, 1fr);
   gap: 15px;
   margin-top: 20px;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fadeIn 0.5s ease-out forwards;
+
+  @keyframes fadeIn {
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 `;
 
-const Metric = styled.div<{ value: number }>`
+const Metric = styled.div<StyledProps<'energyLevel'>>`
   padding: 15px;
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.15);
   position: relative;
   overflow: hidden;
-  backdrop-filter: blur(5px);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-
+  transition: all 0.3s ease;
+  
   &:hover {
+    background: rgba(255, 255, 255, 0.25);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   }
 
   &::after {
     content: '';
     position: absolute;
-    bottom: 0;
+    top: 0;
     left: 0;
-    width: ${(props) => props.value * 100}%;
-    height: 3px;
-    background: ${(props) =>
-      props.value > 0.7
-        ? 'linear-gradient(90deg, #a8edea, #fed6e3)'
-        : 'linear-gradient(90deg, #e6e9f0, #eef1f5)'};
-    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.1) 0%,
+      rgba(255, 255, 255, 0.05) 100%
+    );
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+
+  &:hover::after {
+    transform: translateX(0);
   }
 `;
 
-const Status = styled.div<{ isCoherent: boolean }>`
+const Status = styled.div<CoherentProps>`
   font-size: 1.4em;
   font-weight: 600;
   text-align: center;
   margin-bottom: 20px;
-  color: ${(props) => (props.isCoherent ? '#2a2a2a' : '#666')};
+  color: ${({ isCoherent }) => (isCoherent ? '#2a2a2a' : '#666')};
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
 `;
@@ -92,21 +143,21 @@ const ConsciousnessCanvas = styled.canvas`
   backdrop-filter: blur(5px);
 `;
 
-const ActionButton = styled.button<{ isActive: boolean; action: 'expand' | 'contract' }>`
+const ActionButton = styled.button<StyledButtonProps>`
   flex: 1;
   padding: 12px;
   border: none;
   border-radius: 8px;
-  background: ${(props) =>
-    props.isActive
-      ? props.action === 'expand'
+  background: ${({ isActive, action }) =>
+    isActive
+      ? action === 'expand'
         ? 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)'
         : 'linear-gradient(135deg, #fed6e3 0%, #a8edea 100%)'
       : 'rgba(255, 255, 255, 0.2)'};
-  color: ${(props) => (props.isActive ? '#2a2a2a' : '#999')};
+  color: ${({ isActive }) => (isActive ? '#2a2a2a' : '#999')};
   font-size: 1.1em;
   font-weight: 500;
-  cursor: ${(props) => (props.isActive ? 'pointer' : 'not-allowed')};
+  cursor: ${({ isActive }) => (isActive ? 'pointer' : 'not-allowed')};
   transition: all 0.3s ease;
 
   &:not(:disabled):hover {
