@@ -3,12 +3,13 @@ import { ThemeProvider } from 'styled-components'
 import { theme } from '@/styles/theme'
 import { GlobalStyle } from '@/styles/global'
 import { FieldComponent } from '@/components/Field'
+import { ConsciousnessComponent } from '@/components/Consciousness'
 
 const App: React.FC = () => {
   return (
     <ThemeProvider theme={theme}>
       <GlobalStyle />
-      <div style={{ padding: '2rem' }}>
+      <div style={{ padding: '2rem', display: 'grid', gap: '2rem', gridTemplateColumns: '1fr 1fr' }}>
         <FieldComponent
           isActive={true}
           metrics={[
@@ -16,6 +17,10 @@ const App: React.FC = () => {
             { value: 85, label: 'Flow' },
             { value: 93, label: 'Coherence' },
           ]}
+        />
+        <ConsciousnessComponent
+          energyLevel={85}
+          isCoherent={true}
         />
       </div>
     </ThemeProvider>

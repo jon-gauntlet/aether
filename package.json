@@ -27,6 +27,8 @@
     "@types/react": "^18.2.48",
     "@types/react-dom": "^18.2.18",
     "@types/styled-components": "^5.1.34",
+    "@types/testing-library__jest-dom": "^5.14.9",
+    "@types/testing-library__react": "^10.0.1",
     "@typescript-eslint/eslint-plugin": "^6.19.0",
     "@typescript-eslint/parser": "^6.19.0",
     "@vitejs/plugin-react": "^4.2.1",
