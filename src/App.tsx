@@ -4,12 +4,20 @@ import { theme } from '@/styles/theme'
 import { GlobalStyle } from '@/styles/global'
 import { FieldComponent } from '@/components/Field'
 import { ConsciousnessComponent } from '@/components/Consciousness'
+import { FlowComponent } from '@/components/Flow'
 
 const App: React.FC = () => {
   return (
     <ThemeProvider theme={theme}>
       <GlobalStyle />
-      <div style={{ padding: '2rem', display: 'grid', gap: '2rem', gridTemplateColumns: '1fr 1fr' }}>
+      <div style={{ 
+        padding: '2rem', 
+        display: 'grid', 
+        gap: '2rem', 
+        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+        maxWidth: '1200px',
+        margin: '0 auto'
+      }}>
         <FieldComponent
           isActive={true}
           metrics={[
@@ -21,6 +29,10 @@ const App: React.FC = () => {
         <ConsciousnessComponent
           energyLevel={85}
           isCoherent={true}
+        />
+        <FlowComponent
+          flowIntensity={93}
+          isInFlow={true}
         />
       </div>
     </ThemeProvider>
