@@ -1,63 +1,113 @@
-# Aether Core
+# Aether
 
-Core functionality for the Aether project, focused on autonomous development and natural flow systems.
+A natural flow system for autonomous development, designed to optimize for ADHD hyperfocus states and sustained excellence.
+
+## Features
+
+- Support for 80-100 hours/week of focused development
+- Optimization for ADHD hyperfocus states
+- Code quality maintenance through exhaustion
+- Effective and ethical AI integration
+- Sustainable excellence patterns
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18+
+- npm 9+
+
+### Installation
+
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/aether.git
+cd aether
+```
+
+2. Install dependencies:
+```bash
+npm install
+```
+
+3. Start the development server:
+```bash
+npm run dev
+```
+
+### Testing
+
+Run the test suite:
+```bash
+npm test
+```
+
+Run tests with coverage:
+```bash
+npm run test:coverage
+```
+
+Run tests with UI:
+```bash
+npm run test:ui
+```
+
+### Building
+
+Build for production:
+```bash
+npm run build
+```
+
+Preview the production build:
+```bash
+npm run preview
+```
+
+## Development
+
+### Code Style
+
+- TypeScript for type safety
+- ESLint for linting
+- Prettier for code formatting
+
+Format code:
+```bash
+npm run format
+```
+
+Check types:
+```bash
+npm run typecheck
+```
+
+Lint code:
+```bash
+npm run lint
+```
 
 ## Project Structure
 
-The codebase is organized into the following key directories:
-
-### `/src/core`
-
-- `/energy` - Energy system implementations and utilities
-- `/evolution` - Pattern and repository evolution functionality
-- `/flow` - Flow state and system management
-- `/integration` - System integration components
-- `/js` - JavaScript utilities and helpers
-- `/natural` - Natural system implementations
-- `/pattern` - Pattern recognition and management
-- `/patterns` - Pattern implementations and utilities
-- `/protection` - System protection and guardians
-- `/services` - Core services and implementations
-- `/space` - Mind space and spatial system components
-- `/system` - Core system implementations
-- `/test` - Test setup and utilities
-- `/types` - Type definitions and interfaces
-  - `/autonomic` - Autonomic system types
-  - `/context` - Context management types
-  - `/energy` - Energy system types
-  - `/flow` - Flow system types
-  - `/patterns` - Pattern system types
-  - `/protection` - Protection system types
-  - `/space` - Space system types
-  - `/utils` - Utility types
-  - `/validation` - Validation system types
-
-## Key Components
-
-- **Energy System**: Manages system energy states and flow
-- **Flow System**: Handles state transitions and natural flow
-- **Pattern System**: Pattern recognition and management
-- **Space System**: Mind space and spatial management
-- **Protection System**: System protection and validation
-- **Integration System**: Component integration and interaction
-
-## Development Guidelines
-
-1. Follow TypeScript best practices
-2. Maintain clean directory structure
-3. Use descriptive file names
-4. Keep related functionality together
-5. Document type definitions
-6. Write tests for core functionality
+```
+src/
+  ├── components/     # React components
+  ├── core/          # Core business logic
+  ├── hooks/         # Custom React hooks
+  ├── styles/        # Global styles and themes
+  ├── test/          # Test setup and utilities
+  ├── types/         # TypeScript type definitions
+  └── utils/         # Utility functions
+```
 
 ## Contributing
 
-1. Follow the established directory structure
-2. Use appropriate naming conventions
-3. Add necessary type definitions
-4. Include tests for new functionality
-5. Document changes and additions
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## License
 
-[License information to be added] 
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details. 
