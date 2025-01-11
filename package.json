@@ -17,7 +17,6 @@
     "prepare": "husky install"
   },
   "dependencies": {
-    "@testing-library/user-event": "^14.5.2",
     "@types/node": "^20.11.16",
     "@types/uuid": "^10.0.0",
     "@vitest/coverage-v8": "^1.6.0",
@@ -29,8 +28,9 @@
     "uuid": "^11.0.5"
   },
   "devDependencies": {
-    "@testing-library/jest-dom": "^6.1.0",
+    "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^14.3.1",
+    "@testing-library/user-event": "^14.5.2",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^19.0.2",
     "@types/styled-components": "^5.1.34",
