@@ -1,45 +1,67 @@
-import { SystemState } from './base';
+import { Observable } from 'rxjs';
+import { Connection, Depth } from './index';
 
-export type FlowIntensity = 'low' | 'medium' | 'high' | 'peak';
+// Flow state types
+export type FlowLevel = 'low' | 'medium' | 'high';
+export type FlowState = 'rest' | 'flow' | 'focus' | 'deep';
 
+// Core metrics interface
 export interface FlowMetrics {
-  focus: number;      // 0-1 focus level
-  energy: number;     // 0-1 energy level
-  clarity: number;    // 0-1 mental clarity
-  momentum: number;   // 0-1 progress momentum
+  presence: number;   // Inner presence level
+  harmony: number;    // Flow harmony
+  rhythm: number;     // Natural rhythm
+  resonance: number;  // System resonance
+  coherence: number;  // State coherence
 }
 
-export interface FlowState {
-  active: boolean;
-  intensity: FlowIntensity;
-  duration: number;   // milliseconds in current state
-  metrics: FlowMetrics;
-  lastTransition: number;
+// Pure data state for serialization
+export interface FlowStateData extends FlowMetrics {
+  level: FlowLevel;
+  state: FlowState;
+  depth: Depth;
 }
 
-export interface FlowTransition {
-  from: FlowIntensity;
-  to: FlowIntensity;
-  timestamp: number;
-  trigger?: string;
+// Active flow interface with observables
+export interface NaturalFlow extends FlowStateData {
+  // Observable methods
+  observeDepth(): Observable<number>;
+  observeEnergy(): Observable<number>;
+  observeFocus(): Observable<number>;
 }
 
-export interface FlowProtection {
-  minFocus: number;
-  minEnergy: number;
-  recoveryThreshold: number;
-  maxDuration: number;
+// Flow session tracking
+export interface FlowSession {
+  id: string;
+  state: FlowState;
+  level: FlowLevel;
+  startTime: string;
+  endTime?: string;
+  isProtected?: boolean;
+  metrics: {
+    duration: number;
+    intensity: number;
+    quality: number;
+  };
+  patterns: string[];
 }
 
-export type FlowManager = {
-  currentState: FlowState;
-  systemState: SystemState;
-  protection: FlowProtection;
-  history: FlowTransition[];
-  
-  // Core methods
-  startFlow(): Promise<boolean>;
-  endFlow(): Promise<void>;
-  checkState(): FlowMetrics;
-  needsRecovery(): boolean;
-}; 
+// Space flow state
+export interface FlowSpaceState {
+  id: string;
+  type: 'meditation' | 'focus' | 'flow';
+  flow: FlowStateData;
+  depth: number;
+  connections: Connection[];
+}
+
+// Active space flow
+export interface FlowSpace extends Omit<FlowSpaceState, 'flow'> {
+  flow: NaturalFlow;
+}
+
+// System-level flow
+export interface SystemFlow extends FlowMetrics {
+  pace: number;        // Flow velocity
+  adaptability: number;// System flexibility
+  emergence: number;   // Pattern emergence
+  balance: number;     // System balance

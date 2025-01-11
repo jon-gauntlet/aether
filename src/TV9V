@@ -1,2 +1,0 @@
-#!/bin/bash
-exec "/home/jon/.local/share/cursor/cursor.AppImage" "$@" 
