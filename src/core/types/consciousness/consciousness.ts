@@ -1,6 +1,4 @@
-import { Connection, Space } from './consciousness';
-import { EnergyState, Protection } from '../energy/types';
-import { NaturalFlow, Resonance } from '../flow/types';
+import { Connection, Space, EnergyState, Protection, NaturalFlow, Resonance } from '../base';
 
 // Extended space types
 export interface MindSpace extends Space {
@@ -25,6 +23,56 @@ export interface ConsciousnessState {
   energy: EnergyState;
   flow: NaturalFlow;
 }
+
+// Default state creator
+export const createDefaultConsciousnessState = (): ConsciousnessState => ({
+  id: 'default',
+  type: 'individual',
+  space: {
+    resonance: {
+      primary: { frequency: 1, amplitude: 0.5, phase: 0 },
+      harmonics: [],
+      frequency: 1,
+      amplitude: 0.5,
+      phase: 0,
+      coherence: 0.5,
+      harmony: 0.5
+    },
+    energy: {
+      mental: 0.5,
+      physical: 0.5,
+      emotional: 0.5
+    }
+  },
+  spaces: [],
+  connections: [],
+  resonance: {
+    primary: { frequency: 1, amplitude: 0.5, phase: 0 },
+    harmonics: [],
+    frequency: 1,
+    amplitude: 0.5,
+    phase: 0,
+    coherence: 0.5,
+    harmony: 0.5
+  },
+  depth: 0.5,
+  protection: {
+    level: 0.5,
+    type: 'standard',
+    shields: 0.5
+  },
+  energy: {
+    mental: 0.5,
+    physical: 0.5,
+    emotional: 0.5
+  },
+  flow: {
+    intensity: 0.5,
+    stability: 0.5,
+    coherence: 0.5,
+    energy: 0.5
+  }
+});
 
 // Thought stream
 export interface ThoughtStream {
@@ -70,3 +118,4 @@ export const isThoughtEvolution = (evolution: any): evolution is ThoughtEvolutio
     isConsciousnessState(evolution.to) &&
     typeof evolution.depth === 'number'
   );
+};
