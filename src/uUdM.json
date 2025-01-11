@@ -1,8 +1,0 @@
-{
-  "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "types": ["jest", "node"],
-    "moduleResolution": "node"
-  },
-  "include": ["src/**/*.test.ts", "src/**/*.spec.ts"]
-} 

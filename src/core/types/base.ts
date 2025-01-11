@@ -1,82 +1,74 @@
-// Core system types that form the foundation of the type system
-import { ProtectionState } from './protection';
+import { Energy } from '../energy/types';
 
-export type SystemState = {
-  health: number;  // 0-1 system health indicator
-  energy: number;  // 0-1 energy level
-  focus: number;   // 0-1 focus level
-  context: any;    // Current system context
-};
-
-export type FlowState = {
-  active: boolean;
-  duration: number;
-  intensity: number;
-  quality: number;
-};
-
-export type SystemMetrics = {
-  performance: number;
-  reliability: number;
-  quality: number;
-  evolution: number;
-};
-
-// Base interfaces
-export interface ISystemComponent {
-  state: SystemState;
-  getHealth(): number;
-  evolve(): void;
+export enum FlowState {
+  FLOW = 'FLOW',
+  FOCUS = 'FOCUS',
+  RECOVERING = 'RECOVERING',
+  TRANSITIONING = 'TRANSITIONING'
 }
 
-export interface IFlowManager {
-  currentFlow: FlowState;
-  startFlow(): void;
-  maintainFlow(): void;
-  endFlow(): FlowState;
+export interface IWave {
+  frequency: number;
+  amplitude: number;
+  phase: number;
 }
 
-export interface IProtectionManager {
-  protection: ProtectionState;
-  checkHealth(): number;
-  preserve(): void;
-  recover(): void;
+export interface IResonance {
+  primary: IWave;
+  harmonics: IWave[];
+  frequency: number;
+  amplitude: number;
+  phase: number;
+  coherence: number;
+  harmony: number;
 }
 
-// Field types
-export type FieldConfig = {
-  name: string;
-  type: string;
-  defaultValue?: any;
-  validation?: (value: any) => boolean;
-};
-
-export type Field<T = any> = {
-  name: string;
-  type: string;
-  value: T;
-  isValid: boolean;
-  validate: () => boolean;
-};
-
-// Utility types
-export type DeepPartial<T> = {
-  [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
-};
-
-export type SystemConfig = DeepPartial<{
-  protection: ProtectionState;
-  flow: FlowState;
-  metrics: SystemMetrics;
-}>;
-
-// Factory functions
-export const createDefaultField = <T>(config: FieldConfig): Field<T> => {
-  return {
-    name: config.name,
-    type: config.type,
-    value: config.defaultValue as T,
-    isValid: true,
-    validate: () => config.validation ? config.validation(config.defaultValue) : true
+export interface IField {
+  id: string;
+  center: {
+    x: number;
+    y: number;
+    z: number;
   };
-}; 
+  radius: number;
+  strength: number;
+  coherence: number;
+  stability: number;
+  resonance: IResonance;
+  protection: {
+    level: number;
+    type: string;
+    shields: number;
+  };
+  energy: Energy;
+  waves: IWave[];
+}
+
+export const createDefaultField = (): IField => ({
+  id: '',
+  center: { x: 0, y: 0, z: 0 },
+  radius: 1,
+  strength: 1,
+  coherence: 1,
+  stability: 1,
+  resonance: {
+    primary: { frequency: 1, amplitude: 1, phase: 0 },
+    harmonics: [],
+    frequency: 1,
+    amplitude: 1,
+    phase: 0,
+    coherence: 1,
+    harmony: 1
+  },
+  protection: {
+    level: 1,
+    type: 'standard',
+    shields: 1
+  },
+  energy: {
+    mental: 1,
+    physical: 1,
+    emotional: 1
+  },
+  waves: []
+});

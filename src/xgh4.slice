@@ -1,9 +1,0 @@
-[Unit]
-Description=Cursor Context Management Slice
-Before=slices.target
-
-[Slice]
-CPUWeight=90
-IOWeight=90
-MemoryHigh=4G
-TasksMax=32 

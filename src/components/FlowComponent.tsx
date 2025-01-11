@@ -1,25 +1,26 @@
-import { PropsWithChildren } from 'react';
+import React from 'react';
 import styled from 'styled-components';
-import { Field } from '../core/types/base';
-import { ConsciousnessState } from '../core/types/consciousness';
+import { IField } from '../core/types/base';
 import { useFlow } from '../core/flow/useFlow';
 
-interface FlowComponentProps {
-  field: Field;
-  consciousness: ConsciousnessState;
+interface IFlowComponentProps {
+  fields: IField[];
+  isInFlow: boolean;
+  value: number;
 }
 
 const FlowContainer = styled.div<{ isInFlow: boolean }>`
   padding: 20px;
   border-radius: 10px;
-  background: ${props => props.isInFlow ? 
-    'linear-gradient(135deg, #00f260 0%, #0575e6 100%)' : 
-    'linear-gradient(135deg, #e6e9f0 0%, #eef1f5 100%)'};
-  color: ${props => props.isInFlow ? '#fff' : '#333'};
+  background: ${(props: { isInFlow: boolean }) =>
+    props.isInFlow
+      ? 'linear-gradient(135deg, #00f260 0%, #0575e6 100%)'
+      : 'linear-gradient(135deg, #e6e9f0 0%, #eef1f5 100%)'};
+  color: ${(props: { isInFlow: boolean }) => (props.isInFlow ? '#fff' : '#333')};
   transition: all 0.3s ease;
 `;
 
-const FlowMetrics = styled.div`
+const MetricsGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 10px;
@@ -29,7 +30,7 @@ const FlowMetrics = styled.div`
 const Metric = styled.div<{ value: number }>`
   padding: 10px;
   border-radius: 5px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.3);
   position: relative;
   overflow: hidden;
 
@@ -38,52 +39,67 @@ const Metric = styled.div<{ value: number }>`
     position: absolute;
     bottom: 0;
     left: 0;
-    width: ${props => props.value * 100}%;
+    width: ${(props: { value: number }) => props.value * 100}%;
     height: 3px;
-    background: ${props => props.value > 0.7 ? '#00f260' : '#e6e9f0'};
+    background: ${(props: { value: number }) => (props.value > 0.7 ? '#00f260' : '#e6e9f0')};
     transition: width 0.3s ease;
   }
 `;
 
-const FlowStatus = styled.div<{ isInFlow: boolean }>`
+const Status = styled.div<{ isInFlow: boolean }>`
   font-size: 1.2em;
   font-weight: bold;
   text-align: center;
   margin-bottom: 15px;
-  color: ${props => props.isInFlow ? '#fff' : '#666'};
+  color: ${(props: { isInFlow: boolean }) => (props.isInFlow ? '#fff' : '#666')};
 `;
 
-export const FlowComponent = ({ field, consciousness }: PropsWithChildren<FlowComponentProps>) => {
-  const { flowState, enhanceFlow, disruptFlow } = useFlow(field, consciousness);
-  const { flowMetrics, isInFlow } = flowState;
+export const FlowComponent = ({ fields, isInFlow, value }: IFlowComponentProps) => {
+  const { flow, transition } = useFlow();
+
+  const enterFlow = async () => {
+    try {
+      await transition('flow', 'user_initiated');
+    } catch (error) {
+      console.error('Failed to enter flow state:', error);
+    }
+  };
+
+  const exitFlow = async () => {
+    try {
+      await transition('natural', 'user_initiated');
+    } catch (error) {
+      console.error('Failed to exit flow state:', error);
+    }
+  };
 
   return (
     <FlowContainer isInFlow={isInFlow}>
-      <FlowStatus isInFlow={isInFlow}>
+      <Status isInFlow={isInFlow}>
         {isInFlow ? 'In Flow State' : 'Building Flow'}
-      </FlowStatus>
+      </Status>
       
-      <FlowMetrics>
-        <Metric value={flowMetrics.velocity}>
-          Velocity: {(flowMetrics.velocity * 100).toFixed(0)}%
+      <MetricsGrid>
+        <Metric value={flow.metrics.focus}>
+          Focus: {(flow.metrics.focus * 100).toFixed(0)}%
         </Metric>
-        <Metric value={flowMetrics.momentum}>
-          Momentum: {(flowMetrics.momentum * 100).toFixed(0)}%
+        <Metric value={flow.metrics.presence}>
+          Presence: {(flow.metrics.presence * 100).toFixed(0)}%
         </Metric>
-        <Metric value={1 - flowMetrics.resistance}>
-          Flow: {((1 - flowMetrics.resistance) * 100).toFixed(0)}%
+        <Metric value={flow.metrics.coherence}>
+          Coherence: {(flow.metrics.coherence * 100).toFixed(0)}%
         </Metric>
-        <Metric value={flowMetrics.conductivity}>
-          Conductivity: {(flowMetrics.conductivity * 100).toFixed(0)}%
+        <Metric value={flow.metrics.sustainability}>
+          Sustainability: {(flow.metrics.sustainability * 100).toFixed(0)}%
         </Metric>
-      </FlowMetrics>
+      </MetricsGrid>
 
       <div style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
-        <button onClick={enhanceFlow} disabled={isInFlow}>
-          Enhance Flow
+        <button onClick={enterFlow} disabled={isInFlow}>
+          Enter Flow
         </button>
-        <button onClick={disruptFlow} disabled={!isInFlow}>
-          Take Break
+        <button onClick={exitFlow} disabled={!isInFlow}>
+          Exit Flow
         </button>
       </div>
     </FlowContainer>

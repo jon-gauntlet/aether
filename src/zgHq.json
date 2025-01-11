@@ -1,7 +1,0 @@
-[
-    {
-        "key": "ctrl+h",
-        "command": "workbench.files.action.toggleHiddenFiles",
-        "when": "filesExplorerFocus"
-    }
-] 

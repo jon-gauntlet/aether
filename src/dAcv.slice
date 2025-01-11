@@ -1,8 +1,0 @@
-[Slice]
-Description=System Claude Optimization Slice
-CPUWeight=60
-MemoryHigh=4G
-IOWeight=70
-
-[Install]
-WantedBy=cursor.slice 

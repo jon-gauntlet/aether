@@ -1,24 +1,30 @@
 import { useCallback, useEffect, useMemo } from 'react';
-import { BehaviorSubject, combineLatest } from 'rxjs';
+import { BehaviorSubject } from 'rxjs';
 import { map, distinctUntilChanged, debounceTime } from 'rxjs/operators';
-import { Field, Resonance, Protection, FlowMetrics } from '../types/base';
+import { IField, IResonance } from '../types/base';
 
-interface FieldState {
-  field: Field;
+interface IFieldState {
+  field: IField | null;
   isActive: boolean;
   isResonating: boolean;
   isProtected: boolean;
 }
 
-const fieldState$ = new BehaviorSubject<FieldState>({
+interface IProtection {
+  shields: number;
+  level: number;
+  type: string;
+}
+
+const fieldState$ = new BehaviorSubject<IFieldState>({
   field: null,
   isActive: false,
   isResonating: false,
   isProtected: false
 });
 
-export const useField = (initialField: Field) => {
-  const updateFieldState = useCallback((field: Field) => {
+export const useField = (initialField: IField) => {
+  const updateFieldState = useCallback((field: IField) => {
     const currentState = fieldState$.getValue();
     fieldState$.next({
       ...currentState,
@@ -30,12 +36,11 @@ export const useField = (initialField: Field) => {
   }, []);
 
   const fieldObservable = useMemo(() => 
-    new BehaviorSubject<Field>(initialField).pipe(
-      map(field => ({
+    new BehaviorSubject<IField>(initialField).pipe(
+      map((field: IField) => ({
         ...field,
         resonance: calculateResonance(field.resonance),
-        protection: calculateProtection(field.protection),
-        flowMetrics: calculateFlowMetrics(field.flowMetrics)
+        protection: calculateProtection(field.protection)
       })),
       distinctUntilChanged(),
       debounceTime(100)
@@ -48,49 +53,32 @@ export const useField = (initialField: Field) => {
 
   const amplifyField = useCallback(() => {
     const { field } = fieldState$.getValue();
-    updateFieldState({
-      ...field,
-      strength: Math.min(field.strength * 1.1, 1),
-      resonance: {
-        ...field.resonance,
-        amplitude: Math.min(field.resonance.amplitude * 1.05, 1)
-      }
-    });
-  }, [updateFieldState]);
+    if (!field) return;
 
-  const dampField = useCallback(() => {
-    const { field } = fieldState$.getValue();
     updateFieldState({
       ...field,
-      strength: Math.max(field.strength * 0.9, 0),
+      strength: Math.min(1, field.strength + 0.1),
       resonance: {
         ...field.resonance,
-        amplitude: Math.max(field.resonance.amplitude * 0.95, 0)
+        amplitude: Math.min(1, field.resonance.amplitude + 0.1)
       }
     });
-  }, [updateFieldState]);
+  }, []);
+
+  const calculateResonance = (resonance: IResonance): IResonance => ({
+    ...resonance,
+    amplitude: Math.min(1, resonance.amplitude + 0.05),
+    coherence: Math.min(1, resonance.coherence + 0.05)
+  });
+
+  const calculateProtection = (protection: IProtection): IProtection => ({
+    ...protection,
+    shields: Math.min(1, protection.shields + 0.05)
+  });
 
   return {
     fieldState: fieldState$.getValue(),
     amplifyField,
-    dampField,
     updateFieldState
   };
-};
-
-const calculateResonance = (resonance: Resonance): Resonance => ({
-  ...resonance,
-  harmonics: resonance.harmonics.map(h => h * resonance.amplitude)
-});
-
-const calculateProtection = (protection: Protection): Protection => ({
-  ...protection,
-  shields: protection.shields * protection.resilience,
-  recovery: protection.recovery * protection.adaptability
-});
-
-const calculateFlowMetrics = (metrics: FlowMetrics): FlowMetrics => ({
-  ...metrics,
-  velocity: metrics.velocity * (1 - metrics.resistance),
-  momentum: metrics.momentum * metrics.conductivity
-}); 
+}; 

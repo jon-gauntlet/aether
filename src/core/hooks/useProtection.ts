@@ -1,16 +1,16 @@
 import { useState, useCallback, useEffect } from 'react';
 import { ProtectionState, ProtectionMetrics } from '../types/protection/protection';
 
-const DEFAULT_METRICS: ProtectionMetrics = {
+export const DEFAULT_METRICS: ProtectionMetrics = {
   stability: 0.9,
   resilience: 0.85,
   integrity: 0.9,
   immunity: 0.85
 };
 
-const FLOW_SHIELD_BONUS = 0.15;
-const MIN_SAFE_LEVEL = 0.7;
-const CRITICAL_THRESHOLD = 0.5;
+export const FLOW_SHIELD_BONUS = 0.15;
+export const MIN_SAFE_LEVEL = 0.7;
+export const CRITICAL_THRESHOLD = 0.5;
 
 export const useProtection = (initialState?: Partial<ProtectionState>) => {
   const [protection, setProtection] = useState<ProtectionState>({

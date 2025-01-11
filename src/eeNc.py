@@ -1,1 +1,0 @@
-"""DAST findings parsers package.""" 
