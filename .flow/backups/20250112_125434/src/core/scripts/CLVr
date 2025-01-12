@@ -1,0 +1,373 @@
+#!/bin/bash
+
+# Enhanced Autonomic Resource Manager
+# Implements AI-First Autonomic patterns with advanced learning
+# Integrates with Context System and follows Sacred Principles
+
+set -euo pipefail
+
+# Configuration with existing paths
+CURSOR_CONFIG_DIR="${CURSOR_CONFIG_DIR:-$HOME/.config/cursor}"
+CURSOR_STATE_DIR="${CURSOR_STATE_DIR:-$HOME/.local/state/cursor}"
+CURSOR_DATA_DIR="${CURSOR_DATA_DIR:-$HOME/.local/share/cursor}"
+CURSOR_CACHE_DIR="$CURSOR_DATA_DIR/cache"
+CURSOR_LOGS_DIR="$CURSOR_DATA_DIR/logs"
+CURSOR_METRICS_DIR="$CURSOR_DATA_DIR/metrics"
+
+# Advanced thresholds with adaptive learning
+declare -A THRESHOLDS=(
+    [memory_critical]=90
+    [memory_high]=80
+    [cpu_critical]=90
+    [cpu_high]=80
+    [disk_critical]=90
+    [disk_high]=80
+    [iops_critical]=90
+    [iops_high]=80
+    [gpu_critical]=90
+    [gpu_high]=80
+    [net_critical]=90
+    [net_high]=80
+)
+
+# Learning configuration
+declare -A LEARNING=(
+    [alpha]=0.1          # Fast adaptation rate
+    [beta]=0.01         # Slow trend learning
+    [gamma]=0.001       # Pattern recognition rate
+    [epsilon]=0.05      # Exploration rate
+    [window_size]=1440  # 24 hours of 1-minute samples
+    [min_samples]=30    # Minimum samples for pattern recognition
+    [max_patterns]=100  # Maximum patterns to maintain
+)
+
+# Initialize state directories
+mkdir -p "$CURSOR_STATE_DIR/autonomic"/{patterns,models,state}
+mkdir -p "$CURSOR_METRICS_DIR"/{current,historical}
+
+# State files
+STATE_FILE="$CURSOR_STATE_DIR/autonomic/state/current.json"
+METRICS_FILE="$CURSOR_METRICS_DIR/current/metrics.jsonl"
+PATTERN_FILE="$CURSOR_STATE_DIR/autonomic/patterns/learned.json"
+MODEL_FILE="$CURSOR_STATE_DIR/autonomic/models/resource.json"
+
+# Initialize state if needed
+if [[ ! -f "$STATE_FILE" ]]; then
+    echo '{
+        "mode": "learning",
+        "adaptation_level": 1,
+        "last_optimization": 0,
+        "resource_patterns": {},
+        "flow_states": [],
+        "learning_progress": 0,
+        "model_version": 1
+    }' > "$STATE_FILE"
+fi
+
+# Initialize pattern storage
+if [[ ! -f "$PATTERN_FILE" ]]; then
+    echo '{
+        "patterns": [],
+        "meta_patterns": [],
+        "correlations": {},
+        "version": 1
+    }' > "$PATTERN_FILE"
+fi
+
+# Helper Functions
+log() {
+    local level=$1
+    shift
+    echo "[$(date -Iseconds)] [$level] $*" | tee -a "$CURSOR_LOGS_DIR/autonomic.log"
+}
+
+notify_systemd() {
+    echo "$1"
+    [[ -n "${NOTIFY_SOCKET:-}" ]] && systemd-notify "$1"
+}
+
+compress_metrics() {
+    local file=$1
+    local age=$2
+    
+    if [[ -f "$file" ]]; then
+        # Compress old metrics with zstd
+        zstd -q -19 "$file" -o "${file}.zst"
+        rm "$file"
+    fi
+}
+
+rotate_metrics() {
+    local current_time=$(date +%s)
+    local rotation_time=86400  # 24 hours
+    
+    find "$CURSOR_METRICS_DIR/current" -type f -mtime +1 -name "*.jsonl" | while read -r file; do
+        local target_dir="$CURSOR_METRICS_DIR/historical/$(date -d "@$current_time" +%Y/%m/%d)"
+        mkdir -p "$target_dir"
+        compress_metrics "$file" "$current_time"
+        mv "${file}.zst" "$target_dir/"
+    done
+}
+
+get_gpu_stats() {
+    if command -v nvidia-smi &>/dev/null; then
+        nvidia-smi --query-gpu=utilization.gpu,memory.used,memory.total --format=csv,noheader,nounits | \
+        awk -F, '{print $1" "$2" "$3}'
+    else
+        echo "0 0 0"
+    fi
+}
+
+get_network_stats() {
+    local iface=$(ip route | grep default | awk '{print $5}')
+    local stats=$(cat /proc/net/dev | grep "$iface:" | awk '{print $2" "$10}')
+    echo "${stats:-0 0}"
+}
+
+detect_flow_state() {
+    local cpu_variance=$(get_pressure_avg "cpu" "some")
+    local mem_pattern=$(get_pressure_avg "memory" "some")
+    local io_pattern=$(get_pressure_avg "io" "some")
+    local gpu_util=$(get_gpu_stats | cut -d' ' -f1)
+    
+    # Load learned patterns
+    local patterns=$(jq -r '.patterns[] | select(.type == "flow")' "$PATTERN_FILE")
+    
+    # Advanced flow detection using multiple indicators
+    if (( $(echo "$cpu_variance < 20" | bc -l) )) && \
+       (( $(echo "$mem_pattern < 30" | bc -l) )) && \
+       (( $(echo "$io_pattern < 40" | bc -l) )); then
+        
+        # Check against learned patterns
+        if [[ -n "$patterns" ]]; then
+            echo "deep_flow"
+        else
+            echo "flow"
+        fi
+    else
+        if [[ -n "$patterns" ]] && jq -e --arg cpu "$cpu_variance" \
+            --arg mem "$mem_pattern" --arg io "$io_pattern" \
+            '.patterns[] | select(.type == "transition" and
+            (.cpu_range[0] <= ($cpu|tonumber) and .cpu_range[1] >= ($cpu|tonumber)) and
+            (.mem_range[0] <= ($mem|tonumber) and .mem_range[1] >= ($mem|tonumber)) and
+            (.io_range[0] <= ($io|tonumber) and .io_range[1] >= ($io|tonumber)))' \
+            "$PATTERN_FILE" >/dev/null; then
+            echo "transition"
+        else
+            echo "normal"
+        fi
+    fi
+}
+
+optimize_resources() {
+    local mode=$1
+    local flow_state=$2
+    
+    # Load current state and patterns
+    local state_data=$(cat "$STATE_FILE")
+    local patterns=$(jq -r '.patterns[] | select(.type == "optimization")' "$PATTERN_FILE")
+    
+    case "$mode" in
+        "deep_flow")
+            # Maximum protection for deep flow states
+            systemctl --user set-property cursor-context.slice MemoryHigh=10G
+            systemctl --user set-property cursor-context.slice CPUQuota=60%
+            systemctl --user set-property cursor-context.slice IOWeight=95
+            
+            # Increase context retention and quality
+            sed -i 's/CRYSTAL_RETENTION_DAYS=.*/CRYSTAL_RETENTION_DAYS=30/' \
+                "$HOME/scripts/cursor/context-crystallizer"
+            sed -i 's/MAX_CONTEXT_SIZE=.*/MAX_CONTEXT_SIZE=2000000/' \
+                "$HOME/scripts/cursor/context-crystallizer"
+            ;;
+        "flow")
+            # Standard flow protection
+            systemctl --user set-property cursor-context.slice MemoryHigh=8G
+            systemctl --user set-property cursor-context.slice CPUQuota=50%
+            systemctl --user set-property cursor-context.slice IOWeight=90
+            ;;
+        "transition")
+            # Optimize for state transitions
+            systemctl --user set-property cursor-context.slice MemoryHigh=6G
+            systemctl --user set-property cursor-context.slice CPUQuota=40%
+            systemctl --user set-property cursor-context.slice IOWeight=80
+            ;;
+        "learning")
+            # Optimize for pattern recognition
+            systemctl --user set-property cursor-context.slice MemoryHigh=4G
+            systemctl --user set-property cursor-context.slice CPUQuota=30%
+            systemctl --user set-property cursor-context.slice IOWeight=70
+            ;;
+        "maintenance")
+            # System maintenance mode
+            systemctl --user set-property cursor-context.slice MemoryHigh=2G
+            systemctl --user set-property cursor-context.slice CPUQuota=20%
+            systemctl --user set-property cursor-context.slice IOWeight=50
+            
+            # Compress old metrics
+            rotate_metrics
+            
+            # Clean non-essential resources
+            find "$CURSOR_CACHE_DIR" -type f -atime +7 -delete
+            find "$CURSOR_DATA_DIR/crystallized" -type f -not -name "*sacred*" \
+                -not -name "*gauntlet*" -not -name "*flow*" -mtime +14 -delete
+            find "$CURSOR_LOGS_DIR" -type f -mtime +30 \
+                -not -name "autonomic.log" -delete
+            
+            # Compress old logs
+            find "$CURSOR_LOGS_DIR" -type f -name "*.log" -mtime +7 \
+                -not -name "autonomic.log" -exec zstd -q -19 {} \;
+            ;;
+    esac
+}
+
+update_learning() {
+    local current_state=$1
+    local metrics=$2
+    
+    # Load current patterns
+    local patterns=$(cat "$PATTERN_FILE")
+    
+    # Update pattern recognition
+    jq --arg state "$current_state" \
+       --arg metrics "$metrics" \
+       --arg alpha "${LEARNING[alpha]}" \
+       --arg gamma "${LEARNING[gamma]}" \
+       --argjson window "${LEARNING[window_size]}" \
+       --argjson min_samples "${LEARNING[min_samples]}" \
+       --argjson max_patterns "${LEARNING[max_patterns]}" \
+       '
+       def update_pattern(pattern; new_data):
+           pattern * (1 - ($alpha|tonumber)) +
+           new_data * ($alpha|tonumber);
+       
+       def recognize_pattern(data; patterns):
+           patterns as $p |
+           data as $d |
+           $p | map(select(
+               (.metrics.memory_range[0] <= ($d.memory|tonumber) and
+                .metrics.memory_range[1] >= ($d.memory|tonumber)) and
+               (.metrics.cpu_range[0] <= ($d.cpu|tonumber) and
+                .metrics.cpu_range[1] >= ($d.cpu|tonumber))
+           )) | first;
+       
+       . as $root |
+       
+       # Update existing patterns
+       if (.patterns | length) > 0 then
+           .patterns |= map(
+               if recognize_pattern($metrics | fromjson; .) then
+                   .metrics |= update_pattern(.; ($metrics | fromjson))
+               else
+                   .
+               end
+           )
+       else . end |
+       
+       # Add new pattern if none matched
+       if (recognize_pattern($metrics | fromjson; .patterns) | not) and
+          (.patterns | length) < ($max_patterns|tonumber) then
+           .patterns += [{
+               "type": $state,
+               "metrics": ($metrics | fromjson),
+               "confidence": 1,
+               "samples": 1,
+               "created_at": now
+           }]
+       else . end |
+       
+       # Update meta-patterns
+       .meta_patterns |= map(
+           if .type == $state then
+               .count += 1 |
+               .last_seen = now
+           else . end
+       )
+       ' "$PATTERN_FILE" > "${PATTERN_FILE}.tmp" && \
+    mv "${PATTERN_FILE}.tmp" "$PATTERN_FILE"
+}
+
+manage_resources() {
+    local used total avail
+    
+    # Check disk space
+    read -r used total avail < <(get_disk_usage "$CURSOR_DATA_DIR")
+    local disk_usage=$(( 100 * used / total ))
+    
+    # Check memory pressure
+    local mem_pressure=$(get_pressure_avg "memory" "some")
+    
+    # Check GPU if available
+    local gpu_usage=$(get_gpu_stats | cut -d' ' -f1)
+    
+    # Check network
+    read -r rx tx < <(get_network_stats)
+    
+    # Determine if maintenance is needed
+    if (( disk_usage > THRESHOLDS[disk_high] )) || \
+       (( mem_pressure > THRESHOLDS[memory_high] )) || \
+       { [[ -n "$gpu_usage" ]] && (( gpu_usage > THRESHOLDS[gpu_high] )); }; then
+        
+        log "WARN" "Resource pressure detected, initiating maintenance"
+        optimize_resources "maintenance" "normal"
+    fi
+}
+
+# Main Loop
+notify_systemd "READY=1"
+log "INFO" "Starting Enhanced Autonomic Resource Manager"
+
+while true; do
+    notify_systemd "WATCHDOG=1"
+    
+    # Gather comprehensive metrics
+    mem_stats=$(get_memory_stats)
+    cpu_pressure=$(get_pressure_avg "cpu" "some")
+    io_pressure=$(get_pressure_avg "io" "some")
+    gpu_stats=$(get_gpu_stats)
+    read -r net_rx net_tx < <(get_network_stats)
+    
+    # Detect system state
+    flow_state=$(detect_flow_state)
+    
+    # Record detailed metrics
+    echo "{
+        \"timestamp\": \"$(date -Iseconds)\",
+        \"memory\": \"$mem_stats\",
+        \"cpu_pressure\": $cpu_pressure,
+        \"io_pressure\": $io_pressure,
+        \"gpu_stats\": \"$gpu_stats\",
+        \"network\": {\"rx\": $net_rx, \"tx\": $net_tx},
+        \"flow_state\": \"$flow_state\"
+    }" >> "$METRICS_FILE"
+    
+    # Optimize based on state
+    case "$flow_state" in
+        "deep_flow")
+            optimize_resources "deep_flow" "$flow_state"
+            ;;
+        "flow")
+            optimize_resources "flow" "$flow_state"
+            ;;
+        "transition")
+            optimize_resources "transition" "$flow_state"
+            ;;
+        *)
+            optimize_resources "learning" "$flow_state"
+            ;;
+    esac
+    
+    # Manage system resources
+    manage_resources
+    
+    # Update learning patterns
+    update_learning "$flow_state" "{
+        memory: \"$mem_stats\",
+        cpu: $cpu_pressure,
+        io: $io_pressure,
+        gpu: \"$gpu_stats\",
+        network: {rx: $net_rx, tx: $net_tx}
+    }"
+    
+    sleep 5
+done 

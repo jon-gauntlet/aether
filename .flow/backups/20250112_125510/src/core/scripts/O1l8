@@ -1,0 +1,107 @@
+#!/bin/bash
+
+# Get the real cursor AppImage path
+REAL_CURSOR=$(readlink -f $(which cursor.real))
+CURSOR_EXTRACT_DIR="$HOME/.local/share/cursor-extracted"
+CURSOR_BIN_DIR="$HOME/.local/share/cursor-bin"
+
+# Ensure directories exist
+mkdir -p "$CURSOR_EXTRACT_DIR"
+mkdir -p "$CURSOR_BIN_DIR"
+
+# Extract AppImage if needed or if it's been updated
+if [ ! -f "$CURSOR_BIN_DIR/cursor" ] || [ "$REAL_CURSOR" -nt "$CURSOR_BIN_DIR/cursor" ]; then
+    echo "Extracting Cursor AppImage (one-time setup)..."
+    cd "$CURSOR_EXTRACT_DIR"
+    "$REAL_CURSOR" --appimage-extract > /dev/null 2>&1
+    
+    # Copy binary and resources to avoid FUSE
+    cp -r squashfs-root/* "$CURSOR_BIN_DIR/"
+    rm -rf squashfs-root
+    
+    # Fix permissions
+    chmod +x "$CURSOR_BIN_DIR/cursor"
+    find "$CURSOR_BIN_DIR" -type f -name "*.node" -exec chmod +x {} \;
+    find "$CURSOR_BIN_DIR" -type f -name "*.so" -exec chmod +x {} \;
+
+    # Create wrapper script for the actual binary
+    cat > "$CURSOR_BIN_DIR/cursor.bin" << 'EOF'
+#!/bin/bash
+exec "$(dirname "$0")/resources/app/cursor" "$@"
+EOF
+    chmod +x "$CURSOR_BIN_DIR/cursor.bin"
+fi
+
+# Set resource limits for this session and children
+ulimit -n 524288 2>/dev/null  # File descriptors
+ulimit -v 16777216 2>/dev/null  # Virtual memory (16GB)
+ulimit -t unlimited 2>/dev/null  # CPU time
+ulimit -m 16777216 2>/dev/null  # Max memory size
+ulimit -l unlimited 2>/dev/null  # Max locked memory
+ulimit -i 16384 2>/dev/null  # Pending signals
+
+# Create a new process group for better control
+set -m
+
+# Set CPU governor
+sudo /home/jon/scripts/cursor/cursor-optimize cpupower
+
+# Optimize kernel parameters
+sudo /home/jon/scripts/cursor/cursor-optimize sysctl "vm.swappiness=1"
+sudo /home/jon/scripts/cursor/cursor-optimize sysctl "kernel.sched_autogroup_enabled=0"
+
+# Handle workspace argument
+if [ -n "$1" ] && [ -d "$1" ]; then
+    export CURSOR_WORKSPACE="$1"
+elif [ -n "$1" ]; then
+    mkdir -p "$1" 2>/dev/null
+    export CURSOR_WORKSPACE="$1"
+else
+    export CURSOR_WORKSPACE="$(pwd)"
+fi
+
+# Export optimization environment variables
+export ELECTRON_ENABLE_LOGGING=1
+export ELECTRON_NO_ATTACH_CONSOLE=1
+export ELECTRON_NO_ASAR=1
+export NODE_OPTIONS="--max-old-space-size=8192"
+export CURSOR_OPTIMIZE=1
+export CURSOR_NO_SANDBOX=1
+export CURSOR_USE_SYSTEM_ELECTRON=1
+export CURSOR_SKIP_APPIMAGE=1
+
+# Function to optimize child processes
+optimize_children() {
+    local parent_pid=$1
+    for child in $(pgrep -P $parent_pid); do
+        sudo /home/jon/scripts/cursor/cursor-optimize optimize "$child"
+        
+        # Verify optimization
+        if ! sudo /home/jon/scripts/cursor/cursor-optimize verify "$child"; then
+            # Retry optimization if verification fails
+            sudo /home/jon/scripts/cursor/cursor-optimize optimize "$child"
+        fi
+        
+        optimize_children $child
+    done
+}
+
+# Launch Cursor with optimized environment
+cd "$CURSOR_WORKSPACE"
+"$CURSOR_BIN_DIR/cursor.bin" "$@" & 
+CURSOR_PID=$!
+
+# Initial process setup and verification
+sudo /home/jon/scripts/cursor/cursor-optimize optimize "$CURSOR_PID"
+if ! sudo /home/jon/scripts/cursor/cursor-optimize verify "$CURSOR_PID"; then
+    # Retry optimization if verification fails
+    sudo /home/jon/scripts/cursor/cursor-optimize optimize "$CURSOR_PID"
+fi
+
+# Monitor and optimize processes with verification
+while kill -0 $CURSOR_PID 2>/dev/null; do
+    optimize_children $CURSOR_PID
+    sleep 2
+done
+
+wait $CURSOR_PID

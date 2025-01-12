@@ -28,6 +28,14 @@ export default defineConfig({
         'node_modules/',
         'src/setupTests.ts',
       ]
+    },
+    include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+    transformMode: {
+      web: [/\.[jt]sx?$/]
     }
+  },
+  build: {
+    target: 'es2022',
+    sourcemap: true
   }
 }); 

@@ -1,0 +1,165 @@
+#!/bin/bash
+
+# Context Crystallizer
+# Manages context optimization and inheritance across sessions
+
+set -euo pipefail
+
+# Configuration
+CURSOR_CONFIG_DIR="${CURSOR_CONFIG_DIR:-$HOME/.config/cursor}"
+CURSOR_STATE_DIR="${CURSOR_STATE_DIR:-$HOME/.local/state/cursor}"
+CURSOR_DATA_DIR="${CURSOR_DATA_DIR:-$HOME/.local/share/cursor}"
+
+# Paths
+CONTEXTS_DIR="$CURSOR_CONFIG_DIR/contexts"
+ACTIVE_CONTEXT="$CURSOR_STATE_DIR/active_context.json"
+CONTEXT_HISTORY="$CURSOR_STATE_DIR/context_history.jsonl"
+CRYSTALLIZED_DIR="$CURSOR_DATA_DIR/crystallized"
+
+# Ensure directories exist
+mkdir -p "$CURSOR_STATE_DIR" "$CRYSTALLIZED_DIR"
+mkdir -p "$CONTEXTS_DIR"/{system,general,projects,sacred,gauntlet}
+
+# Notify systemd we're ready
+systemd-notify --ready
+
+# Helper Functions
+log() {
+    echo "[$(date -Iseconds)] $*" >&2
+}
+
+update_active_context() {
+    local context_data=$1
+    echo "$context_data" > "$ACTIVE_CONTEXT"
+}
+
+append_context_history() {
+    local context_data=$1
+    echo "$context_data" >> "$CONTEXT_HISTORY"
+}
+
+crystallize_context() {
+    local context_data=$1
+    local context_type=$2
+    local timestamp=$(date +%Y%m%d_%H%M%S)
+    local crystal_file="$CRYSTALLIZED_DIR/${context_type}_${timestamp}.json"
+    
+    # Extract essential information using jq
+    jq -c '{
+        timestamp: now,
+        type: $type,
+        essence: {
+            key_concepts: (.concepts | sort_by(.importance) | reverse | .[0:5]),
+            critical_state: (.state | to_entries | sort_by(.value.priority) | reverse | .[0:3]),
+            learned_patterns: (.patterns | sort_by(.frequency) | reverse | .[0:5])
+        },
+        metrics: {
+            context_size: (.size // 0),
+            interaction_count: (.interactions // 0),
+            success_rate: (.success_rate // 0)
+        }
+    }' --arg type "$context_type" <<<"$context_data" > "$crystal_file"
+    
+    echo "$crystal_file"
+}
+
+merge_crystals() {
+    local type=$1
+    local max_age=${2:-3600} # Default 1 hour
+    local cutoff=$(( $(date +%s) - max_age ))
+    
+    # Find recent crystals of the same type
+    find "$CRYSTALLIZED_DIR" -name "${type}_*.json" -type f -newermt "@$cutoff" |
+    while read -r crystal; do
+        jq -s 'reduce .[] as $item (
+            {};
+            .timestamp = now |
+            .type = $item.type |
+            .essence.key_concepts = ((.essence.key_concepts // []) + $item.essence.key_concepts | unique) |
+            .essence.critical_state = ((.essence.critical_state // []) + $item.essence.critical_state | unique) |
+            .essence.learned_patterns = ((.essence.learned_patterns // []) + $item.essence.learned_patterns | unique) |
+            .metrics = {
+                context_size: ((.metrics.context_size + $item.metrics.context_size) / 2),
+                interaction_count: (.metrics.interaction_count + $item.metrics.interaction_count),
+                success_rate: ((.metrics.success_rate + $item.metrics.success_rate) / 2)
+            }
+        )' "$crystal"
+    done
+}
+
+optimize_context() {
+    local context_data=$1
+    local max_size=${2:-10000} # Default max size in bytes
+    
+    # Optimize context while preserving essential information
+    jq -c --arg max "$max_size" '
+    def score(obj):
+        (obj.importance // 0) +
+        (obj.frequency // 0) * 2 +
+        (obj.recent // 0) * 3;
+    
+    def optimize_array(arr):
+        arr | sort_by(score(.)) | reverse |
+        while(
+            (. | tojson | length) > ($max | tonumber);
+            .[0:-1]
+        );
+    
+    {
+        concepts: optimize_array(.concepts),
+        state: (.state | with_entries(
+            select(.value.priority > 0.5)
+        )),
+        patterns: optimize_array(.patterns),
+        metrics: .metrics
+    }' <<<"$context_data"
+}
+
+watch_context_changes() {
+    local last_size=0
+    local check_interval=5 # seconds
+    
+    while true; do
+        if [[ -f "$ACTIVE_CONTEXT" ]]; then
+            current_size=$(stat -f%z "$ACTIVE_CONTEXT" 2>/dev/null || stat -c%s "$ACTIVE_CONTEXT")
+            
+            # If context has grown significantly
+            if (( current_size > last_size * 1.5 || current_size > 50000 )); then
+                log "Context size threshold reached ($current_size bytes). Crystallizing..."
+                
+                # Read and crystallize current context
+                local context_data=$(cat "$ACTIVE_CONTEXT")
+                local context_type=$(jq -r '.type // "general"' <<<"$context_data")
+                
+                # Optimize current context
+                local optimized_data=$(optimize_context "$context_data")
+                update_active_context "$optimized_data"
+                
+                # Create new crystal
+                local crystal_file=$(crystallize_context "$context_data" "$context_type")
+                log "Created crystal: $crystal_file"
+                
+                # Merge recent crystals
+                local merged_data=$(merge_crystals "$context_type")
+                if [[ -n "$merged_data" ]]; then
+                    echo "$merged_data" > "$CRYSTALLIZED_DIR/${context_type}_merged.json"
+                    log "Updated merged crystal for type: $context_type"
+                fi
+                
+                last_size=$(stat -f%z "$ACTIVE_CONTEXT" 2>/dev/null || stat -c%s "$ACTIVE_CONTEXT")
+            fi
+        fi
+        
+        sleep "$check_interval"
+    done
+}
+
+cleanup_old_crystals() {
+    # Keep crystals for 7 days
+    find "$CRYSTALLIZED_DIR" -name "*.json" -type f -mtime +7 -delete
+}
+
+# Main loop
+trap cleanup_old_crystals EXIT
+
+watch_context_changes 

@@ -1,0 +1,253 @@
+#!/bin/bash
+
+# Pattern Synthesizer
+# Integrates learning patterns across all subsystems
+# Implements continuous pattern evolution and synthesis
+
+set -euo pipefail
+
+# Configuration
+CURSOR_CONFIG_DIR="${CURSOR_CONFIG_DIR:-$HOME/.config/cursor}"
+CURSOR_STATE_DIR="${CURSOR_STATE_DIR:-$HOME/.local/state/cursor}"
+CURSOR_DATA_DIR="${CURSOR_DATA_DIR:-$HOME/.local/share/cursor}"
+PATTERN_DIR="$CURSOR_STATE_DIR/patterns"
+SYNTHESIS_DIR="$CURSOR_STATE_DIR/synthesis"
+
+# Initialize directories
+mkdir -p "$PATTERN_DIR"/{raw,processed,evolved,sacred}
+mkdir -p "$SYNTHESIS_DIR"/{current,historical,insights}
+
+# Pattern configuration
+declare -A PATTERN_CONFIG=(
+    [synthesis_threshold]=0.8
+    [evolution_rate]=0.05
+    [sacred_confidence]=0.95
+    [max_pattern_depth]=5
+    [min_pattern_support]=3
+)
+
+# Helper Functions
+log() {
+    local level=$1
+    shift
+    echo "[$(date -Iseconds)] [$level] $*" | tee -a "$CURSOR_LOGS_DIR/synthesis.log"
+}
+
+collect_patterns() {
+    # Collect patterns from all subsystems
+    local patterns=()
+    
+    # Meta-learning patterns
+    if [[ -f "$CURSOR_STATE_DIR/meta/patterns/learned.json" ]]; then
+        patterns+=("$CURSOR_STATE_DIR/meta/patterns/learned.json")
+    fi
+    
+    # Focus patterns
+    if [[ -f "$CURSOR_STATE_DIR/focus/patterns/current.json" ]]; then
+        patterns+=("$CURSOR_STATE_DIR/focus/patterns/current.json")
+    fi
+    
+    # Harmony patterns
+    if [[ -f "$CURSOR_STATE_DIR/harmony/patterns/current.json" ]]; then
+        patterns+=("$CURSOR_STATE_DIR/harmony/patterns/current.json")
+    fi
+    
+    # Context patterns
+    if [[ -f "$CURSOR_STATE_DIR/context/patterns/current.json" ]]; then
+        patterns+=("$CURSOR_STATE_DIR/context/patterns/current.json")
+    fi
+    
+    echo "${patterns[@]}"
+}
+
+synthesize_patterns() {
+    local pattern_files=($@)
+    
+    # Merge and analyze patterns
+    jq -s '
+    def pattern_similarity(p1; p2):
+        # Calculate semantic similarity between patterns
+        (p1.metrics as $m1 | p2.metrics as $m2 |
+        ($m1.memory_range[0] - $m2.memory_range[0] | abs) +
+        ($m1.memory_range[1] - $m2.memory_range[1] | abs) +
+        ($m1.cpu_range[0] - $m2.cpu_range[0] | abs) +
+        ($m1.cpu_range[1] - $m2.cpu_range[1] | abs)) / 4;
+    
+    def cluster_patterns(patterns):
+        # Group similar patterns
+        reduce patterns[] as $p ({};
+            . as $groups |
+            ($p | objects | to_entries | map(.value) | sort) as $pattern |
+            ($groups | to_entries | map(select(
+                .value | arrays | length > 0 and
+                (.[0] | pattern_similarity(.; $p)) < 0.2
+            )) | first.key // "cluster_\($p.type)_\(now)") as $group |
+            . + { ($group): ((.[$group] // []) + [$p]) }
+        );
+    
+    def extract_meta_patterns(clusters):
+        # Extract higher-order patterns from clusters
+        clusters | to_entries | map(
+            select(.value | length >= 3) |
+            {
+                type: "meta",
+                source: .key,
+                patterns: .value,
+                confidence: (.value | length) / 10,
+                metrics: {
+                    memory_range: [
+                        (.value | map(.metrics.memory_range[0]) | add) / (.value | length),
+                        (.value | map(.metrics.memory_range[1]) | add) / (.value | length)
+                    ],
+                    cpu_range: [
+                        (.value | map(.metrics.cpu_range[0]) | add) / (.value | length),
+                        (.value | map(.metrics.cpu_range[1]) | add) / (.value | length)
+                    ]
+                },
+                created_at: now
+            }
+        );
+    
+    def evolve_patterns(patterns; meta_patterns):
+        # Evolve patterns based on meta-patterns
+        patterns | map(
+            . as $p |
+            meta_patterns | map(select(
+                .patterns | any(.type == $p.type)
+            )) as $related_meta |
+            if $related_meta | length > 0 then
+                . * 0.95 + ($related_meta[0].metrics | . * 0.05)
+            else
+                .
+            end
+        );
+    
+    # Combine all patterns
+    reduce .[] as $file ([];
+        . + ($file.patterns // [])
+    ) as $all_patterns |
+    
+    # Cluster and synthesize
+    {
+        timestamp: now,
+        patterns: $all_patterns,
+        clusters: cluster_patterns($all_patterns),
+        meta_patterns: extract_meta_patterns(cluster_patterns($all_patterns)),
+        evolved_patterns: evolve_patterns(
+            $all_patterns,
+            extract_meta_patterns(cluster_patterns($all_patterns))
+        )
+    }' "${pattern_files[@]}" > "$SYNTHESIS_DIR/current/synthesis.json"
+}
+
+detect_sacred_patterns() {
+    # Identify patterns that should be elevated to sacred status
+    jq -c --arg conf "${PATTERN_CONFIG[sacred_confidence]}" '
+    def is_sacred(pattern):
+        pattern.confidence >= ($conf | tonumber) and
+        (pattern.occurrences // 0) > 10 and
+        (pattern.success_rate // 0) > 0.9;
+    
+    .meta_patterns |
+    map(select(is_sacred(.))) |
+    map({
+        type: "sacred_pattern",
+        source: .source,
+        pattern: .,
+        confidence: .confidence,
+        elevation_time: now,
+        metrics: .metrics
+    })' "$SYNTHESIS_DIR/current/synthesis.json" > "$PATTERN_DIR/sacred/elevated.json"
+}
+
+apply_pattern_insights() {
+    # Apply synthesized pattern insights
+    if [[ -f "$SYNTHESIS_DIR/current/synthesis.json" ]]; then
+        jq -c '.meta_patterns[] | select(.confidence > 0.8)' "$SYNTHESIS_DIR/current/synthesis.json" |
+        while read -r pattern; do
+            local type=$(echo "$pattern" | jq -r '.type')
+            local source=$(echo "$pattern" | jq -r '.source')
+            
+            case "$type" in
+                "focus")
+                    # Update focus enhancement
+                    echo "$pattern" > "$CURSOR_STATE_DIR/focus/patterns/synthesized.json"
+                    ;;
+                "harmony")
+                    # Update harmony optimization
+                    echo "$pattern" > "$CURSOR_STATE_DIR/harmony/patterns/synthesized.json"
+                    ;;
+                "context")
+                    # Update context preservation
+                    echo "$pattern" > "$CURSOR_STATE_DIR/context/patterns/synthesized.json"
+                    ;;
+                "resource")
+                    # Update resource allocation
+                    local cpu_quota=$(echo "$pattern" | jq -r '.metrics.cpu_range[1]')
+                    local memory_high=$(echo "$pattern" | jq -r '.metrics.memory_range[1]')
+                    
+                    systemctl --user set-property cursor-context.slice \
+                        CPUQuota="${cpu_quota}%" \
+                        MemoryHigh="${memory_high}G"
+                    ;;
+            esac
+        done
+    fi
+}
+
+evolve_sacred_patterns() {
+    # Evolve patterns that have achieved sacred status
+    if [[ -f "$PATTERN_DIR/sacred/elevated.json" ]]; then
+        jq -c --arg rate "${PATTERN_CONFIG[evolution_rate]}" '
+        def evolve(pattern):
+            pattern * (1 - ($rate | tonumber)) +
+            (pattern.metrics | . * ($rate | tonumber));
+        
+        map(
+            if .evolution_count > 10 and .confidence > 0.98 then
+                . + {
+                    evolved: true,
+                    pattern: evolve(.pattern)
+                }
+            else
+                . + {
+                    evolution_count: (.evolution_count // 0) + 1
+                }
+            end
+        )' "$PATTERN_DIR/sacred/elevated.json" > "$PATTERN_DIR/sacred/evolved.json"
+    fi
+}
+
+# Main Loop
+log "INFO" "Starting Pattern Synthesizer"
+
+while true; do
+    # Collect patterns from all subsystems
+    patterns=($(collect_patterns))
+    
+    if (( ${#patterns[@]} > 0 )); then
+        # Synthesize patterns
+        synthesize_patterns "${patterns[@]}"
+        
+        # Detect sacred patterns
+        detect_sacred_patterns
+        
+        # Apply insights
+        apply_pattern_insights
+        
+        # Evolve sacred patterns
+        evolve_sacred_patterns
+        
+        # Archive old syntheses
+        find "$SYNTHESIS_DIR/historical" -type f -mtime +7 -delete
+        
+        # Compress historical data
+        if [[ -f "$SYNTHESIS_DIR/current/synthesis.json" ]]; then
+            local timestamp=$(date +%Y%m%d_%H%M%S)
+            zstd -19 "$SYNTHESIS_DIR/current/synthesis.json" \
+                -o "$SYNTHESIS_DIR/historical/synthesis_${timestamp}.json.zst"
+        fi
+    fi
+    
+    sleep 300  # Run every 5 minutes
+done 

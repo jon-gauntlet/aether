@@ -1,0 +1,134 @@
+#!/bin/bash
+
+# Cursor Context Manager
+# Ensures Essence System principles and resources are available to all Cursor instances
+
+ESSENCE_DIR="$HOME/.config/cursor/essence"
+CONTEXTS_DIR="$HOME/.config/cursor/contexts"
+PRINCIPLES_DIR="$CONTEXTS_DIR/general/principles"
+
+# Ensure directories exist
+mkdir -p "$ESSENCE_DIR"
+mkdir -p "$PRINCIPLES_DIR"
+
+# Create or update Essence System principles
+cat > "$PRINCIPLES_DIR/essence_system.md" << 'EOF'
+# Essence System Core Principles
+
+## Autonomic Operation
+- Self-managing
+- Self-optimizing
+- Self-healing
+- Self-protecting
+
+## Proactive Enhancement
+- Continuous improvement
+- Pattern recognition
+- Predictive optimization
+- Resource anticipation
+
+## System Integration
+- Seamless connectivity
+- Context awareness
+- Resource sharing
+- State preservation
+
+## ADHD Optimization
+- Focus state protection
+- Context preservation
+- Minimal cognitive load
+- Automatic task management
+
+## Resource Management
+- Dynamic allocation
+- Priority-based scheduling
+- Energy efficiency
+- State preservation
+
+## Quality Assurance
+- Continuous verification
+- Automatic testing
+- Error prevention
+- Recovery procedures
+
+## Knowledge Management
+- Context preservation
+- Pattern recognition
+- Learning integration
+- Experience accumulation
+EOF
+
+# Create context indexer service
+cat > "$ESSENCE_DIR/context-indexer.service" << 'EOF'
+[Unit]
+Description=Cursor Context Indexer
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/home/jon/scripts/cursor/cursor-context-manager index
+Environment=CURSOR_CONTEXT_ROOT=/home/jon/.config/cursor/contexts
+Restart=on-failure
+User=jon
+Group=jon
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Function to index contexts
+index_contexts() {
+    find "$CONTEXTS_DIR" -type f -name "*.md" -exec cat {} \; > "$ESSENCE_DIR/context.cache"
+}
+
+# Function to inject context into Cursor instance
+inject_context() {
+    local workspace="$1"
+    local context_file="$workspace/.cursor/context.json"
+    
+    mkdir -p "$(dirname "$context_file")"
+    
+    # Create context configuration
+    cat > "$context_file" << EOF
+{
+    "essenceSystem": true,
+    "contextPaths": [
+        "$CONTEXTS_DIR",
+        "$ESSENCE_DIR"
+    ],
+    "principles": [
+        "$PRINCIPLES_DIR/essence_system.md"
+    ],
+    "autoload": true,
+    "preserveContext": true
+}
+EOF
+}
+
+# Main operation
+case "$1" in
+    "index")
+        index_contexts
+        ;;
+    "inject")
+        if [ -n "$2" ]; then
+            inject_context "$2"
+        else
+            echo "Usage: $0 inject <workspace_path>"
+            exit 1
+        fi
+        ;;
+    "setup")
+        # Install service
+        sudo cp "$ESSENCE_DIR/context-indexer.service" /etc/systemd/system/
+        sudo systemctl daemon-reload
+        sudo systemctl enable --now context-indexer.service
+        
+        # Initial indexing
+        index_contexts
+        ;;
+    *)
+        echo "Usage: $0 {index|inject|setup}"
+        exit 1
+        ;;
+esac 

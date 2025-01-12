@@ -1,0 +1,422 @@
+#!/bin/bash
+
+# One-shot setup script for Dual Claude system
+# Just run this once and everything will be ready
+
+set -euo pipefail
+
+CURSOR_CONFIG="/home/jon/.config/cursor"
+CURSOR_SHARE="/home/jon/.local/share/cursor"
+SYSTEMD_USER_DIR="/home/jon/.config/systemd/user"
+SCRIPTS_DIR="/home/jon/scripts/cursor"
+DEBUG=true
+
+# Project paths
+SYSTEM_PATH="/"
+PROJECT_PATH="/home/jon/projects/aether"
+AI_SYSTEM_PATH="/home/jon/ai_system_evolution"
+
+# Original cursor binary
+CURSOR_BIN="/usr/bin/cursor"
+CURSOR_REAL="/usr/bin/cursor.real"
+
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
+}
+
+debug() {
+    if [[ "$DEBUG" == "true" ]]; then
+        echo "[DEBUG] $1"
+    fi
+}
+
+check_dependencies() {
+    log "Checking dependencies..."
+    local deps=(systemctl jq lsof pkill chmod rsync tar curl)
+    for dep in "${deps[@]}"; do
+        if ! command -v "$dep" >/dev/null 2>&1; then
+            log "ERROR: Required dependency '$dep' not found"
+            return 1
+        fi
+    done
+}
+
+verify_cursor() {
+    log "Verifying cursor installation..."
+    
+    # Check command existence
+    if ! command -v cursor >/dev/null 2>&1; then
+        log "ERROR: cursor not found in PATH"
+        return 1
+    fi
+    debug "Found cursor in PATH"
+    
+    # Check binary
+    local cursor_bin=$(command -v cursor)
+    if [[ ! -x "$cursor_bin" ]]; then
+        log "ERROR: cursor binary not executable"
+        return 1
+    fi
+    debug "Cursor binary is executable: $cursor_bin"
+    
+    # Verify project paths
+    for path in "$PROJECT_PATH" "$AI_SYSTEM_PATH"; do
+        if [[ ! -d "$path" ]]; then
+            log "ERROR: Required path $path does not exist"
+            return 1
+        fi
+        debug "Verified path: $path"
+    done
+    
+    return 0
+}
+
+setup_cursor_wrapper() {
+    log "Setting up cursor wrapper chain..."
+    
+    # Backup original cursor binary if not already done
+    if [[ -f "$CURSOR_BIN" ]] && [[ ! -f "$CURSOR_REAL" ]]; then
+        log "Backing up original cursor binary..."
+        sudo mv "$CURSOR_BIN" "$CURSOR_REAL"
+        debug "Moved $CURSOR_BIN to $CURSOR_REAL"
+    fi
+    
+    # Install wrapper as new cursor binary
+    log "Installing cursor wrapper..."
+    sudo cp "$SCRIPTS_DIR/cursor-wrapper" "$CURSOR_BIN"
+    sudo chmod 755 "$CURSOR_BIN"
+    debug "Installed wrapper at $CURSOR_BIN"
+    
+    # Set up shell integration
+    log "Setting up shell integration..."
+    local shell_rc="$HOME/.zshrc"
+    local context_aware="$CURSOR_CONFIG/context-aware.sh"
+    
+    # Add source line if not already present
+    if ! grep -q "source.*context-aware.sh" "$shell_rc"; then
+        echo "# Cursor context-aware integration" >> "$shell_rc"
+        echo "source \"$context_aware\"" >> "$shell_rc"
+        debug "Added shell integration to $shell_rc"
+    fi
+}
+
+backup_cursor_config() {
+    log "Backing up cursor configuration..."
+    local timestamp=$(date '+%Y%m%d_%H%M%S')
+    local backup_base="/tmp/cursor_backup_$timestamp"
+    
+    mkdir -p "$backup_base"
+    
+    if [[ -d "$CURSOR_CONFIG" ]]; then
+        cp -r "$CURSOR_CONFIG" "$backup_base/"
+        debug "Backed up $CURSOR_CONFIG"
+    fi
+    
+    if [[ -d "$CURSOR_SHARE" ]]; then
+        # Exclude the backups directory to avoid recursion
+        rsync -a --exclude 'backups' "$CURSOR_SHARE/" "$backup_base/cursor_share/"
+        debug "Backed up $CURSOR_SHARE"
+    fi
+    
+    # Create final backup in cursor directory
+    mkdir -p "$CURSOR_SHARE/backups"
+    tar czf "$CURSOR_SHARE/backups/backup_$timestamp.tar.gz" -C "$backup_base" .
+    debug "Created compressed backup at $CURSOR_SHARE/backups/backup_$timestamp.tar.gz"
+    
+    # Cleanup temp files
+    rm -rf "$backup_base"
+}
+
+setup_directories() {
+    log "Creating required directories..."
+    local dirs=(
+        "$CURSOR_SHARE/contexts/project"
+        "$CURSOR_SHARE/contexts/system"
+        "$CURSOR_SHARE/contexts/.sacred"
+        "$CURSOR_SHARE/logs"
+        "$CURSOR_SHARE/metrics/claude"
+        "$CURSOR_SHARE/state"
+        "$CURSOR_SHARE/run"
+        "$CURSOR_SHARE/run/locks"
+        "$CURSOR_CONFIG/contexts/patterns"
+        "$CURSOR_SHARE/backups"
+        "$CURSOR_CONFIG/contexts/autonomic"
+        "$CURSOR_CONFIG/contexts/sacred"
+        "$CURSOR_CONFIG/contexts/sacred/principles"
+    )
+    
+    for dir in "${dirs[@]}"; do
+        mkdir -p "$dir"
+        chmod 755 "$dir"
+        debug "Created directory: $dir"
+    done
+}
+
+setup_context_files() {
+    log "Setting up context files..."
+    
+    # System context for AI system evolution
+    cat > "$CURSOR_CONFIG/contexts/system/config.json" <<EOF
+{
+    "workspace": "$AI_SYSTEM_PATH",
+    "type": "system",
+    "autonomic": true,
+    "patterns": ["evolution", "optimization", "monitoring"],
+    "sacred_paths": [
+        "/home/jon/ai_system_evolution",
+        "/home/jon/.config/cursor"
+    ]
+}
+EOF
+    
+    # Project context for Aether
+    cat > "$CURSOR_CONFIG/contexts/project/config.json" <<EOF
+{
+    "workspace": "$PROJECT_PATH",
+    "type": "project",
+    "autonomic": true,
+    "patterns": ["sdlc", "optimization", "monitoring"],
+    "sacred_paths": [
+        "/home/jon/projects/aether"
+    ]
+}
+EOF
+    
+    # Copy sacred principles
+    cp "$CURSOR_CONFIG/contexts/sacred/principles/CURSOR_PROTECTION.md" \
+       "$CURSOR_CONFIG/contexts/sacred/principles/CURSOR_PROTECTION.md.bak" 2>/dev/null || true
+    
+    debug "Created context configurations"
+}
+
+setup_executables() {
+    log "Setting up executables..."
+    local scripts=(
+        "claude-autonomic-manager"
+        "launch-dual-claude"
+        "context-crystallizer"
+        "cursor-wrapper"
+    )
+    
+    for script in "${scripts[@]}"; do
+        local script_path="$SCRIPTS_DIR/$script"
+        if [[ ! -f "$script_path" ]]; then
+            log "ERROR: Required script $script not found"
+            return 1
+        fi
+        chmod +x "$script_path"
+        debug "Made executable: $script_path"
+    done
+}
+
+check_service_file() {
+    local service="$1"
+    if [[ ! -f "$SYSTEMD_USER_DIR/$service" ]]; then
+        log "ERROR: Service file $service not found"
+        return 1
+    fi
+    debug "Service file exists: $service"
+}
+
+stop_optimization_services() {
+    log "Stopping optimization services..."
+    local services=(
+        "cursor-startup.service"
+        "claude-autonomic-manager.service"
+        "cursor-claude-project.slice"
+        "cursor-claude-system.slice"
+    )
+    
+    for svc in "${services[@]}"; do
+        systemctl --user stop "$svc" 2>/dev/null || true
+        debug "Stopped service: $svc"
+    done
+    
+    # Only kill optimization-related cursor instances
+    pkill -f "cursor.*CURSOR_CONTEXT_TYPE" 2>/dev/null || true
+    
+    # Give processes time to clean up
+    sleep 2
+}
+
+reload_systemd() {
+    log "Reloading systemd..."
+    systemctl --user daemon-reload
+    debug "Systemd reloaded"
+}
+
+enable_services() {
+    log "Enabling services..."
+    local services=(
+        "cursor-startup.service"
+        "claude-autonomic-manager.service"
+    )
+    
+    for svc in "${services[@]}"; do
+        if ! check_service_file "$svc"; then
+            return 1
+        fi
+        systemctl --user enable "$svc"
+        debug "Enabled service: $svc"
+    done
+}
+
+check_service_status() {
+    local service="$1"
+    local max_attempts=5
+    local attempt=1
+    
+    while (( attempt <= max_attempts )); do
+        local status
+        status=$(systemctl --user status "$service" 2>&1)
+        debug "Service $service status (attempt $attempt):"
+        debug "$status"
+        
+        if systemctl --user is-active "$service" >/dev/null 2>&1; then
+            return 0
+        fi
+        
+        log "Service $service not active yet (attempt $attempt/$max_attempts)"
+        journalctl --user -u "$service" -n 10 --no-pager
+        
+        (( attempt++ ))
+        sleep 2
+    done
+    
+    log "Service $service failed to start after $max_attempts attempts. Status:"
+    echo "$status"
+    return 1
+}
+
+start_services() {
+    log "Starting services..."
+    
+    # Start autonomic manager first
+    log "Starting autonomic manager..."
+    if ! systemctl --user start claude-autonomic-manager.service; then
+        log "ERROR: Failed to start autonomic manager"
+        journalctl --user -u claude-autonomic-manager.service -n 50 --no-pager
+        return 1
+    fi
+    
+    # Check its status
+    if ! check_service_status "claude-autonomic-manager.service"; then
+        return 1
+    fi
+    
+    # Start cursor startup service
+    log "Starting cursor startup service..."
+    if ! systemctl --user start cursor-startup.service; then
+        log "ERROR: Failed to start cursor startup service"
+        journalctl --user -u cursor-startup.service -n 50 --no-pager
+        return 1
+    fi
+    
+    # Check its status
+    if ! check_service_status "cursor-startup.service"; then
+        return 1
+    fi
+}
+
+verify_setup() {
+    log "Verifying setup..."
+    local services=(
+        "cursor-startup.service"
+        "claude-autonomic-manager.service"
+    )
+    
+    local slices=(
+        "cursor-claude-project.slice"
+        "cursor-claude-system.slice"
+    )
+    
+    # Check services
+    for svc in "${services[@]}"; do
+        if ! systemctl --user is-active "$svc" >/dev/null 2>&1; then
+            log "ERROR: Service $svc is not active"
+            return 1
+        fi
+        debug "Service $svc is active"
+    done
+    
+    # Check slices
+    for slice in "${slices[@]}"; do
+        if ! systemctl --user is-active "$slice" >/dev/null 2>&1; then
+            log "ERROR: Slice $slice is not active"
+            return 1
+        fi
+        debug "Slice $slice is active"
+    done
+    
+    # Check processes
+    for type in project system; do
+        if ! pgrep -f "cursor.*CURSOR_CONTEXT_TYPE=$type" >/dev/null; then
+            log "ERROR: No cursor process found for type $type"
+            return 1
+        fi
+        debug "Found cursor process for type $type"
+    done
+    
+    # Verify cursor wrapper
+    if ! grep -q "cursor-wrapper" "$CURSOR_BIN" 2>/dev/null; then
+        log "ERROR: Cursor wrapper not properly installed"
+        return 1
+    fi
+    debug "Cursor wrapper verified"
+    
+    # Verify shell integration
+    if ! grep -q "context-aware.sh" "$HOME/.zshrc" 2>/dev/null; then
+        log "ERROR: Shell integration not properly installed"
+        return 1
+    fi
+    debug "Shell integration verified"
+    
+    log "Setup verification complete"
+    return 0
+}
+
+main() {
+    log "Starting Dual Claude setup..."
+    
+    # Initial checks
+    check_dependencies || exit 1
+    verify_cursor || exit 1
+    
+    # Backup existing config
+    backup_cursor_config
+    
+    # Stop existing services
+    stop_optimization_services
+    
+    # Setup directory structure
+    setup_directories
+    
+    # Setup context files
+    setup_context_files
+    
+    # Setup cursor wrapper chain
+    setup_cursor_wrapper || exit 1
+    
+    # Setup executables
+    setup_executables || exit 1
+    
+    # Reload systemd
+    reload_systemd
+    
+    # Enable services
+    enable_services || exit 1
+    
+    # Start services
+    start_services || exit 1
+    
+    # Verify everything is running
+    if verify_setup; then
+        log "Dual Claude setup completed successfully!"
+        return 0
+    else
+        log "Setup completed with errors - check logs"
+        return 1
+    fi
+}
+
+main "$@" 

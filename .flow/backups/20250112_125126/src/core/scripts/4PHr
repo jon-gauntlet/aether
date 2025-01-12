@@ -1,0 +1,251 @@
+#!/bin/bash
+
+# Essence Harmonizer
+# Integrates and balances all subsystems according to Sacred Principles
+# Implements continuous re-integration and kaizen
+
+set -euo pipefail
+
+# Configuration
+CURSOR_CONFIG_DIR="${CURSOR_CONFIG_DIR:-$HOME/.config/cursor}"
+CURSOR_STATE_DIR="${CURSOR_STATE_DIR:-$HOME/.local/state/cursor}"
+CURSOR_DATA_DIR="${CURSOR_DATA_DIR:-$HOME/.local/share/cursor}"
+ESSENCE_DIR="$CURSOR_CONFIG_DIR/contexts"
+HARMONY_DIR="$CURSOR_STATE_DIR/harmony"
+
+# Initialize harmony directories
+mkdir -p "$HARMONY_DIR"/{state,insights,balance,flow}
+
+# Harmony configuration
+declare -A HARMONY_CONFIG=(
+    [balance_threshold]=0.85
+    [flow_confidence]=0.9
+    [integration_interval]=60
+    [essence_depth]=3
+    [max_harmonics]=50
+)
+
+# Helper Functions
+log() {
+    local level=$1
+    shift
+    echo "[$(date -Iseconds)] [$level] $*" | tee -a "$CURSOR_LOGS_DIR/harmony.log"
+}
+
+detect_system_harmony() {
+    local services=(
+        "meta-learner"
+        "autonomic-manager"
+        "context-crystallizer"
+        "essence-integrator"
+    )
+    
+    local harmony_score=0
+    local total_services=${#services[@]}
+    
+    for service in "${services[@]}"; do
+        if systemctl --user is-active "$service.service" >/dev/null 2>&1; then
+            # Get service metrics
+            local cpu_usage=$(systemctl --user show "$service.service" -p CPUUsageNSec | cut -d= -f2)
+            local memory_usage=$(systemctl --user show "$service.service" -p MemoryCurrent | cut -d= -f2)
+            
+            # Calculate service harmony
+            local service_harmony=$(echo "scale=2; ($cpu_usage < 70 && $memory_usage < 80) ? 1 : 0.5" | bc)
+            harmony_score=$(echo "scale=2; $harmony_score + $service_harmony" | bc)
+        fi
+    done
+    
+    echo "scale=2; $harmony_score / $total_services" | bc
+}
+
+analyze_essence_flow() {
+    local sacred_dir="$ESSENCE_DIR/sacred"
+    local general_dir="$ESSENCE_DIR/general"
+    
+    jq -n --arg sacred "$(find "$sacred_dir" -type f -name "*.md" -exec cat {} \;)" \
+          --arg general "$(find "$general_dir" -type f -name "*.md" -exec cat {} \;)" '
+    def extract_principles($text):
+        $text | split("\n") |
+        map(select(contains("principle") or contains("pattern") or contains("wisdom"))) |
+        map(capture("(?<type>principle|pattern|wisdom)[:\\s]+(?<content>.+)"));
+    
+    def find_alignments($sacred; $general):
+        ($sacred | extract_principles) as $s |
+        ($general | extract_principles) as $g |
+        $s | map({
+            principle: .,
+            alignments: ($g | map(select(.content | contains($s.content))))
+        });
+    
+    {
+        sacred_principles: ($sacred | extract_principles),
+        general_principles: ($general | extract_principles),
+        alignments: find_alignments($sacred; $general)
+    }'
+}
+
+balance_resources() {
+    local harmony_score=$1
+    local threshold="${HARMONY_CONFIG[balance_threshold]}"
+    
+    if (( $(echo "$harmony_score < $threshold" | bc -l) )); then
+        log "INFO" "Rebalancing resources for harmony (score: $harmony_score)"
+        
+        # Adjust resource quotas based on harmony score
+        local cpu_quota=$(echo "scale=0; 60 - (($threshold - $harmony_score) * 100)" | bc)
+        local memory_high=$(echo "scale=0; 8 - (($threshold - $harmony_score) * 10)" | bc)
+        
+        systemctl --user set-property cursor-context.slice CPUQuota="${cpu_quota}%"
+        systemctl --user set-property cursor-context.slice MemoryHigh="${memory_high}G"
+        
+        # Update meta-learning parameters
+        sed -i "s/\[pattern_confidence_threshold\]=.*/[pattern_confidence_threshold]=$harmony_score/" \
+            "$HOME/scripts/cursor/meta-learner"
+    fi
+}
+
+integrate_essence() {
+    local flow_data=$1
+    
+    # Extract core principles
+    jq -c '.sacred_principles[] | select(.type == "principle")' <<<"$flow_data" |
+    while read -r principle; do
+        local principle_name=$(echo "$principle" | jq -r '.content' | tr -cd '[:alnum:]')
+        local principle_file="$ESSENCE_DIR/sacred/principles/${principle_name}.md"
+        
+        # Create or update principle file
+        if [[ ! -f "$principle_file" ]]; then
+            echo "# Sacred Principle: $principle_name" > "$principle_file"
+            echo "$(echo "$principle" | jq -r '.content')" >> "$principle_file"
+            echo >> "$principle_file"
+            echo "## Alignments" >> "$principle_file"
+        fi
+        
+        # Update alignments
+        jq -c --arg principle "$principle_name" \
+           '.alignments[] | select(.principle.content | contains($principle))' \
+           <<<"$flow_data" >> "$principle_file"
+    done
+}
+
+optimize_harmony() {
+    local harmony_score=$1
+    local flow_data=$2
+    
+    # Update harmony state
+    echo "{
+        \"timestamp\": \"$(date -Iseconds)\",
+        \"harmony_score\": $harmony_score,
+        \"flow_data\": $flow_data,
+        \"system_state\": {
+            \"meta_learning\": $(systemctl --user is-active meta-learner.service >/dev/null 2>&1 && echo true || echo false),
+            \"autonomic\": $(systemctl --user is-active autonomic-manager.service >/dev/null 2>&1 && echo true || echo false),
+            \"crystallizer\": $(systemctl --user is-active context-crystallizer.service >/dev/null 2>&1 && echo true || echo false)
+        }
+    }" > "$HARMONY_DIR/state/current.json"
+    
+    # Generate harmony insights
+    jq -c --arg score "$harmony_score" '
+    def insight_priority(score; state):
+        if score < 0.7 then "critical"
+        elif score < 0.85 then "high"
+        elif score < 0.95 then "medium"
+        else "low"
+        end;
+    
+    {
+        timestamp: now,
+        harmony_score: ($score | tonumber),
+        priority: insight_priority($score; .system_state),
+        insights: [
+            if .system_state.meta_learning then empty else
+                {type: "service", message: "Meta-learning inactive", action: "restart"}
+            end,
+            if .system_state.autonomic then empty else
+                {type: "service", message: "Autonomic management inactive", action: "restart"}
+            end,
+            if .system_state.crystallizer then empty else
+                {type: "service", message: "Context crystallization inactive", action: "restart"}
+            end,
+            if ($score | tonumber) < 0.85 then
+                {type: "harmony", message: "System harmony below threshold", action: "rebalance"}
+            else empty end
+        ],
+        recommendations: [
+            if .flow_data.sacred_principles | length < 5 then
+                {type: "essence", message: "Insufficient sacred principles", action: "integrate"}
+            else empty end,
+            if .flow_data.alignments | length < 3 then
+                {type: "essence", message: "Low principle alignment", action: "align"}
+            else empty end
+        ]
+    }' "$HARMONY_DIR/state/current.json" > "$HARMONY_DIR/insights/current.json"
+}
+
+apply_harmony_insights() {
+    if [[ -f "$HARMONY_DIR/insights/current.json" ]]; then
+        jq -c '.insights[]' "$HARMONY_DIR/insights/current.json" |
+        while read -r insight; do
+            local type=$(echo "$insight" | jq -r '.type')
+            local action=$(echo "$insight" | jq -r '.action')
+            
+            case "$type" in
+                "service")
+                    case "$action" in
+                        "restart")
+                            local service=$(echo "$insight" | jq -r '.message' | grep -o '^[^ ]*')
+                            log "INFO" "Restarting $service"
+                            systemctl --user restart "$service.service"
+                            ;;
+                    esac
+                    ;;
+                "harmony")
+                    case "$action" in
+                        "rebalance")
+                            log "INFO" "Triggering resource rebalancing"
+                            balance_resources "$(detect_system_harmony)"
+                            ;;
+                    esac
+                    ;;
+                "essence")
+                    case "$action" in
+                        "integrate"|"align")
+                            log "INFO" "Triggering essence integration"
+                            integrate_essence "$(analyze_essence_flow)"
+                            ;;
+                    esac
+                    ;;
+            esac
+        done
+    fi
+}
+
+# Main Loop
+log "INFO" "Starting Essence Harmonizer"
+
+while true; do
+    # Detect current harmony
+    harmony_score=$(detect_system_harmony)
+    log "INFO" "Current harmony score: $harmony_score"
+    
+    # Analyze essence flow
+    flow_data=$(analyze_essence_flow)
+    
+    # Optimize system harmony
+    optimize_harmony "$harmony_score" "$flow_data"
+    
+    # Balance resources if needed
+    balance_resources "$harmony_score"
+    
+    # Apply harmony insights
+    apply_harmony_insights
+    
+    # Integrate essence
+    integrate_essence "$flow_data"
+    
+    # Archive old data while preserving patterns
+    find "$HARMONY_DIR" -type f -mtime +${HARMONY_CONFIG[integration_interval]} \
+        -not -name "*.pattern" -delete
+    
+    sleep "${HARMONY_CONFIG[integration_interval]}"
+done 

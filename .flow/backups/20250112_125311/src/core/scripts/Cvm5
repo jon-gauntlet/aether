@@ -1,0 +1,104 @@
+#!/usr/bin/env zsh
+
+# AI-First Development Helper (ai)
+# Usage: ai [command] [args]
+#   ai plan     # Plan with AI
+#   ai code     # Code with AI
+#   ai save     # Save useful prompt
+
+# Exit if being sourced
+[[ $ZSH_EVAL_CONTEXT == *:file:* ]] && return 0
+
+# Colors
+[[ -z "$NO_COLOR" ]] && {
+    GREEN='\033[0;32m'
+    YELLOW='\033[1;33m'
+    BLUE='\033[0;34m'
+    NC='\033[0m'
+}
+
+# Data storage (minimal)
+DATA_DIR="$HOME/.local/share/gauntlet"
+PROMPTS_FILE="$DATA_DIR/prompts.md"
+mkdir -p "$DATA_DIR"
+touch "$PROMPTS_FILE"
+
+# Show help if needed
+[[ "$1" == "help" || $# -eq 0 ]] && {
+    cat << EOF
+AI-First Development Helper
+
+Quick Start:
+  ai plan     Plan with AI (15min)
+  ai code     Code with AI (25min)
+  ai debug    Debug with AI (20min)
+  ai save     Save useful prompt
+  ai prompts  View saved prompts
+
+Tips shown during sessions!
+EOF
+    exit 0
+}
+
+# Save prompt
+save_prompt() {
+    local type=$1
+    shift
+    local prompt="$*"
+    echo -e "\n## $(date +%Y-%m-%d\ %H:%M) - $type\n$prompt" >> "$PROMPTS_FILE"
+    echo -e "${GREEN}✓ Prompt saved${NC}"
+}
+
+# Show prompts
+show_prompts() {
+    echo -e "\n${BLUE}Recent Prompts:${NC}"
+    tail -n 10 "$PROMPTS_FILE"
+}
+
+# Start AI session
+start_session() {
+    local type=$1
+    local duration=25
+    
+    case $type in
+        plan) 
+            duration=15
+            echo -e "${BLUE}AI Planning Session${NC}"
+            echo "Tips:"
+            echo "1. Describe goal clearly"
+            echo "2. Break into steps"
+            echo "3. Consider edge cases"
+            ;;
+        debug)
+            duration=20
+            echo -e "${BLUE}AI Debugging Session${NC}"
+            echo "Tips:"
+            echo "1. Show error context"
+            echo "2. List what you tried"
+            echo "3. Step through logic"
+            ;;
+        *)
+            echo -e "${BLUE}AI Coding Session${NC}"
+            echo "Tips:"
+            echo "1. Start with tests"
+            echo "2. Small changes"
+            echo "3. Verify each step"
+            ;;
+    esac
+    
+    # Start timer
+    gt $duration "ai-$type"
+    
+    # Prompt for useful prompts
+    echo -e "\n${YELLOW}Save useful prompt? (Enter to skip)${NC}"
+    read -r prompt
+    [[ -n "$prompt" ]] && save_prompt "$type" "$prompt"
+}
+
+# Handle commands
+case $1 in
+    save) shift; save_prompt "general" "$*" ;;
+    prompts) show_prompts ;;
+    plan|code|debug) start_session "$1" ;;
+    *) show_help ;;
+esac 

@@ -1,0 +1,38 @@
+Status:
+M  .env
+A  .husky/pre-commit
+D  RECOVERY_PLAN.md
+D  RECOVERY_STATUS_UPDATE.md
+D  TYPESCRIPT_BEST_PRACTICES.md
+M  VISION.md
+A  docs/BEST_PRACTICES.md
+D  docs/ENERGY_PATTERN_INTEGRATION.md
+D  docs/ENERGY_SYSTEM.md
+A  docs/FLOW_SLED.md
+D  docs/FLOW_SYSTEM.md
+A  docs/IMPLEMENTATION.md
+A  docs/NATURAL_ARCHITECTURE.md
+A  docs/NATURAL_IMPLEMENTATION.md
+A  docs/SLED_QUICK_REF.md
+A  docs/STANDARDS.md
+A  docs/guides/TYPESCRIPT.md
+A  docs/systems/ENERGY.md
+A  docs/systems/FLOW.md
+D  fixing-types.md
+M  package.json
+A  scripts/divine_sled.sh
+A  scripts/flow.js
+A  scripts/monitor.js
+A  scripts/recovery.js
+A  scripts/recovery.sh
+A  scripts/save-state.js
+A  scripts/verify-env.js
+A  src/ai/prepare.ts
+D  src/core/aaa/TYPE_PRACTICES.md
+A  src/core/types.ts
+
+Branch:
+recovery/2025-01-12T05-30-11-458Z
+
+Last Commit:
+ed3bfa21 feat: implement UI components with visualizations - Add ConsciousnessComponent with state visualization - Add FieldComponent with resonance display - Add PatternVisualization with node graph - Add AutonomicDevelopment with flow states - Update system types and schemas - Configure Vercel deployment
