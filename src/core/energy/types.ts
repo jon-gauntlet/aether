@@ -1,26 +1,39 @@
-export enum EnergyType {
-  MENTAL = 'MENTAL',
-  PHYSICAL = 'PHYSICAL',
-  EMOTIONAL = 'EMOTIONAL'
+import { z } from 'zod';
+
+// Internal types
+interface EnergyMetrics {
+  strength: number;
+  resonance: number;
+  frequency: number;
 }
 
-export interface Energy {
-  mental: number;
-  physical: number;
-  emotional: number;
+interface EnergyState {
+  current: EnergyMetrics;
+  baseline: EnergyMetrics;
+  peaks: EnergyMetrics[];
 }
 
-export interface EnergyMetrics {
-  efficiency: number;
-  sustainability: number;
-  recovery: number;
-  adaptability: number;
-  stability: number;
-}
+// Runtime validation
+export const EnergyMetricsSchema = z.object({
+  strength: z.number().min(0).max(1),
+  resonance: z.number().min(0).max(1), 
+  frequency: z.number()
+});
 
-export enum EnergyState {
-  OPTIMAL = 'OPTIMAL',
-  STABLE = 'STABLE',
-  RECOVERING = 'RECOVERING',
-  DEPLETED = 'DEPLETED'
-} 
+export const EnergyStateSchema = z.object({
+  current: EnergyMetricsSchema,
+  baseline: EnergyMetricsSchema,
+  peaks: z.array(EnergyMetricsSchema)
+});
+
+// Type guards
+export const isEnergyMetrics = (value: unknown): value is EnergyMetrics => {
+  return EnergyMetricsSchema.safeParse(value).success;
+};
+
+export const isEnergyState = (value: unknown): value is EnergyState => {
+  return EnergyStateSchema.safeParse(value).success;
+};
+
+// Public types
+export type { EnergyMetrics, EnergyState }; 

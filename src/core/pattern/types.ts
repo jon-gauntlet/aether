@@ -1,49 +1,50 @@
-import { Energy, EnergyMetrics } from '../energy/types';
-import { FlowState } from '../types/base';
+import { z } from 'zod';
+import { EnergyMetricsSchema } from '../energy/types';
 
-export enum PatternState {
-  PROTECTED = 'PROTECTED',
-  STABLE = 'STABLE',
-  EVOLVING = 'EVOLVING',
-  UNSTABLE = 'UNSTABLE'
-}
-
-export interface PatternMetrics {
-  efficiency: number;
-  sustainability: number;
-  recovery: number;
-  adaptability: number;
-  stability: number;
-  resonance: number;
-}
-
-export interface PatternContext {
-  flowState: FlowState;
-  energyLevels: Energy;
-  metrics: PatternMetrics;
-  metadata?: Record<string, any>;
-}
-
-export interface EnergyPattern {
+// Internal types
+interface Pattern {
   id: string;
   name: string;
-  flowState: FlowState;
-  energyLevels: Energy;
-  metrics: EnergyMetrics;
-  state: PatternState;
-  evolution: {
-    version: number;
-    history: Array<{
-      timestamp: Date;
-      changes: any;
-      success: boolean;
-    }>;
+  energy: {
+    required: number;
+    current: number;
   };
-  metadata?: Record<string, any>;
+  state: PatternState;
 }
 
-export interface PatternMatch {
-  pattern: EnergyPattern;
-  confidence: number;
-  context: PatternContext;
-} 
+interface PatternState {
+  active: boolean;
+  strength: number;
+  stability: number;
+  evolution: number;
+}
+
+// Runtime validation
+export const PatternStateSchema = z.object({
+  active: z.boolean(),
+  strength: z.number().min(0).max(1),
+  stability: z.number().min(0).max(1),
+  evolution: z.number().min(0)
+});
+
+export const PatternSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  energy: z.object({
+    required: z.number().min(0),
+    current: z.number().min(0)
+  }),
+  state: PatternStateSchema
+});
+
+// Type guards
+export const isPattern = (value: unknown): value is Pattern => {
+  return PatternSchema.safeParse(value).success;
+};
+
+export const isPatternState = (value: unknown): value is PatternState => {
+  return PatternStateSchema.safeParse(value).success;
+};
+
+// Public types
+export type { Pattern, PatternState }; 

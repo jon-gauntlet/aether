@@ -1,0 +1,154 @@
+#!/bin/bash
+
+# Claude Autonomic Manager
+# Manages Claude instances with zero cognitive overhead
+
+set -euo pipefail
+
+CURSOR_CONFIG="${CURSOR_CONFIG:-/home/jon/.config/cursor}"
+CURSOR_SHARE="${CURSOR_SHARE:-/home/jon/.local/share/cursor}"
+LOG_FILE="$CURSOR_SHARE/logs/claude_autonomic.log"
+METRICS_DIR="$CURSOR_SHARE/metrics/claude"
+LOCK_DIR="$CURSOR_SHARE/run/locks"
+
+# Ensure directories exist with proper permissions
+for dir in "$(dirname "$LOG_FILE")" "$METRICS_DIR" "$LOCK_DIR"; do
+    if ! mkdir -p "$dir" 2>/dev/null; then
+        echo "ERROR: Failed to create directory: $dir" >&2
+        exit 1
+    fi
+    if ! chmod -R u+rw "$dir" 2>/dev/null; then
+        echo "ERROR: Failed to set permissions on: $dir" >&2
+        exit 1
+    fi
+done
+
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE" 2>/dev/null || \
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >&2
+}
+
+acquire_lock() {
+    local type="$1"
+    local lock_file="$LOCK_DIR/claude_${type}.lock"
+    
+    if ! mkdir "$lock_file" 2>/dev/null; then
+        # Check if lock is stale (older than 5 minutes)
+        if [[ -d "$lock_file" ]] && [[ $(find "$lock_file" -maxdepth 0 -mmin +5) ]]; then
+            log "Removing stale lock for $type"
+            rm -rf "$lock_file"
+            mkdir "$lock_file"
+        else
+            return 1
+        fi
+    fi
+    
+    # Store PID in lock
+    echo $$ > "$lock_file/pid"
+    return 0
+}
+
+release_lock() {
+    local type="$1"
+    rm -rf "$LOCK_DIR/claude_${type}.lock"
+}
+
+cleanup_stale_processes() {
+    local type="$1"
+    
+    # Find and kill any zombie cursor processes for this type
+    pkill -f "cursor.*CURSOR_CONTEXT_TYPE=$type" || true
+    
+    # Remove stale PID file
+    rm -f "$CURSOR_SHARE/run/claude_${type}.pid"
+    
+    # Give processes time to die
+    sleep 2
+}
+
+check_cursor_process() {
+    local type="$1"
+    local pid_file="$CURSOR_SHARE/run/claude_${type}.pid"
+    
+    # First check PID file
+    if [[ -f "$pid_file" ]]; then
+        local pid
+        pid=$(cat "$pid_file")
+        if kill -0 "$pid" 2>/dev/null; then
+            # Verify it's the right type of process
+            if pgrep -f "cursor.*CURSOR_CONTEXT_TYPE=$type.*$pid" >/dev/null; then
+                return 0
+            fi
+            log "PID $pid exists but is not a $type Claude process"
+        else
+            log "PID file exists but process $pid is not running"
+        fi
+    else
+        log "No PID file found for $type Claude"
+    fi
+    
+    # Fallback to pgrep
+    if pgrep -f "cursor.*CURSOR_CONTEXT_TYPE=$type" >/dev/null; then
+        log "Found running $type Claude via pgrep"
+        return 0
+    fi
+    
+    log "Cursor $type instance not running"
+    return 1
+}
+
+restart_claude() {
+    local type="$1"
+    local slice_name="cursor-claude-$type.slice"
+    
+    if ! acquire_lock "$type"; then
+        log "Could not acquire lock for $type Claude restart"
+        return 1
+    fi
+    
+    log "Attempting to restart $type Claude..."
+    
+    # Clean up any stale processes first
+    cleanup_stale_processes "$type"
+    
+    # Start fresh instance via launch script
+    if /home/jon/scripts/cursor/launch-dual-claude "$type"; then
+        log "Successfully launched new $type Claude"
+        sleep 5
+        if check_cursor_process "$type"; then
+            release_lock "$type"
+            return 0
+        fi
+    fi
+    
+    # If direct launch fails, try slice restart
+    log "Direct launch failed, trying slice restart..."
+    if systemctl --user restart "$slice_name"; then
+        log "Successfully restarted $slice_name"
+        sleep 5
+        if check_cursor_process "$type"; then
+            release_lock "$type"
+            return 0
+        fi
+    fi
+    
+    log "Failed to restart $type Claude"
+    release_lock "$type"
+    return 1
+}
+
+monitor_processes() {
+    log "Starting process monitoring"
+    while true; do
+        for type in project system; do
+            if ! check_cursor_process "$type"; then
+                restart_claude "$type" || log "Failed to restart $type Claude"
+            fi
+        done
+        sleep 30
+    done
+}
+
+# Main execution
+log "Starting Claude Autonomic Manager"
+monitor_processes 

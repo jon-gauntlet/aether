@@ -1,0 +1,77 @@
+#!/bin/bash
+
+# Enhanced Cursor Wrapper
+# Automatically detects and sets appropriate Claude context
+# while preserving original cursor functionality
+
+set -euo pipefail
+
+CURSOR_BIN="/usr/bin/cursor"
+CURSOR_SHARE="/home/jon/.local/share/cursor"
+CURSOR_CONFIG="/home/jon/.config/cursor"
+
+detect_context_type() {
+    local workspace="$1"
+    local abs_path=$(realpath "$workspace")
+    
+    # System context if:
+    # 1. Path is root (/)
+    # 2. Path is in /etc, /usr, /var, etc.
+    # 3. Path contains systemd units, system configs
+    if [[ "$abs_path" == "/" ]] || \
+       [[ "$abs_path" =~ ^/(etc|usr|var|srv|opt|boot|lib|bin|sbin) ]] || \
+       [[ "$abs_path" =~ systemd|system|config ]]; then
+        echo "system"
+        return 0
+    fi
+    
+    # Project context if in aether directory
+    if [[ "$abs_path" =~ /projects/aether(/|$) ]]; then
+        echo "project"
+        return 0
+    fi
+    
+    # No special context for other paths
+    echo ""
+    return 0
+}
+
+setup_context() {
+    local workspace="$1"
+    local context_type=$(detect_context_type "$workspace")
+    
+    # Only set up context if it's a special path
+    if [[ -n "$context_type" ]]; then
+        local slice_name="cursor-claude-${context_type}.slice"
+        
+        # Ensure slice exists and is active
+        systemctl --user start "$slice_name" >/dev/null 2>&1 || true
+        
+        # Initialize context (but don't fail if it fails)
+        /home/jon/scripts/cursor/context-crystallizer "$context_type" >/dev/null 2>&1 || true
+        
+        # Set environment variables
+        export CURSOR_CONTEXT_TYPE="$context_type"
+        export CURSOR_WORKSPACE="$workspace"
+        export CURSOR_SLICE="$slice_name"
+    fi
+}
+
+main() {
+    # Get the workspace argument (default to current directory)
+    local workspace="."
+    for arg in "$@"; do
+        if [[ ! "$arg" =~ ^- ]]; then
+            workspace="$arg"
+            break
+        fi
+    done
+    
+    # Setup context if appropriate (but don't fail if it fails)
+    setup_context "$workspace" || true
+    
+    # Execute original cursor with all arguments
+    exec "$CURSOR_BIN" "$@"
+}
+
+main "$@"

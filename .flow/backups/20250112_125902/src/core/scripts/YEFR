@@ -1,0 +1,147 @@
+#!/bin/bash
+
+# Context Bridge
+# Handles context inheritance between Cursor sessions
+
+set -euo pipefail
+
+# Configuration
+CURSOR_CONFIG_DIR="${CURSOR_CONFIG_DIR:-$HOME/.config/cursor}"
+CURSOR_STATE_DIR="${CURSOR_STATE_DIR:-$HOME/.local/state/cursor}"
+CURSOR_DATA_DIR="${CURSOR_DATA_DIR:-$HOME/.local/share/cursor}"
+
+# Paths
+CONTEXTS_DIR="$CURSOR_CONFIG_DIR/contexts"
+ACTIVE_CONTEXT="$CURSOR_STATE_DIR/active_context.json"
+CRYSTALLIZED_DIR="$CURSOR_DATA_DIR/crystallized"
+INHERITANCE_MAP="$CURSOR_STATE_DIR/inheritance_map.json"
+
+# Ensure directories exist
+mkdir -p "$CURSOR_STATE_DIR" "$CRYSTALLIZED_DIR"
+
+# Initialize inheritance map if it doesn't exist
+if [[ ! -f "$INHERITANCE_MAP" ]]; then
+    echo '{"sessions": {}, "inheritance_chain": []}' > "$INHERITANCE_MAP"
+fi
+
+# Helper Functions
+log() {
+    echo "[$(date -Iseconds)] $*" >&2
+}
+
+get_session_context() {
+    local session_id=$1
+    jq -r --arg sid "$session_id" '.sessions[$sid] // empty' "$INHERITANCE_MAP"
+}
+
+update_inheritance_map() {
+    local session_id=$1
+    local context_file=$2
+    local temp_file=$(mktemp)
+    
+    jq --arg sid "$session_id" \
+       --arg ctx "$context_file" \
+       '.sessions[$sid] = $ctx |
+        .inheritance_chain = (.inheritance_chain + [$sid])' \
+       "$INHERITANCE_MAP" > "$temp_file"
+    
+    mv "$temp_file" "$INHERITANCE_MAP"
+}
+
+inherit_context() {
+    local session_id=$1
+    local context_type=${2:-general}
+    
+    # Get most recent merged crystal of this type
+    local crystal_file="$CRYSTALLIZED_DIR/${context_type}_merged.json"
+    
+    if [[ -f "$crystal_file" ]]; then
+        # Create new session context from crystal
+        local new_context="$CURSOR_STATE_DIR/context_${session_id}.json"
+        jq '{
+            inherited_from: .timestamp,
+            type: .type,
+            concepts: .essence.key_concepts,
+            state: (.essence.critical_state | from_entries),
+            patterns: .essence.learned_patterns,
+            metrics: .metrics,
+            session_id: $sid,
+            created_at: now
+        }' --arg sid "$session_id" "$crystal_file" > "$new_context"
+        
+        # Update inheritance map
+        update_inheritance_map "$session_id" "$new_context"
+        
+        echo "$new_context"
+    else
+        # If no crystal exists, create fresh context
+        local new_context="$CURSOR_STATE_DIR/context_${session_id}.json"
+        echo '{
+            "type": "'$context_type'",
+            "concepts": [],
+            "state": {},
+            "patterns": [],
+            "metrics": {
+                "context_size": 0,
+                "interaction_count": 0,
+                "success_rate": 0
+            },
+            "session_id": "'$session_id'",
+            "created_at": '$(date +%s)'
+        }' > "$new_context"
+        
+        update_inheritance_map "$session_id" "$new_context"
+        
+        echo "$new_context"
+    fi
+}
+
+cleanup_old_contexts() {
+    # Keep contexts for 24 hours
+    find "$CURSOR_STATE_DIR" -name "context_*.json" -type f -mtime +1 -delete
+    
+    # Update inheritance map
+    local temp_file=$(mktemp)
+    jq 'del(.sessions[] | select(test("^/.*context_.*\\.json$") and (now - fromdate) > 86400))' \
+        "$INHERITANCE_MAP" > "$temp_file"
+    mv "$temp_file" "$INHERITANCE_MAP"
+}
+
+handle_new_session() {
+    local session_id=$1
+    local context_type=${2:-general}
+    
+    # Check if session already has context
+    if get_session_context "$session_id" > /dev/null; then
+        log "Session $session_id already has context"
+        return
+    fi
+    
+    # Inherit context
+    local context_file=$(inherit_context "$session_id" "$context_type")
+    log "Created new context for session $session_id: $context_file"
+    
+    # Link to active context if this is the current session
+    if [[ "$session_id" == "$(cat "$CURSOR_STATE_DIR/active_session" 2>/dev/null)" ]]; then
+        ln -sf "$context_file" "$ACTIVE_CONTEXT"
+        log "Linked $context_file as active context"
+    fi
+}
+
+watch_for_sessions() {
+    local check_interval=2 # seconds
+    
+    while true; do
+        if [[ -f "$CURSOR_STATE_DIR/active_session" ]]; then
+            local current_session=$(cat "$CURSOR_STATE_DIR/active_session")
+            handle_new_session "$current_session"
+        fi
+        
+        sleep "$check_interval"
+    done
+}
+
+# Main loop
+trap cleanup_old_contexts EXIT
+
+watch_for_sessions 

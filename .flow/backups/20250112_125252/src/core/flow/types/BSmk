@@ -1,0 +1,160 @@
+#!/bin/bash
+
+# Claude Autonomic Manager
+# Fully autonomous management of Claude instances with zero cognitive overhead
+
+set -euo pipefail
+
+CURSOR_CONFIG="${CURSOR_CONFIG:-/home/jon/.config/cursor}"
+CURSOR_SHARE="${CURSOR_SHARE:-/home/jon/.local/share/cursor}"
+CURSOR_STATE="${XDG_STATE_HOME:-$HOME/.local/state}/cursor"
+LOG_FILE="$CURSOR_SHARE/logs/claude_autonomic.log"
+METRICS_DIR="$CURSOR_SHARE/metrics/claude"
+STATE_FILE="$CURSOR_STATE/claude_autonomic.json"
+TEMP_DIR="${XDG_RUNTIME_DIR:-/tmp}/cursor"
+
+mkdir -p "$CURSOR_STATE" "$TEMP_DIR" "$(dirname "$LOG_FILE")" "$METRICS_DIR"
+
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE"
+}
+
+update_state() {
+    local key="$1"
+    local value="$2"
+    local temp_file
+    temp_file="$TEMP_DIR/state.$$"
+    
+    if [[ -f "$STATE_FILE" ]]; then
+        jq --arg k "$key" --arg v "$value" '.[$k] = $v' "$STATE_FILE" > "$temp_file"
+    else
+        jq -n --arg k "$key" --arg v "$value" '{($k): $v}' > "$temp_file"
+    fi
+    
+    mv "$temp_file" "$STATE_FILE"
+}
+
+get_state() {
+    local key="$1"
+    local default="${2:-}"
+    
+    if [[ -f "$STATE_FILE" ]]; then
+        jq -r --arg k "$key" '.[$k] // empty' "$STATE_FILE" || echo "$default"
+    else
+        echo "$default"
+    fi
+}
+
+check_cursor_process() {
+    local type="$1"
+    local workspace="$2"
+    
+    if ! pgrep -f "cursor.*CURSOR_CONTEXT_TYPE=$type" >/dev/null; then
+        log "Cursor $type instance not running, restarting..."
+        /home/jon/scripts/cursor/launch-dual-claude "$type"
+        update_state "${type}_last_restart" "$(date -Iseconds)"
+    fi
+}
+
+monitor_context_health() {
+    local type="$1"
+    local context_dir="$CURSOR_SHARE/contexts/$type"
+    local current_context="$context_dir/current_context.json"
+    
+    if [[ -f "$current_context" ]]; then
+        local depth tool_calls
+        depth=$(jq -r '.context_depth // 0' "$current_context")
+        tool_calls=$(jq -r '.tool_calls // 0' "$current_context")
+        
+        # Proactive crystallization
+        if (( depth > 60 )) || (( tool_calls > 15 )); then
+            log "Proactively crystallizing $type context..."
+            /home/jon/scripts/cursor/context-crystallizer "$type"
+        fi
+        
+        # Update metrics
+        echo "$depth" > "$METRICS_DIR/${type}_context_depth"
+        echo "$tool_calls" > "$METRICS_DIR/${type}_tool_calls"
+    fi
+}
+
+check_resource_usage() {
+    local type="$1"
+    local slice="cursor-claude-$type.slice"
+    
+    local cpu_usage
+    cpu_usage=$(systemctl --user show "$slice" -p CPUUsageNSec | cut -d= -f2)
+    
+    if (( cpu_usage > 80000000000 )); then  # 80% CPU
+        log "High CPU usage in $slice, optimizing..."
+        systemctl --user restart "$slice"
+    fi
+}
+
+detect_flow_state() {
+    local type="$1"
+    local tool_calls_file="$METRICS_DIR/${type}_tool_calls"
+    local last_check
+    last_check=$(get_state "${type}_last_check" "0")
+    
+    if [[ -f "$tool_calls_file" ]]; then
+        local current_time tool_calls tool_rate
+        current_time=$(date +%s)
+        tool_calls=$(cat "$tool_calls_file")
+        
+        # Calculate tool calls per minute
+        tool_rate=$(( (tool_calls - $(get_state "${type}_last_tool_calls" "0")) / (((current_time - last_check)) / 60) ))
+        
+        if (( tool_rate > 10 )); then  # High activity
+            log "Flow state detected for $type Claude"
+            update_state "${type}_flow_state" "active"
+            
+            # Optimize for flow
+            systemctl --user set-property "cursor-claude-$type.slice" CPUWeight=95 IOWeight=95
+        else
+            update_state "${type}_flow_state" "normal"
+            # Reset to normal weights
+            systemctl --user set-property "cursor-claude-$type.slice" \
+                CPUWeight=$([[ "$type" = "project" ]] && echo 80 || echo 60) \
+                IOWeight=$([[ "$type" = "project" ]] && echo 90 || echo 70)
+        fi
+        
+        update_state "${type}_last_tool_calls" "$tool_calls"
+    fi
+    
+    update_state "${type}_last_check" "$(date +%s)"
+}
+
+maintain_workspace() {
+    local type="$1"
+    local workspace="$2"
+    
+    # Ensure workspace exists and is accessible
+    if [[ ! -d "$workspace" ]]; then
+        log "Workspace $workspace not found for $type Claude"
+        return 1
+    fi
+    
+    # Check for stuck file handles
+    lsof "$workspace" 2>/dev/null | grep -q "cursor.*deleted" && {
+        log "Found stuck file handles in $workspace, cleaning up..."
+        systemctl --user restart "cursor-claude-$type.slice"
+    }
+}
+
+# Main loop
+log "Starting Claude Autonomic Manager"
+
+while true; do
+    for type in project system; do
+        workspace=$([[ "$type" = "project" ]] && echo "/home/jon/projects/aether" || echo "/")
+        
+        check_cursor_process "$type" "$workspace"
+        monitor_context_health "$type"
+        check_resource_usage "$type"
+        detect_flow_state "$type"
+        maintain_workspace "$type" "$workspace"
+    done
+    
+    sleep 30
+done 

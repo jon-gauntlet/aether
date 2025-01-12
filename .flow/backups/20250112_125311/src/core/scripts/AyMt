@@ -1,0 +1,99 @@
+#!/usr/bin/env zsh
+
+# Gauntlet Timer (gt) - Focus and Learning Timer
+# Usage: gt [time] [type] [notes]
+#   gt 25        # 25min focus block
+#   gt 45 learn  # 45min learning session
+#   gt note      # Quick insight capture
+
+# Exit if being sourced
+[[ $ZSH_EVAL_CONTEXT == *:file:* ]] && return 0
+
+# Colors
+[[ -z "$NO_COLOR" ]] && {
+    GREEN='\033[0;32m'
+    YELLOW='\033[1;33m'
+    BLUE='\033[0;34m'
+    NC='\033[0m'
+}
+
+# Data storage (minimal, just what we need)
+DATA_DIR="$HOME/.local/share/gauntlet"
+LOG_FILE="$DATA_DIR/$(date +%Y-%m-%d).log"
+INSIGHTS_FILE="$DATA_DIR/insights.md"
+mkdir -p "$DATA_DIR"
+touch "$LOG_FILE" "$INSIGHTS_FILE"
+
+# Show help if needed
+[[ "$1" == "help" || $# -eq 0 ]] && {
+    cat << EOF
+Gauntlet Timer - Focus & Learning
+
+Quick Start:
+  gt 25        Focus block (25min)
+  gt 45 learn  Learning session (45min)
+  gt note      Capture insight
+  gt stats     View progress
+
+Tips shown after sessions!
+EOF
+    exit 0
+}
+
+# Record session
+record_session() {
+    local duration=$1
+    local type=${2:-focus}
+    local notes=${3:-No notes}
+    echo "$(date +%H:%M) - $type: $notes" >> "$LOG_FILE"
+}
+
+# Show stats
+show_stats() {
+    echo -e "\n${BLUE}Today's Progress:${NC}"
+    echo -e "$(cat "$LOG_FILE" | tail -n 5)"
+    echo -e "\n${BLUE}Recent Insights:${NC}"
+    echo -e "$(tail -n 3 "$INSIGHTS_FILE")"
+}
+
+# Handle commands
+case $1 in
+    note)
+        shift
+        echo -e "\n## $(date +%Y-%m-%d\ %H:%M)\n$*" >> "$INSIGHTS_FILE"
+        echo -e "${GREEN}✓ Insight captured${NC}"
+        ;;
+    stats)
+        show_stats
+        ;;
+    *)
+        # Timer mode
+        duration=${1:-25}
+        type=${2:-focus}
+        echo -e "${BLUE}Starting ${duration}min $type block${NC}"
+        
+        # Get task
+        echo -e "${YELLOW}Task? (Enter for '$type')${NC}"
+        read -r task
+        [[ -z "$task" ]] && task=$type
+        
+        # Run timer
+        END=$(($(date +%s) + duration * 60))
+        while [ $(date +%s) -lt $END ]; do
+            REMAINING=$((END - $(date +%s)))
+            MIN=$((REMAINING / 60))
+            SEC=$((REMAINING % 60))
+            [[ $SEC -lt 10 ]] && SEC="0$SEC"
+            clear
+            echo -e "${BLUE}═══════════════════════${NC}"
+            echo -e "${YELLOW}Task:${NC} $task"
+            echo -e "${GREEN}Time:${NC} $MIN:$SEC"
+            sleep 1
+        done
+        
+        # Complete
+        record_session $duration $type "$task"
+        echo -e "\n${GREEN}Session complete!${NC}"
+        notify-send "✅ Done!" "$task completed"
+        ;;
+esac 

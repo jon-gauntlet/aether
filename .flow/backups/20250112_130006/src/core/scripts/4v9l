@@ -1,0 +1,77 @@
+#!/bin/bash
+
+set -euo pipefail
+
+# Environment setup
+CURSOR_CONFIG_DIR="${CURSOR_CONFIG_DIR:-$HOME/.config/cursor}"
+CURSOR_STATE_DIR="${CURSOR_STATE_DIR:-$HOME/.local/state/cursor}"
+CURSOR_DATA_DIR="${CURSOR_DATA_DIR:-$HOME/.local/share/cursor}"
+GAUNTLET_DATA_DIR="${GAUNTLET_DATA_DIR:-$HOME/.local/share/gauntlet}"
+
+# Ensure directories exist
+mkdir -p "$GAUNTLET_DATA_DIR"/{stats,metrics,state}
+
+# Logging function
+log() {
+    echo "[$(date -Iseconds)] $*"
+}
+
+# Notify systemd watchdog
+notify_watchdog() {
+    echo "WATCHDOG=1"
+}
+
+# Optimize gauntlet performance
+optimize_gauntlet() {
+    local timestamp=$(date +%Y%m%d_%H%M%S)
+    local stats_file="$GAUNTLET_DATA_DIR/stats/daily_stats.json"
+    local metrics_file="$GAUNTLET_DATA_DIR/metrics/optimization_${timestamp}.json"
+    
+    # Ensure stats file exists
+    touch "$stats_file"
+    
+    # Get today's date
+    local today=$(date +%Y-%m-%d)
+    
+    # Read current stats
+    local current_stats=$(jq -r ".[\"$today\"] // {}" "$stats_file")
+    
+    # Calculate optimization metrics
+    {
+        echo "{"
+        echo "  \"timestamp\": \"$(date -Iseconds)\","
+        echo "  \"daily_stats\": $current_stats,"
+        echo "  \"system_metrics\": {"
+        echo "    \"cpu_usage\": $(top -bn1 | grep "Cpu(s)" | awk '{print $2}'),"
+        echo "    \"memory_usage\": $(free | grep Mem | awk '{print $3/$2 * 100}'),"
+        echo "    \"swap_usage\": $(free | grep Swap | awk '{print $3/$2 * 100}'),"
+        echo "    \"disk_usage\": $(df -h / | tail -1 | awk '{print $5}' | tr -d '%')"
+        echo "  },"
+        echo "  \"focus_metrics\": {"
+        echo "    \"deep_mode_duration\": $(jq -r ".deep_mode_duration // 0" "$GAUNTLET_DATA_DIR/state/focus_metrics.json" 2>/dev/null || echo 0),"
+        echo "    \"flow_state_duration\": $(jq -r ".flow_state_duration // 0" "$GAUNTLET_DATA_DIR/state/focus_metrics.json" 2>/dev/null || echo 0),"
+        echo "    \"focus_sessions\": $(jq -r ".focus_sessions // 0" "$GAUNTLET_DATA_DIR/state/focus_metrics.json" 2>/dev/null || echo 0)"
+        echo "  }"
+        echo "}"
+    } > "$metrics_file"
+
+    # Apply optimizations based on metrics
+    if [[ $(jq -r '.system_metrics.memory_usage' "$metrics_file") -gt 80 ]]; then
+        log "High memory usage detected, triggering cleanup"
+        find "$GAUNTLET_DATA_DIR/stats" -type f -name "*.json" -mtime +7 -delete
+    fi
+
+    if [[ $(jq -r '.system_metrics.swap_usage' "$metrics_file") -gt 50 ]]; then
+        log "High swap usage detected, adjusting memory limits"
+        systemctl --user set-property cursor-context.slice MemoryHigh=2G
+    fi
+
+    log "Optimized gauntlet metrics to $metrics_file"
+}
+
+# Main loop
+while true; do
+    optimize_gauntlet
+    notify_watchdog
+    sleep 300  # Run every 5 minutes
+done 

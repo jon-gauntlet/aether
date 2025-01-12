@@ -1,0 +1,44 @@
+#!/bin/bash
+
+# Claude Autonomic Manager
+# Manages Claude instances with zero cognitive overhead
+
+set -euo pipefail
+
+CURSOR_CONFIG="${CURSOR_CONFIG:-/home/jon/.config/cursor}"
+CURSOR_SHARE="${CURSOR_SHARE:-/home/jon/.local/share/cursor}"
+LOG_FILE="$CURSOR_SHARE/logs/claude_autonomic.log"
+METRICS_DIR="$CURSOR_SHARE/metrics/claude"
+
+# Ensure directories exist with proper permissions
+mkdir -p "$(dirname "$LOG_FILE")" "$METRICS_DIR"
+chmod -R u+rw "$(dirname "$LOG_FILE")" "$METRICS_DIR"
+
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE"
+}
+
+check_cursor_process() {
+    local type="$1"
+    if ! pgrep -f "cursor.*CURSOR_CONTEXT_TYPE=$type" >/dev/null; then
+        log "Cursor $type instance not running"
+        return 1
+    fi
+    return 0
+}
+
+monitor_processes() {
+    while true; do
+        for type in project system; do
+            if ! check_cursor_process "$type"; then
+                log "Restarting $type Claude..."
+                systemctl --user restart "cursor-claude-$type.slice" || true
+            fi
+        done
+        sleep 30
+    done
+}
+
+# Main execution
+log "Starting Claude Autonomic Manager"
+monitor_processes 
