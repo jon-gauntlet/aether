@@ -190,3 +190,6 @@ export function useAutonomicValidation(
     observeValidation: () => validationState$.current.asObservable(),
     getAutonomicState: () => autonomic.current.observeAutonomicState()
   };
+
+  return {};
+}

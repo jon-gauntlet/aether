@@ -201,3 +201,6 @@ export const useAutonomicDevelopment = () => {
     protection$,
     patterns$
   };
+
+  return {};
+}

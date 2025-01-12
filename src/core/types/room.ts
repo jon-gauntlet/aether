@@ -1,4 +1,4 @@
-import { Connection } from '../types';
+import { Connection } from '../consciousness';
 
 interface Effect {
   calm: number;
@@ -7,6 +7,7 @@ interface Effect {
 
 interface Path extends Connection {
   strength: number;
+  to: string;
 }
 
 interface Room {
@@ -45,3 +46,4 @@ function findConnected(room: Room, rooms: Room[]): Array<{room: Room, path: Path
 
 function average(values: number[]): number {
   return values.reduce((sum, v) => sum + v, 0) / values.length;
+}

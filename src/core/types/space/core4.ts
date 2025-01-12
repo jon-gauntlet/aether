@@ -1,42 +1,19 @@
 /**
- * Core Type System
+ * Core Type System - Part 4
  * 
- * This establishes the type hierarchy for the entire system.
- * The order of exports is significant:
- * 
- * 1. Foundational types (order.ts)
- * 2. Structural types (structure.ts)
- * 3. Consciousness types (consciousness.ts)
- * 4. Flow types (flow.ts)
- * 5. Space types (space.ts)
- * 6. Validation functions (validation.ts)
+ * This file contains the core types for the space system.
  */
 
-// Import and re-export specific types to resolve conflicts
-import { Connection } from './consciousness';
-import type { FlowType as FlowTypeBase } from './order';
-import type { SpaceType as SpaceTypeBase } from './order';
-import type { FlowType as FlowTypeFlow } from './flow';
-import type { SpaceType as SpaceTypeSpace } from './space';
+import type { Connection } from '../base';
+import type { Energy, Presence, Harmony, Depth } from '../base';
 
-// Re-export with explicit names
-export type { FlowTypeBase as CoreFlowType };
-export type { SpaceTypeBase as CoreSpaceType };
-export type { FlowTypeFlow as FlowType };
-export type { SpaceTypeSpace as SpaceType };
-
-// Re-export all types
-export * from './order';
-export * from './consciousness';
-export * from './structure';
-
-// Additional types
+// Space types
 export interface Space {
   id: string;
   name: string;
   purpose: string;
   character: {
-    energy: number;
+    energy: Energy;
     focus: number;
     mood: Mood;
   };
@@ -45,49 +22,33 @@ export interface Space {
 
 export type Mood = 'focused' | 'lively' | 'casual' | 'quiet';
 
+// Experience types
 export interface Member {
   id: string;
   focus: {
-    level: number;
-    quality: number;
+    level: Presence;
+    quality: Harmony;
   };
-  energy: number;
-  depth: number;
+  energy: Energy;
+  depth: Depth;
 }
 
 export interface Room {
   id: string;
-  calm: number;
-  focus: number;
-  energy: number;
+  calm: Harmony;
+  focus: Presence;
+  energy: Energy;
   paths: Connection[];
 }
 
 export interface Stage {
-  level: number;
-  quality: number;
-  energy: number;
+  level: Presence;
+  quality: Harmony;
+  energy: Energy;
 }
 
 export interface State {
   focus: Stage;
   flow: Stage;
-  depth: number;
+  depth: Depth;
 }
-
-// Re-export validation functions
-export {
-  validateField,
-  validateNaturalFlow,
-  validateEnergyState,
-  validateConnection,
-  validateResonance,
-  validateProtection,
-  validateFlowSpace,
-  validateMindSpace,
-  validateConsciousnessState,
-  validateSpace,
-  validateMember,
-  validateRoom,
-  validateStage,
-  validateState

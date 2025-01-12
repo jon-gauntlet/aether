@@ -17,3 +17,5 @@ export interface SpaceState {
   type: string;
   metrics: FlowMetrics;
   connections: Connection[];
+
+}

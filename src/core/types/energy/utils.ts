@@ -45,3 +45,4 @@ export function useEnergyAnalytics(): EnergyAnalytics {
     flowEfficiency,
     protectionRate
   };
+}

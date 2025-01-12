@@ -22,3 +22,5 @@ export interface SpaceTransition {
   to: string;
   type: SpaceType;
   context: SpaceContext;
+
+}

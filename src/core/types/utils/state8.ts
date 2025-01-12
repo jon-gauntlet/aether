@@ -169,3 +169,6 @@ export function useAutonomic({
       getLearnings: () => pattern?.meta.learnings || []
     }
   };
+
+  return {};
+}

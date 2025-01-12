@@ -19,7 +19,7 @@ import type {
   SpaceType,
   ConnectionType,
   ConsciousnessType
-} from './order';
+} from '../base';
 
 // Import consciousness types
 import type {
@@ -33,7 +33,25 @@ import type {
   Protection,
   Resonance,
   Wave
-} from './consciousness';
+} from '../base';
+
+// Import validation functions
+import {
+  validateField,
+  validateNaturalFlow,
+  validateEnergyState,
+  validateConnection,
+  validateResonance,
+  validateProtection,
+  validateFlowSpace,
+  validateMindSpace,
+  validateConsciousnessState,
+  validateSpace,
+  validateMember,
+  validateRoom,
+  validateStage,
+  validateState
+} from './validation';
 
 // Re-export foundational types
 export type {
@@ -122,3 +140,4 @@ export {
   validateRoom,
   validateStage,
   validateState
+};

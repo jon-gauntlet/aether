@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
-import { FlowState, FlowMetrics } from '../types/flow/types';
-import { SpaceState } from '../types/space/types';
-import { ProtectionState } from '../types/protection/protection';
+import type { FlowState, FlowMetrics } from '../types/flow/types';
+import type { SpaceState } from '../types/space/types';
+import type { ProtectionState } from '../types/protection/protection';
 
 interface PreservedState {
   timestamp: number;

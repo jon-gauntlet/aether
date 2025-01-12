@@ -1,7 +1,8 @@
-import React from 'react'
+import React, { useState } from 'react'
 import styled from 'styled-components'
+import { useMessages } from '@/core/messaging/MessageProvider'
+import { useAuth } from '@/core/auth/AuthProvider'
 import { StyledContainerProps } from '@/components/shared/types'
-import { pulseAnimation, spiralAnimation, timing } from '@/styles/animations'
 
 interface Metric {
   value: number
@@ -15,88 +16,133 @@ interface FieldProps extends StyledContainerProps {
 const FieldContainer = styled.div<StyledContainerProps>`
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  gap: 1rem;
   padding: 2rem;
-  border-radius: 1.618rem;
+  border-radius: 1rem;
   background: ${({ theme }) => theme.colors.background};
-  transition: all ${timing.normal} ${timing.easings.natural};
-  transform: scale(${({ isActive }) => (isActive ? 1.618 : 1)});
   box-shadow: ${({ theme }) => theme.shadows.medium};
-  position: relative;
-  overflow: hidden;
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(
-      45deg,
-      ${({ theme }) => theme.colors.primary}15 0%,
-      ${({ theme }) => theme.colors.secondary}15 100%
-    );
-    animation: ${spiralAnimation} ${timing.slow} ${timing.easings.gentle} infinite;
-    z-index: 0;
-  }
-
-  &:hover {
-    transform: scale(1.0618);
-  }
+  transition: all ${({ theme }) => theme.transitions.normal};
+  transform: scale(${({ isActive }) => (isActive ? 1.05 : 1)});
 `
 
-const MetricsGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 1.618rem;
+const MessageList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  background: ${({ theme }) => theme.colors.backgroundAlt};
+`
+
+const Message = styled.div<{ isOwn: boolean }>`
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  background: ${({ theme, isOwn }) => isOwn ? theme.colors.primary : theme.colors.secondary};
+  align-self: ${({ isOwn }) => isOwn ? 'flex-end' : 'flex-start'};
+  max-width: 80%;
+`
+
+const MessageHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: ${({ theme }) => theme.colors.textAlt};
+`
+
+const MessageText = styled.p`
+  margin: 0;
+  color: ${({ theme }) => theme.colors.text};
+`
+
+const MessageInput = styled.input`
   width: 100%;
-  margin-top: 1.618rem;
-  position: relative;
-  z-index: 1;
+  padding: 0.75rem;
+  border: none;
+  border-radius: 0.5rem;
+  background: ${({ theme }) => theme.colors.backgroundAlt};
+  color: ${({ theme }) => theme.colors.text};
+  
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.primary};
+  }
 `
 
-const Metric = styled.div`
+const MetricsContainer = styled.div`
+  display: flex;
+  gap: 1rem;
+  justify-content: space-around;
+  margin-bottom: 1rem;
+`
+
+const MetricBox = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 1.618rem;
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: 0.618rem;
-  transition: transform ${timing.fast} ${timing.easings.smooth};
-  animation: ${pulseAnimation} ${timing.normal} ${timing.easings.natural} infinite;
-  animation-delay: ${() => Math.random() * timing.normal};
-
-  &:hover {
-    transform: translateY(-0.618rem);
-  }
+  gap: 0.25rem;
 `
 
-const Value = styled.span`
-  font-size: 1.618rem;
+const MetricValue = styled.span`
+  font-size: 1.5rem;
   font-weight: bold;
   color: ${({ theme }) => theme.colors.primary};
 `
 
-const Label = styled.span`
+const MetricLabel = styled.span`
   font-size: 0.875rem;
-  color: ${({ theme }) => theme.colors.text};
-  margin-top: 0.618rem;
-  opacity: 0.618;
+  color: ${({ theme }) => theme.colors.textAlt};
 `
 
-export const FieldComponent: React.FC<FieldProps> = ({ isActive = false, metrics = [] }) => {
+export const FieldComponent: React.FC<FieldProps> = ({
+  isActive = false,
+  metrics = []
+}) => {
+  const [messageText, setMessageText] = useState('')
+  const { messages, sendMessage } = useMessages()
+  const { user } = useAuth()
+
+  const handleSendMessage = async (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && messageText.trim()) {
+      await sendMessage(messageText.trim())
+      setMessageText('')
+    }
+  }
+
   return (
-    <FieldContainer data-testid="field-container" isActive={isActive}>
-      <MetricsGrid>
+    <FieldContainer isActive={isActive}>
+      <MetricsContainer>
         {metrics.map((metric, index) => (
-          <Metric key={index}>
-            <Value>{metric.value}</Value>
-            <Label>{metric.label}</Label>
-          </Metric>
+          <MetricBox key={index}>
+            <MetricValue>{metric.value}</MetricValue>
+            <MetricLabel>{metric.label}</MetricLabel>
+          </MetricBox>
         ))}
-      </MetricsGrid>
+      </MetricsContainer>
+
+      <MessageList>
+        {messages.map((message) => (
+          <Message key={message.id} isOwn={message.userId === user?.uid}>
+            <MessageHeader>
+              <span>{message.userName}</span>
+              <span>E:{message.energyLevel} C:{message.coherenceLevel}</span>
+            </MessageHeader>
+            <MessageText>{message.text}</MessageText>
+          </Message>
+        ))}
+      </MessageList>
+
+      <MessageInput
+        type="text"
+        value={messageText}
+        onChange={(e) => setMessageText(e.target.value)}
+        onKeyPress={handleSendMessage}
+        placeholder="Type a message..."
+      />
     </FieldContainer>
   )
 } 

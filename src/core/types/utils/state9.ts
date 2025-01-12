@@ -77,3 +77,6 @@ export function useGuardian(): GuardianState {
   }, []);
 
   return state;
+
+  return {};
+}

@@ -1,65 +1,41 @@
 import { DefaultTheme } from 'styled-components'
 
-declare module 'styled-components' {
-  export interface DefaultTheme {
-    colors: {
-      background: string
-      surface: string
-      primary: string
-      secondary: string
-      text: string
-      textLight: string
-      accent: string
-      error: string
-      success: string
-      warning: string
-    }
-    shadows: {
-      small: string
-      medium: string
-      large: string
-    }
-    transitions: {
-      fast: string
-      normal: string
-      slow: string
-    }
-    breakpoints: {
-      mobile: string
-      tablet: string
-      desktop: string
-      wide: string
-    }
+const theme: DefaultTheme = {
+  colors: {
+    background: '#000000',
+    backgroundAlt: '#111111',
+    surface: '#222222',
+    primary: '#6200ee',
+    secondary: '#03dac6',
+    text: '#ffffff',
+    textAlt: '#cccccc',
+    textLight: '#999999',
+    accent: '#bb86fc',
+    error: '#cf6679',
+    onError: '#000000',
+    success: '#00c853',
+    warning: '#ffd600'
+  },
+  shadows: {
+    small: '0 2px 4px rgba(0,0,0,0.1)',
+    medium: '0 4px 8px rgba(0,0,0,0.2)',
+    large: '0 8px 16px rgba(0,0,0,0.3)'
+  },
+  transitions: {
+    fast: '0.1s ease',
+    normal: '0.2s ease',
+    slow: '0.3s ease'
+  },
+  spacing: {
+    small: '0.5rem',
+    medium: '1rem',
+    large: '2rem'
+  },
+  borderRadius: {
+    small: '0.25rem',
+    medium: '0.5rem',
+    large: '1rem'
   }
 }
 
-export const theme: DefaultTheme = {
-  colors: {
-    background: '#f8f9fa',
-    surface: '#ffffff',
-    primary: '#4a90e2',
-    secondary: '#50e3c2',
-    text: '#2c3e50',
-    textLight: '#7f8c8d',
-    accent: '#8e44ad',
-    error: '#e74c3c',
-    success: '#2ecc71',
-    warning: '#f1c40f',
-  },
-  shadows: {
-    small: '0 2px 4px rgba(0, 0, 0, 0.1)',
-    medium: '0 4px 6px rgba(0, 0, 0, 0.1)',
-    large: '0 8px 16px rgba(0, 0, 0, 0.1)',
-  },
-  transitions: {
-    fast: '0.2s ease',
-    normal: '0.3s ease',
-    slow: '0.5s ease',
-  },
-  breakpoints: {
-    mobile: '320px',
-    tablet: '768px',
-    desktop: '1024px',
-    wide: '1440px',
-  },
-} 
+export { theme } 

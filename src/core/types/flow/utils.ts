@@ -1,14 +1,10 @@
 import { useEffect, useState, useCallback } from 'react';
-import { FlowSpace } from '../types/consciousness';
+import { FlowSpace, FlowPattern, FlowType, FlowContext } from './FlowSpace';
 import { Space } from './FlowSpace';
-import { FlowPattern, FlowType, FlowContext } from './FlowEngine';
 
 interface Flow {
-  // Simple interface
   state: Space;
   items: FlowPattern[];
-  
-  // Basic actions
   join: (type: FlowType, context?: FlowContext) => Promise<FlowPattern>;
   part: (id: string) => Promise<void>;
 }
@@ -26,9 +22,9 @@ export function useFlow(context: FlowContext = {}): Flow {
 
   useEffect(() => {
     const sub = space.watch().subscribe(
-      ({ state: next, flows }) => {
-        setState(next);
-        setItems(flows);
+      (data: { state: Space; flows: FlowPattern[] }) => {
+        setState(data.state);
+        setItems(data.flows);
       }
     );
 
@@ -55,3 +51,6 @@ export function useFlow(context: FlowContext = {}): Flow {
     join,
     part
   };
+}
+
+export type { Flow, FlowPattern, FlowType, FlowContext };

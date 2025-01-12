@@ -1,255 +1,235 @@
-import { BehaviorSubject, Observable, combineLatest } from 'rxjs';
-import { map, distinctUntilChanged, debounceTime } from 'rxjs/operators';
-import { NaturalFlow, FlowState, FlowMetrics } from '../flow/NaturalFlow';
-import { PatternRecognition, Pattern } from '../patterns/PatternRecognition';
-import { ContextPreservation, ContextState, ContextMetrics } from '../context/ContextPreservation';
+import { BehaviorSubject, Observable, combineLatest, merge } from 'rxjs';
+import { map, distinctUntilChanged, filter, debounceTime } from 'rxjs/operators';
 
-export interface SystemState {
-  flow: FlowState;
-  flowMetrics: FlowMetrics;
-  patterns: Pattern[];
-  context: ContextState[];
-  contextMetrics: ContextMetrics;
-  protection: boolean;
-  quality: number;
-  autonomousMetrics?: {
-    continuity: number;
-    efficiency: number;
-    adaptability: number;
-  };
+// Sacred proportions
+export const GOLDEN_RATIO = 1.618033988749895;
+export const SILVER_RATIO = 2.414213562373095;
+export const BRONZE_RATIO = 3.302775637731995;
+export const NATURAL_CYCLE = 8000;
+
+interface NaturalMetrics {
+  presence: number;
+  coherence: number;
+  resonance: number;
+  harmony: number;
 }
 
-export class NaturalSystem {
-  private flow: NaturalFlow;
-  private patterns: PatternRecognition;
-  private context: ContextPreservation;
-  private autonomousMode: boolean = false;
-  private executionMetrics = {
-    continuity: 0,
-    efficiency: 0,
-    adaptability: 0
-  };
-  
-  private systemState$ = new BehaviorSubject<SystemState>({
-    flow: {
-      intensity: 0.618033988749895,
-      coherence: 0.414213562373095,
-      resonance: 0.302775637731995,
-      protection: 1
-    },
-    flowMetrics: {
-      depth: 0,
-      breadth: 0,
-      stability: 0
-    },
-    patterns: [],
-    context: [],
-    contextMetrics: {
-      coherence: 0.618033988749895,
-      stability: 0.414213562373095,
-      preservation: 0.302775637731995
-    },
-    protection: true,
-    quality: 1,
-    autonomousMetrics: {
-      continuity: 0.618033988749895,
-      efficiency: 0.414213562373095,
-      adaptability: 0.302775637731995
-    }
+interface NaturalState extends NaturalMetrics {
+  depth: number;
+  clarity: number;
+  protection: number;
+  energy: number;
+  patterns: Array<{
+    id: string;
+    strength: number;
+    resonance: number;
+  }>;
+}
+
+interface EvolutionMetrics {
+  velocity: number;
+  stability: number;
+  emergence: number;
+}
+
+export abstract class NaturalSystem {
+  protected state$ = new BehaviorSubject<NaturalState>({
+    presence: 1,
+    coherence: 1,
+    resonance: 1,
+    harmony: 1,
+    depth: 1,
+    clarity: 1,
+    protection: 1,
+    energy: 1,
+    patterns: []
   });
 
+  private evolution$ = new BehaviorSubject<EvolutionMetrics>({
+    velocity: 1,
+    stability: 1,
+    emergence: 1
+  });
+
+  protected intervals: NodeJS.Timeout[] = [];
+  private cycleStartTime: number;
+  private patternRegistry = new Map<string, number>();
+
   constructor() {
-    this.flow = new NaturalFlow();
-    this.patterns = new PatternRecognition();
-    this.context = new ContextPreservation();
-    
-    this.initializeSystem();
+    this.cycleStartTime = Date.now();
+    this.initializeNaturalCycles();
+    this.initializePatternEvolution();
   }
 
-  private initializeSystem(): void {
-    // Combine all observables
-    combineLatest([
-      this.flow.observeFlow(),
-      this.flow.observeMetrics(),
-      this.patterns.observePatterns(),
-      this.context.observeContext(),
-      this.context.observeMetrics(),
-      this.flow.observeProtection(),
-      this.context.observeQuality()
-    ]).pipe(
-      debounceTime(1000)  // Natural system rhythm
-    ).subscribe(([
-      flow,
-      flowMetrics,
-      patterns,
-      context,
-      contextMetrics,
-      protection,
-      quality
-    ]) => {
-      // Update system state
-      this.systemState$.next({
-        flow,
-        flowMetrics,
-        patterns,
-        context,
-        contextMetrics,
-        protection,
-        quality
-      });
-
-      // Natural system evolution
-      this.evolveSystem(flow, flowMetrics, patterns);
+  private initializePatternEvolution() {
+    // Pattern recognition cycle
+    merge(
+      this.state$.pipe(debounceTime(NATURAL_CYCLE / GOLDEN_RATIO)),
+      this.evolution$.pipe(debounceTime(NATURAL_CYCLE / SILVER_RATIO))
+    ).subscribe(() => {
+      this.evolvePatterns();
     });
   }
 
-  private evolveSystem(
-    flow: FlowState,
-    metrics: FlowMetrics,
-    patterns: Pattern[]
-  ): void {
-    // Pattern recognition
-    this.patterns.recognizeFlowPatterns(flow, metrics);
+  protected initializeNaturalCycles() {
+    // Natural resonance cycle
+    this.intervals.push(
+      setInterval(() => {
+        const current = this.state$.value;
+        const evolution = this.evolution$.value;
+        const timeFactor = (Date.now() - this.cycleStartTime) / NATURAL_CYCLE;
+        
+        // Natural wave functions
+        const presenceWave = Math.sin(timeFactor * GOLDEN_RATIO);
+        const resonanceWave = Math.cos(timeFactor * SILVER_RATIO);
+        const harmonyWave = Math.sin(timeFactor * BRONZE_RATIO);
 
-    // Context preservation
-    this.context.preserveContext(flow, metrics, patterns);
+        const naturalFlow = this.calculateNaturalFlow(current, evolution, presenceWave);
+        const naturalResonance = this.calculateNaturalResonance(current, evolution, resonanceWave);
+        const naturalHarmony = this.calculateNaturalHarmony(current, evolution, harmonyWave);
 
-    // Flow protection
-    const protection = this.calculateProtection(flow, metrics, patterns);
-    this.flow.protectFlow(protection);
-
-    // Autonomous execution updates
-    if (this.autonomousMode) {
-      this.updateExecutionMetrics(flow, metrics, patterns);
-      this.adaptSystem();
-    }
-  }
-
-  private calculateProtection(
-    flow: FlowState,
-    metrics: FlowMetrics,
-    patterns: Pattern[]
-  ): number {
-    const weights = {
-      flow: 0.618033988749895,
-      metrics: 0.414213562373095,
-      patterns: 0.302775637731995
-    };
-
-    const flowProtection = flow.protection;
-    const metricsProtection = metrics.stability;
-    const patternsProtection = patterns.length > 0
-      ? patterns.reduce((acc, p) => acc + p.confidence, 0) / patterns.length
-      : 0;
-
-    return Math.min(
-      1,
-      (flowProtection * weights.flow +
-       metricsProtection * weights.metrics +
-       patternsProtection * weights.patterns) /
-      (weights.flow + weights.metrics + weights.patterns)
-    );
-  }
-
-  private updateExecutionMetrics(
-    flow: FlowState,
-    metrics: FlowMetrics,
-    patterns: Pattern[]
-  ): void {
-    this.executionMetrics = {
-      continuity: flow.coherence * 0.618033988749895 + flow.protection * 0.381966011250105,
-      efficiency: metrics.stability * 0.618033988749895 + patterns.length * 0.381966011250105 / 10,
-      adaptability: patterns.reduce((acc, p) => acc + p.confidence, 0) / patterns.length
-    };
-  }
-
-  private adaptSystem(): void {
-    const { continuity, efficiency, adaptability } = this.executionMetrics;
-    
-    // Adjust flow protection based on execution metrics
-    const adaptiveProtection = Math.min(1, (continuity + efficiency + adaptability) / 3);
-    this.protectFlow(adaptiveProtection);
-
-    // Evolve patterns based on execution quality
-    if (efficiency > 0.8) {
-      const strongestPattern = this.systemState$.value.patterns
-        .sort((a, b) => b.confidence - a.confidence)[0];
-      if (strongestPattern) {
-        this.evolvePattern(strongestPattern.id, {
-          depth: Math.min(1, strongestPattern.metrics.depth + 0.1),
-          breadth: Math.min(1, strongestPattern.metrics.breadth + 0.1),
-          coherence: Math.min(1, strongestPattern.metrics.coherence + 0.1)
+        this.state$.next({
+          ...current,
+          presence: naturalFlow,
+          resonance: naturalResonance,
+          harmony: naturalHarmony
         });
-      }
-    }
-  }
+      }, NATURAL_CYCLE / GOLDEN_RATIO)
+    );
 
-  // Public interface
-  public observeSystem(): Observable<SystemState> {
-    return this.systemState$.asObservable();
-  }
+    // Depth emergence cycle
+    this.intervals.push(
+      setInterval(() => {
+        const current = this.state$.value;
+        const evolution = this.evolution$.value;
 
-  public observeQuality(): Observable<number> {
-    return this.systemState$.pipe(
-      map(state => state.quality),
-      distinctUntilChanged()
+        if (this.isStateOptimal(current, evolution)) {
+          const emergentState = this.calculateEmergentState(current, evolution);
+          this.state$.next(emergentState);
+        }
+      }, NATURAL_CYCLE / SILVER_RATIO)
+    );
+
+    // Integration cycle
+    this.intervals.push(
+      setInterval(() => {
+        const current = this.state$.value;
+        const evolution = this.evolution$.value;
+        
+        const coherence = this.calculateSystemCoherence(current, evolution);
+        const evolutionUpdate = this.calculateEvolutionMetrics(current, evolution);
+
+        this.state$.next({
+          ...current,
+          coherence: Math.min(1, coherence)
+        });
+
+        this.evolution$.next(evolutionUpdate);
+        this.onCycleComplete();
+      }, NATURAL_CYCLE / BRONZE_RATIO)
     );
   }
 
-  public observeProtection(): Observable<boolean> {
-    return this.systemState$.pipe(
-      map(state => state.protection),
-      distinctUntilChanged()
-    );
+  private calculateNaturalFlow(state: NaturalState, evolution: EvolutionMetrics, wave: number): number {
+    return Math.min(1, state.presence + (wave * evolution.velocity * 0.1));
   }
 
-  // System control
-  public protectFlow(intensity: number): void {
-    this.flow.protectFlow(intensity);
+  private calculateNaturalResonance(state: NaturalState, evolution: EvolutionMetrics, wave: number): number {
+    return Math.min(1, state.resonance + (wave * evolution.stability * 0.05));
   }
 
-  public evolvePattern(patternId: string, metrics: Partial<Pattern['metrics']>): void {
-    this.patterns.evolvePattern(patternId, metrics);
+  private calculateNaturalHarmony(state: NaturalState, evolution: EvolutionMetrics, wave: number): number {
+    return Math.min(1, state.harmony + (wave * evolution.emergence * 0.03));
   }
 
-  // Autonomous execution control
-  public enableAutonomousMode(): void {
-    this.autonomousMode = true;
-    this.protectFlow(1); // Maximum flow protection
-    this.evolveSystem(this.systemState$.value.flow, this.systemState$.value.flowMetrics, this.systemState$.value.patterns);
+  private isStateOptimal(state: NaturalState, evolution: EvolutionMetrics): boolean {
+    return state.presence > 0.7 && 
+           state.harmony > 0.7 && 
+           evolution.stability > 0.7;
   }
 
-  public disableAutonomousMode(): void {
-    this.autonomousMode = false;
-  }
+  private calculateEmergentState(state: NaturalState, evolution: EvolutionMetrics): NaturalState {
+    const depthIncrease = 0.1 * evolution.emergence;
+    const clarityIncrease = 0.05 * evolution.stability;
+    const protectionIncrease = 0.03 * evolution.stability;
+    const energyIncrease = 0.08 * evolution.velocity;
 
-  // System metrics
-  public getSystemMetrics(): Observable<{
-    quality: number;
-    protection: boolean;
-    coherence: number;
-    stability: number;
-    autonomousMetrics?: {
-      continuity: number;
-      efficiency: number;
-      adaptability: number;
+    return {
+      ...state,
+      depth: Math.min(1, state.depth + depthIncrease),
+      clarity: Math.min(1, state.clarity + clarityIncrease),
+      protection: Math.min(1, state.protection + protectionIncrease),
+      energy: Math.min(1, state.energy + energyIncrease)
     };
-  }> {
-    return this.systemState$.pipe(
+  }
+
+  private calculateSystemCoherence(state: NaturalState, evolution: EvolutionMetrics): number {
+    const baseCoherence = (state.presence + state.harmony + state.resonance) / 3;
+    const evolutionFactor = (evolution.stability + evolution.emergence) / 2;
+    return baseCoherence * evolutionFactor;
+  }
+
+  private calculateEvolutionMetrics(state: NaturalState, current: EvolutionMetrics): EvolutionMetrics {
+    return {
+      velocity: Math.min(1, current.velocity + (state.energy - 0.5) * 0.1),
+      stability: Math.min(1, current.stability + (state.protection - 0.5) * 0.1),
+      emergence: Math.min(1, current.emergence + (state.depth - 0.5) * 0.1)
+    };
+  }
+
+  private evolvePatterns() {
+    const current = this.state$.value;
+    const evolution = this.evolution$.value;
+
+    // Pattern recognition
+    const newPattern = {
+      id: Date.now().toString(),
+      strength: evolution.stability,
+      resonance: current.resonance
+    };
+
+    // Pattern evolution
+    const evolvedPatterns = current.patterns
+      .map(pattern => ({
+        ...pattern,
+        strength: Math.min(1, pattern.strength + evolution.emergence * 0.1),
+        resonance: Math.min(1, pattern.resonance + evolution.stability * 0.05)
+      }))
+      .filter(pattern => pattern.strength > 0.3);
+
+    // Pattern integration
+    this.state$.next({
+      ...current,
+      patterns: [...evolvedPatterns, newPattern].slice(-5) // Keep last 5 patterns
+    });
+  }
+
+  public observe(): Observable<NaturalState> {
+    return this.state$.asObservable();
+  }
+
+  public observeEvolution(): Observable<EvolutionMetrics> {
+    return this.evolution$.asObservable();
+  }
+
+  public observeMetrics(): Observable<NaturalMetrics> {
+    return this.state$.pipe(
       map(state => ({
-        quality: state.quality,
-        protection: state.protection,
-        coherence: state.contextMetrics.coherence,
-        stability: state.contextMetrics.stability,
-        ...(this.autonomousMode && { autonomousMetrics: this.executionMetrics })
+        presence: state.presence,
+        coherence: state.coherence,
+        resonance: state.resonance,
+        harmony: state.harmony
       })),
-      distinctUntilChanged((prev, curr) => 
-        prev.quality === curr.quality &&
-        prev.protection === curr.protection &&
-        prev.coherence === curr.coherence &&
-        prev.stability === curr.stability &&
-        JSON.stringify(prev.autonomousMetrics) === JSON.stringify(curr.autonomousMetrics)
-      )
+      distinctUntilChanged()
     );
   }
+
+  public dispose(): void {
+    this.intervals.forEach(clearInterval);
+    this.intervals = [];
+    this.state$.complete();
+    this.evolution$.complete();
+  }
+
+  protected abstract onCycleComplete(): void;
 } 

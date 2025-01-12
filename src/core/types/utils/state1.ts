@@ -149,3 +149,6 @@ export function useDevelopmentValidation() {
     validate,
     hasErrors: validationErrors.length > 0
   };
+
+  return {};
+}

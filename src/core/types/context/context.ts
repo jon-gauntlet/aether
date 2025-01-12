@@ -22,3 +22,4 @@ export interface ContextMeta {
   accessCount: number;
   importance: number;
   tags: string[];
+}

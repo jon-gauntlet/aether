@@ -1,21 +1,41 @@
-// Re-export everything from core
-export * from './core';
+import { 
+  Space, 
+  FlowMetrics, 
+  FlowState as FlowSpaceState,
+  FlowPattern as BaseFlowPattern,
+  FlowContext as BaseFlowContext
+} from './FlowSpace';
 
-// Re-export specific types
-export type {
-  FlowMetrics,
-  AdvancedFlowMetrics,
-  DetailedFlowMetrics
-} from './metrics';
+import {
+  FlowType,
+  FlowPattern,
+  FlowContext,
+  FlowEngine
+} from './FlowEngine';
 
-export type {
-  FlowState,
-  NaturalFlow,
+import {
   Flow,
-  ConsciousnessState
-} from './state';
+  useFlow
+} from './utils';
 
+// Re-export core types
+export type { Space, FlowMetrics };
+
+// Re-export flow space types
+export type { 
+  FlowSpaceState,
+  BaseFlowPattern,
+  BaseFlowContext
+};
+
+// Re-export flow engine types
 export type {
-  Stream,
-  StreamId,
-  PresenceType
+  FlowType,
+  FlowPattern,
+  FlowContext,
+  FlowEngine
+};
+
+// Re-export utils
+export type { Flow };
+export { useFlow };

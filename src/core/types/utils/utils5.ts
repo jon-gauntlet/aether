@@ -49,3 +49,6 @@ export function useTypeValidation(predictiveValidation: PredictiveValidation) {
     hasErrors: errors.length > 0,
     clearErrors: () => setErrors([])
   };
+
+  return {};
+}

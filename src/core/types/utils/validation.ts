@@ -123,3 +123,4 @@ export const validateProtection = (state: ProtectionState, path: string[] = []):
     warnings,
     path
   };
+};

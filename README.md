@@ -1,14 +1,26 @@
 # Aether
 
-A natural flow system for autonomous development, designed to optimize for ADHD hyperfocus states and sustained excellence.
+A natural system for optimizing human digital communication, designed from first principles to enhance presence, authenticity, and flow in the digital realm.
 
-## Features
+## Core Objectives
 
-- Support for 80-100 hours/week of focused development
-- Optimization for ADHD hyperfocus states
-- Code quality maintenance through exhaustion
-- Effective and ethical AI integration
-- Sustainable excellence patterns
+1. **Natural Communication Flow**
+   - Seamless transitions between communication modes
+   - Intuitive context preservation
+   - Enhanced presence and engagement
+   - Organic interaction patterns
+
+2. **Digital Presence Optimization**
+   - Authentic representation across modalities
+   - Context-aware communication
+   - Natural attention management
+   - Sustained engagement patterns
+
+3. **AI Augmentation**
+   - Human-centric enhancement
+   - Natural system design
+   - Context-aware assistance
+   - Pattern recognition and evolution
 
 ## Getting Started
 
@@ -30,62 +42,26 @@ cd aether
 npm install
 ```
 
-3. Start the development server:
+### Development
+
 ```bash
-npm run dev
+npm run dev        # Start development server
+npm test          # Run tests
+npm run build     # Build for production
 ```
 
-### Testing
+## System Architecture
 
-Run the test suite:
-```bash
-npm test
-```
+### Core Systems
+- **Flow**: Natural communication patterns
+- **Presence**: Digital state management
+- **Context**: Understanding and adaptation
+- **Protection**: System stability and privacy
 
-Run tests with coverage:
-```bash
-npm run test:coverage
-```
-
-Run tests with UI:
-```bash
-npm run test:ui
-```
-
-### Building
-
-Build for production:
-```bash
-npm run build
-```
-
-Preview the production build:
-```bash
-npm run preview
-```
-
-## Development
-
-### Code Style
-
-- TypeScript for type safety
-- ESLint for linting
-- Prettier for code formatting
-
-Format code:
-```bash
-npm run format
-```
-
-Check types:
-```bash
-npm run typecheck
-```
-
-Lint code:
-```bash
-npm run lint
-```
+### Documentation
+- [Flow System](docs/systems/flow.md)
+- [Core Architecture](docs/architecture/core.md)
+- [Development Principles](docs/development/principles.md)
 
 ## Project Structure
 
@@ -96,16 +72,16 @@ src/
   ├── hooks/         # Custom React hooks
   ├── styles/        # Global styles and themes
   ├── test/          # Test setup and utilities
-  ├── types/         # TypeScript type definitions
+  ├── types/         # TypeScript definitions
   └── utils/         # Utility functions
 ```
 
 ## Contributing
 
 1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
+2. Create your feature branch
+3. Commit your changes
+4. Push to the branch
 5. Open a Pull Request
 
 ## License

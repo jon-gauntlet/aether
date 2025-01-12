@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { FlowState, FlowStateType, FlowIntensity } from '../types/flow/types';
-import { FlowMetrics, DEFAULT_FLOW_METRICS, calculateFlowQuality } from '../types/flow/metrics';
+import { FlowStateType } from '../types/flow/types';
+import type { FlowState, FlowIntensity } from '../types/flow/types';
+import { DEFAULT_FLOW_METRICS, calculateFlowQuality } from '../types/flow/metrics';
+import type { FlowMetrics } from '../types/flow/metrics';
 import { useProtection } from './useProtection';
 
 const FLOW_THRESHOLDS = {

@@ -1,121 +1,63 @@
-import { Connection, Space, EnergyState, Protection, NaturalFlow, Resonance } from '../base';
+import { Field, FlowState } from '../base';
 
-// Extended space types
-export interface MindSpace extends Space {
-  resonance: Resonance;
-  energy: EnergyState;
-}
-
-export interface FlowSpace extends Space {
-  flow: NaturalFlow;
-}
-
-// Consciousness state
 export interface ConsciousnessState {
-  id: string;
-  type: 'individual' | 'collective';
-  space: MindSpace;
-  spaces: FlowSpace[];
-  connections: Connection[];
-  resonance: Resonance;
-  depth: number;
-  protection: Protection;
-  energy: EnergyState;
-  flow: NaturalFlow;
-}
-
-// Default state creator
-export const createDefaultConsciousnessState = (): ConsciousnessState => ({
-  id: 'default',
-  type: 'individual',
-  space: {
-    resonance: {
-      primary: { frequency: 1, amplitude: 0.5, phase: 0 },
-      harmonics: [],
-      frequency: 1,
-      amplitude: 0.5,
-      phase: 0,
-      coherence: 0.5,
-      harmony: 0.5
-    },
-    energy: {
-      mental: 0.5,
-      physical: 0.5,
-      emotional: 0.5
-    }
-  },
-  spaces: [],
-  connections: [],
-  resonance: {
-    primary: { frequency: 1, amplitude: 0.5, phase: 0 },
-    harmonics: [],
-    frequency: 1,
-    amplitude: 0.5,
-    phase: 0,
-    coherence: 0.5,
-    harmony: 0.5
-  },
-  depth: 0.5,
+  currentState: FlowState;
+  flowSpace: {
+    stability: number;
+    coherence: number;
+    resonance: number;
+  };
   protection: {
-    level: 0.5,
-    type: 'standard',
-    shields: 0.5
-  },
-  energy: {
-    mental: 0.5,
-    physical: 0.5,
-    emotional: 0.5
-  },
-  flow: {
-    intensity: 0.5,
-    stability: 0.5,
-    coherence: 0.5,
-    energy: 0.5
-  }
-});
-
-// Thought stream
-export interface ThoughtStream {
-  id: string;
-  type: 'focus' | 'explore' | 'rest' | 'connect';
-  state: ConsciousnessState;
+    level: number;
+    integrity: number;
+    adaptability: number;
+  };
+  metrics: {
+    focus: number;
+    clarity: number;
+    presence: number;
+  };
 }
 
-// Thought evolution
-export interface ThoughtEvolution {
-  id: string;
-  from: ConsciousnessState;
-  to: ConsciousnessState;
-  depth: number;
+export interface FlowSpace {
+  watch: () => {
+    subscribe: (callback: (data: { 
+      state: FlowState;
+      flows: FlowPattern[];
+    }) => void) => { 
+      unsubscribe: () => void;
+    };
+  };
+  join: (type: string, context: any) => Promise<FlowPattern>;
+  part: (id: string) => Promise<void>;
 }
 
-// Type guards
-export const isConsciousnessState = (state: any): state is ConsciousnessState => {
-  return (
-    typeof state === 'object' &&
-    typeof state.id === 'string' &&
-    (state.type === 'individual' || state.type === 'collective') &&
-    Array.isArray(state.spaces) &&
-    Array.isArray(state.connections) &&
-    typeof state.depth === 'number'
-  );
-};
+export interface FlowPattern {
+  id: string;
+  type: string;
+  context: any;
+  confidence: number;
+  timestamp: number;
+}
 
-export const isThoughtStream = (stream: any): stream is ThoughtStream => {
+export const validateConsciousness = (state: ConsciousnessState): boolean => {
   return (
-    typeof stream === 'object' &&
-    typeof stream.id === 'string' &&
-    ['focus', 'explore', 'rest', 'connect'].includes(stream.type) &&
-    isConsciousnessState(stream.state)
-  );
-};
-
-export const isThoughtEvolution = (evolution: any): evolution is ThoughtEvolution => {
-  return (
-    typeof evolution === 'object' &&
-    typeof evolution.id === 'string' &&
-    isConsciousnessState(evolution.from) &&
-    isConsciousnessState(evolution.to) &&
-    typeof evolution.depth === 'number'
+    state.flowSpace.stability >= 0 &&
+    state.flowSpace.stability <= 1 &&
+    state.flowSpace.coherence >= 0 &&
+    state.flowSpace.coherence <= 1 &&
+    state.flowSpace.resonance >= 0 &&
+    state.protection.level >= 0 &&
+    state.protection.level <= 1 &&
+    state.protection.integrity >= 0 &&
+    state.protection.integrity <= 1 &&
+    state.protection.adaptability >= 0 &&
+    state.protection.adaptability <= 1 &&
+    state.metrics.focus >= 0 &&
+    state.metrics.focus <= 1 &&
+    state.metrics.clarity >= 0 &&
+    state.metrics.clarity <= 1 &&
+    state.metrics.presence >= 0 &&
+    state.metrics.presence <= 1
   );
 };
