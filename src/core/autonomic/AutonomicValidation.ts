@@ -1,115 +1,123 @@
-import { Field, FlowState, Protection } from '../types/base';
-
-export type ActionType = 'flow' | 'protection' | 'resonance';
+import { ActionType } from '../types/constants';
 
 export interface ValidationResult {
   isValid: boolean;
-  confidence: number;
-  context: {
-    flowState: FlowState;
-    protection: Protection;
-    metrics: {
-      stability: number;
-      coherence: number;
-      safety: number;
-    };
+  safetyScore: number;
+  protectionScore: number;
+  coherenceScore: number;
+  resonanceScore: number;
+}
+
+export interface ValidationState {
+  id: string;
+  currentState: string;
+  metrics: {
+    stability: number;
+    coherence: number;
+    resonance: number;
   };
 }
 
-export function validateAutonomicAction(
-  field: Field,
+export interface ValidationHistory {
+  id: string;
+  stateHistory: string[];
+  metrics: {
+    stability: number;
+    coherence: number;
+    resonance: number;
+  };
+}
+
+/**
+ * Validates autonomic actions based on current state and history
+ */
+export const validateAutonomicAction = (
   actionType: ActionType,
-  context: string[]
-): ValidationResult {
+  state: ValidationState,
+  history: ValidationHistory
+): ValidationResult => {
+  // Calculate base scores
+  const stabilityImpact = state.metrics.stability * history.metrics.stability;
+  const coherenceImpact = state.metrics.coherence * history.metrics.coherence;
+  const resonanceImpact = state.metrics.resonance * history.metrics.resonance;
+
+  // Calculate safety score based on action type
+  const safetyScore = calculateSafetyScore(actionType, stabilityImpact);
+  
+  // Calculate protection score
+  const protectionScore = calculateProtectionScore(actionType, stabilityImpact);
+  
+  // Calculate coherence score
+  const coherenceScore = calculateCoherenceScore(actionType, coherenceImpact);
+  
+  // Calculate resonance score
+  const resonanceScore = calculateResonanceScore(actionType, resonanceImpact);
+
+  return {
+    isValid: safetyScore > 0.5 && protectionScore > 0.3,
+    safetyScore,
+    protectionScore,
+    coherenceScore,
+    resonanceScore
+  };
+};
+
+const calculateSafetyScore = (actionType: ActionType, stabilityImpact: number): number => {
   switch (actionType) {
-    case 'flow':
-      return validateFlow(field);
-    case 'protection':
-      return validateProtection(field);
-    case 'resonance':
-      return validateResonance(field);
+    case 'ENHANCE_FLOW':
+      return stabilityImpact * 0.8;
+    case 'FORCE_TRANSITION':
+      return stabilityImpact * 0.4;
+    case 'MODIFY_FIELD':
+      return stabilityImpact * 0.6;
+    case 'INITIATE_RECOVERY':
+      return stabilityImpact * 0.9;
     default:
-      return {
-        isValid: false,
-        confidence: 0,
-        context: {
-          flowState: 'RESTING',
-          protection: field.protection,
-          metrics: {
-            stability: 0,
-            coherence: 0,
-            safety: 0
-          }
-        }
-      };
+      return 0;
   }
-}
+};
 
-function validateFlow(field: Field): ValidationResult {
-  const stability = field.protection.stability;
-  const energy = field.metrics.energy;
-  const focus = field.metrics.focus;
+const calculateProtectionScore = (actionType: ActionType, stabilityImpact: number): number => {
+  switch (actionType) {
+    case 'ENHANCE_FLOW':
+      return stabilityImpact * 0.7;
+    case 'FORCE_TRANSITION':
+      return stabilityImpact * 0.3;
+    case 'MODIFY_FIELD':
+      return stabilityImpact * 0.4;
+    case 'INITIATE_RECOVERY':
+      return stabilityImpact * 0.8;
+    default:
+      return 0;
+  }
+};
 
-  const isValid = stability > 0.7 && energy > 0.5 && focus > 0.6;
-  const confidence = (stability + energy + focus) / 3;
+const calculateCoherenceScore = (actionType: ActionType, coherenceImpact: number): number => {
+  switch (actionType) {
+    case 'ENHANCE_FLOW':
+      return coherenceImpact * 0.4;
+    case 'FORCE_TRANSITION':
+      return coherenceImpact * 0.3;
+    case 'MODIFY_FIELD':
+      return coherenceImpact * 0.6;
+    case 'INITIATE_RECOVERY':
+      return coherenceImpact * 0.7;
+    default:
+      return 0;
+  }
+};
 
-  return {
-    isValid,
-    confidence,
-    context: {
-      flowState: isValid ? 'FLOW' : 'RESTING',
-      protection: field.protection,
-      metrics: {
-        stability,
-        coherence: field.resonance.coherence,
-        safety: field.protection.integrity
-      }
-    }
-  };
-}
-
-function validateProtection(field: Field): ValidationResult {
-  const integrity = field.protection.integrity;
-  const shields = field.protection.shields;
-  const resilience = field.protection.resilience;
-
-  const isValid = integrity > 0.8 && shields > 0.7 && resilience > 0.6;
-  const confidence = (integrity + shields + resilience) / 3;
-
-  return {
-    isValid,
-    confidence,
-    context: {
-      flowState: isValid ? 'PROTECTED' : 'RESTING',
-      protection: field.protection,
-      metrics: {
-        stability: field.protection.stability,
-        coherence: field.resonance.coherence,
-        safety: integrity
-      }
-    }
-  };
-}
-
-function validateResonance(field: Field): ValidationResult {
-  const coherence = field.resonance.coherence;
-  const harmony = field.resonance.harmony;
-  const stability = field.protection.stability;
-
-  const isValid = coherence > 0.7 && harmony > 0.6 && stability > 0.5;
-  const confidence = (coherence + harmony + stability) / 3;
-
-  return {
-    isValid,
-    confidence,
-    context: {
-      flowState: isValid ? 'FLOW' : 'RESTING',
-      protection: field.protection,
-      metrics: {
-        stability,
-        coherence,
-        safety: field.protection.integrity
-      }
-    }
-  };
-} 
+const calculateResonanceScore = (actionType: ActionType, resonanceImpact: number): number => {
+  switch (actionType) {
+    case 'ENHANCE_FLOW':
+      return resonanceImpact * 0.7;
+    case 'FORCE_TRANSITION':
+      return resonanceImpact * 0.4;
+    case 'MODIFY_FIELD':
+      return resonanceImpact * 0.9;
+    case 'INITIATE_RECOVERY':
+      return resonanceImpact * 0.8;
+    default:
+      return 0;
+  }
+}; 
