@@ -44,4 +44,8 @@ ui-debug.log
 
 # System Files
 .DS_Store
-Thumbs.db 
+Thumbs.db
+
+# Gauntlet logs
+.gauntlet/logs/
+.gauntlet/logs/*.log 
