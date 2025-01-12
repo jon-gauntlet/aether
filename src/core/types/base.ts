@@ -7,6 +7,16 @@ export type Readonly<T> = {
   readonly [P in keyof T]: T[P];
 };
 
+// Development phases
+export enum DevelopmentPhase {
+  CONFIGURATION = 'CONFIGURATION',
+  OPTIMIZATION = 'OPTIMIZATION',
+  HEALING = 'HEALING',
+  PROTECTION = 'PROTECTION',
+  EVOLUTION = 'EVOLUTION',
+  INTEGRATION = 'INTEGRATION'
+}
+
 // Base metrics interface
 export interface BaseMetrics {
   readonly stability: number;

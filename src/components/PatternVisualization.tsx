@@ -1,190 +1,209 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useRef } from 'react';
 import styled from 'styled-components';
-import { Pattern, PatternMatch } from '../core/autonomic/PatternSystem';
+import { Pattern } from '@/core/types/system';
 
 interface PatternVisualizationProps {
-  patterns: PatternMatch[];
-  confidenceThreshold?: number;
-  onPatternSelect?: (pattern: Pattern) => void;
+  pattern: Pattern;
+  isActive: boolean;
 }
 
-const Container = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  padding: 20px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-`;
-
-const PatternCard = styled.div`
-  padding: 15px;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: transform 0.2s ease;
+const PatternContainer = styled.div<{ isActive: boolean }>`
+  padding: ${({ theme }) => theme.space.lg};
+  border-radius: ${({ theme }) => theme.borderRadius.large};
+  background: ${({ theme, isActive }) =>
+    isActive
+      ? `linear-gradient(135deg, ${theme.colors.primary}15, ${theme.colors.secondary}15)`
+      : theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text};
+  transition: all ${({ theme }) => theme.transitions.normal};
   position: relative;
-
-  &:hover {
-    transform: scale(1.02);
-  }
-`;
-
-const PatternHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
-`;
-
-const PatternName = styled.h3`
-  margin: 0;
-  font-size: 1.1em;
-  color: rgba(255, 255, 255, 0.9);
-`;
-
-const Confidence = styled.span`
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 0.9em;
-`;
-
-const StrengthIndicator = styled.div<{ strength: number }>`
-  width: 100%;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 2px;
   overflow: hidden;
-  position: relative;
 
-  &::after {
+  &::before {
     content: '';
     position: absolute;
     top: 0;
     left: 0;
-    height: 100%;
-    width: ${props => props.strength * 100}%;
-    background: linear-gradient(90deg, #00f260 0%, #0575e6 100%);
-    transition: width 0.3s ease;
-  }
-`;
-
-const ConditionsList = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 10px;
-`;
-
-const ConditionIndicator = styled.div<{ isMatched: boolean }>`
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 0.8em;
-  background: ${props => props.isMatched
-    ? 'linear-gradient(135deg, #00f260 0%, #0575e6 100%)'
-    : 'rgba(255, 255, 255, 0.1)'};
-  color: ${props => props.isMatched ? '#fff' : 'rgba(255, 255, 255, 0.6)'};
-`;
-
-const PatternDetails = styled.div`
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  padding: 15px;
-  background: rgba(0, 0, 0, 0.9);
-  border-radius: 8px;
-  margin-top: 10px;
-  z-index: 1;
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.2s ease, visibility 0.2s ease;
-
-  ${PatternCard}:hover & {
-    opacity: 1;
-    visibility: visible;
-  }
-`;
-
-const DetailItem = styled.div`
-  display: flex;
-  justify-content: space-between;
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 0.9em;
-  margin-bottom: 5px;
-
-  &:last-child {
-    margin-bottom: 0;
-  }
-`;
-
-const EmptyState = styled.div`
-  text-align: center;
-  padding: 30px;
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 1.1em;
-`;
-
-export const PatternVisualization: React.FC<PatternVisualizationProps> = ({
-  patterns,
-  confidenceThreshold = 0,
-  onPatternSelect
-}) => {
-  const sortedPatterns = useMemo(() => {
-    return [...patterns]
-      .filter(p => p.confidence >= confidenceThreshold)
-      .sort((a, b) => b.confidence - a.confidence);
-  }, [patterns, confidenceThreshold]);
-
-  if (patterns.length === 0) {
-    return (
-      <Container>
-        <EmptyState>No active patterns</EmptyState>
-      </Container>
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+      45deg,
+      ${({ theme }) => theme.colors.primary}10,
+      ${({ theme }) => theme.colors.secondary}10
     );
+    opacity: ${({ isActive }) => (isActive ? 1 : 0)};
+    transition: opacity ${({ theme }) => theme.transitions.normal};
+    animation: ${({ isActive }) => isActive ? 'flow 4s ease-in-out infinite' : 'none'};
   }
+
+  @keyframes flow {
+    0%, 100% { transform: scale(1); opacity: 0.7; }
+    50% { transform: scale(1.02); opacity: 1; }
+  }
+`;
+
+const PatternCanvas = styled.canvas`
+  width: 100%;
+  height: 180px;
+  margin: ${({ theme }) => theme.space.md} 0;
+  border-radius: ${({ theme }) => theme.borderRadius.medium};
+  background: ${({ theme }) => theme.colors.background}40;
+`;
+
+const MetricsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: ${({ theme }) => theme.space.md};
+  margin-top: ${({ theme }) => theme.space.lg};
+`;
+
+const Metric = styled.div<{ value: number }>`
+  padding: ${({ theme }) => theme.space.md};
+  border-radius: ${({ theme }) => theme.borderRadius.medium};
+  background: ${({ theme }) => theme.colors.background}40;
+  position: relative;
+  overflow: hidden;
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: ${({ value }) => value}%;
+    height: 2px;
+    background: linear-gradient(
+      to right,
+      ${({ theme }) => theme.colors.primary},
+      ${({ theme }) => theme.colors.secondary}
+    );
+    transition: width ${({ theme }) => theme.transitions.normal};
+  }
+`;
+
+const Title = styled.h3`
+  font-size: ${({ theme }) => theme.fontSizes.xl};
+  margin-bottom: ${({ theme }) => theme.space.md};
+  background: linear-gradient(
+    135deg,
+    ${({ theme }) => theme.colors.primary},
+    ${({ theme }) => theme.colors.secondary}
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+`;
+
+const Status = styled.div<{ isActive: boolean }>`
+  font-size: ${({ theme }) => theme.fontSizes.lg};
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: ${({ theme }) => theme.space.md};
+  color: ${({ theme, isActive }) =>
+    isActive ? theme.colors.primary : theme.colors.textAlt};
+`;
+
+export const PatternVisualization = ({
+  pattern,
+  isActive,
+}: PatternVisualizationProps) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const drawPattern = () => {
+      const { width, height } = canvas;
+      ctx.clearRect(0, 0, width, height);
+
+      // Draw pattern grid
+      const gridSize = 20;
+      const cellSize = Math.min(width, height) / gridSize;
+
+      ctx.strokeStyle = `${isActive ? '#6366F120' : '#94A3B820'}`;
+      ctx.lineWidth = 1;
+
+      // Draw vertical lines
+      for (let x = 0; x <= width; x += cellSize) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, height);
+        ctx.stroke();
+      }
+
+      // Draw horizontal lines
+      for (let y = 0; y <= height; y += cellSize) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+      }
+
+      // Draw pattern nodes
+      const nodeRadius = 4;
+      pattern.nodes.forEach((node, index) => {
+        const x = (node.position.x + 1) * width / 2;
+        const y = (node.position.y + 1) * height / 2;
+
+        // Draw node
+        ctx.beginPath();
+        ctx.arc(x, y, nodeRadius, 0, Math.PI * 2);
+        ctx.fillStyle = isActive ? '#6366F1' : '#94A3B8';
+        ctx.fill();
+
+        // Draw connections
+        pattern.connections.forEach(conn => {
+          if (conn.source === index || conn.target === index) {
+            const targetNode = pattern.nodes[conn.source === index ? conn.target : conn.source];
+            const targetX = (targetNode.position.x + 1) * width / 2;
+            const targetY = (targetNode.position.y + 1) * height / 2;
+
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(targetX, targetY);
+            ctx.strokeStyle = isActive ? '#6366F140' : '#94A3B840';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+          }
+        });
+      });
+    };
+
+    const animate = () => {
+      drawPattern();
+      requestAnimationFrame(animate);
+    };
+
+    animate();
+
+    return () => {
+      cancelAnimationFrame(animate as unknown as number);
+    };
+  }, [pattern, isActive]);
 
   return (
-    <Container>
-      {sortedPatterns.map(({ pattern, confidence, matchedConditions }) => (
-        <PatternCard
-          key={pattern.id}
-          onClick={() => onPatternSelect?.(pattern)}
-          data-testid="pattern-card"
-        >
-          <PatternHeader>
-            <PatternName>{pattern.name}</PatternName>
-            <Confidence>{Math.round(confidence * 100)}%</Confidence>
-          </PatternHeader>
-
-          <StrengthIndicator
-            strength={confidence}
-            data-testid={`strength-indicator-${pattern.id}`}
-          />
-
-          <ConditionsList>
-            {Object.keys(pattern.conditions).map(condition => (
-              <ConditionIndicator
-                key={condition}
-                isMatched={matchedConditions.includes(condition)}
-                data-testid="condition-indicator"
-              >
-                {condition}
-              </ConditionIndicator>
-            ))}
-          </ConditionsList>
-
-          <PatternDetails>
-            <DetailItem>
-              <span>Activations:</span>
-              <span>{pattern.activations}</span>
-            </DetailItem>
-            <DetailItem>
-              <span>Weight:</span>
-              <span>{pattern.weight}</span>
-            </DetailItem>
-          </PatternDetails>
-        </PatternCard>
-      ))}
-    </Container>
+    <PatternContainer isActive={isActive}>
+      <Title>Pattern Visualization</Title>
+      <Status isActive={isActive}>
+        Activations: {pattern.activations}
+      </Status>
+      <PatternCanvas ref={canvasRef} />
+      <MetricsGrid>
+        <Metric value={pattern.strength * 100}>
+          Strength: {(pattern.strength * 100).toFixed(0)}%
+        </Metric>
+        <Metric value={pattern.metrics.coherence.current * 100}>
+          Coherence: {(pattern.metrics.coherence.current * 100).toFixed(0)}%
+        </Metric>
+        <Metric value={pattern.metrics.stability.current * 100}>
+          Stability: {(pattern.metrics.stability.current * 100).toFixed(0)}%
+        </Metric>
+        <Metric value={pattern.resonance * 100}>
+          Resonance: {(pattern.resonance * 100).toFixed(0)}%
+        </Metric>
+      </MetricsGrid>
+    </PatternContainer>
   );
 }; 

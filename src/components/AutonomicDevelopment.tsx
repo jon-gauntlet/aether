@@ -1,176 +1,212 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import styled from 'styled-components';
-import { Field, FlowState } from '../core/types/base';
-import { ConsciousnessState } from '../core/types/consciousness';
-import { useAutonomic } from '../core/autonomic/useAutonomic';
+import { FlowState } from '@/core/types/system';
 
 interface AutonomicDevelopmentProps {
-  field: Field;
-  consciousness: ConsciousnessState;
+  flowStates: FlowState[];
+  isActive: boolean;
 }
 
-const Container = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  padding: 20px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-`;
-
-const MetricsGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 15px;
-`;
-
-const MetricCard = styled.div`
-  padding: 15px;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-`;
-
-const MetricTitle = styled.h3`
-  margin: 0;
-  font-size: 1em;
-  color: rgba(255, 255, 255, 0.9);
-`;
-
-const ProgressBar = styled.div<{ progress: number }>`
-  width: 100%;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 2px;
-  overflow: hidden;
+const AutonomicContainer = styled.div<{ isActive: boolean }>`
+  padding: ${({ theme }) => theme.space.lg};
+  border-radius: ${({ theme }) => theme.borderRadius.large};
+  background: ${({ theme, isActive }) =>
+    isActive
+      ? `linear-gradient(135deg, ${theme.colors.primary}15, ${theme.colors.secondary}15)`
+      : theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text};
+  transition: all ${({ theme }) => theme.transitions.normal};
   position: relative;
+  overflow: hidden;
 
-  &::after {
+  &::before {
     content: '';
     position: absolute;
     top: 0;
     left: 0;
-    height: 100%;
-    width: ${props => props.progress * 100}%;
-    background: linear-gradient(90deg, #00f260 0%, #0575e6 100%);
-    transition: width 0.3s ease;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+      45deg,
+      ${({ theme }) => theme.colors.primary}10,
+      ${({ theme }) => theme.colors.secondary}10
+    );
+    opacity: ${({ isActive }) => (isActive ? 1 : 0)};
+    transition: opacity ${({ theme }) => theme.transitions.normal};
+    animation: ${({ isActive }) => isActive ? 'autonomic 4s ease-in-out infinite' : 'none'};
+  }
+
+  @keyframes autonomic {
+    0%, 100% { transform: scale(1); opacity: 0.7; }
+    50% { transform: scale(1.02); opacity: 1; }
   }
 `;
 
-const PatternList = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+const AutonomicCanvas = styled.canvas`
+  width: 100%;
+  height: 180px;
+  margin: ${({ theme }) => theme.space.md} 0;
+  border-radius: ${({ theme }) => theme.borderRadius.medium};
+  background: ${({ theme }) => theme.colors.background}40;
 `;
 
-const PatternItem = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 6px;
+const MetricsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: ${({ theme }) => theme.space.md};
+  margin-top: ${({ theme }) => theme.space.lg};
 `;
 
-const PatternName = styled.span`
-  color: rgba(255, 255, 255, 0.9);
-`;
+const Metric = styled.div<{ value: number }>`
+  padding: ${({ theme }) => theme.space.md};
+  border-radius: ${({ theme }) => theme.borderRadius.medium};
+  background: ${({ theme }) => theme.colors.background}40;
+  position: relative;
+  overflow: hidden;
 
-const PatternConfidence = styled.span`
-  color: rgba(255, 255, 255, 0.7);
-`;
-
-const Button = styled.button`
-  padding: 12px 20px;
-  background: linear-gradient(135deg, #00f260 0%, #0575e6 100%);
-  border: none;
-  border-radius: 6px;
-  color: white;
-  font-weight: 500;
-  cursor: pointer;
-  transition: transform 0.2s ease;
-
-  &:hover {
-    transform: scale(1.02);
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: ${({ value }) => value}%;
+    height: 2px;
+    background: linear-gradient(
+      to right,
+      ${({ theme }) => theme.colors.primary},
+      ${({ theme }) => theme.colors.secondary}
+    );
+    transition: width ${({ theme }) => theme.transitions.normal};
   }
 `;
 
-export const AutonomicDevelopment: React.FC<AutonomicDevelopmentProps> = ({
-  field,
-  consciousness
-}) => {
-  const {
-    isActive,
-    activePatterns,
-    metrics,
-    activate,
-    detectPatterns
-  } = useAutonomic(field, consciousness);
+const Title = styled.h3`
+  font-size: ${({ theme }) => theme.fontSizes.xl};
+  margin-bottom: ${({ theme }) => theme.space.md};
+  background: linear-gradient(
+    135deg,
+    ${({ theme }) => theme.colors.primary},
+    ${({ theme }) => theme.colors.secondary}
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+`;
+
+const Status = styled.div<{ isActive: boolean }>`
+  font-size: ${({ theme }) => theme.fontSizes.lg};
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: ${({ theme }) => theme.space.md};
+  color: ${({ theme, isActive }) =>
+    isActive ? theme.colors.primary : theme.colors.textAlt};
+`;
+
+export const AutonomicDevelopment = ({
+  flowStates,
+  isActive,
+}: AutonomicDevelopmentProps) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const drawAutonomic = () => {
+      const { width, height } = canvas;
+      ctx.clearRect(0, 0, width, height);
+
+      // Draw flow state timeline
+      const timelineHeight = height * 0.8;
+      const timelineY = height * 0.1;
+      const stateWidth = width / Math.max(10, flowStates.length);
+
+      flowStates.forEach((state, index) => {
+        const x = index * stateWidth;
+        const stateHeight = timelineHeight * state.metrics.velocity;
+
+        // Draw state bar
+        ctx.fillStyle = isActive ? '#6366F140' : '#94A3B840';
+        ctx.fillRect(
+          x,
+          timelineY + timelineHeight - stateHeight,
+          stateWidth * 0.8,
+          stateHeight
+        );
+
+        // Draw state indicator
+        ctx.beginPath();
+        ctx.arc(
+          x + stateWidth * 0.4,
+          timelineY + timelineHeight - stateHeight,
+          4,
+          0,
+          Math.PI * 2
+        );
+        ctx.fillStyle = isActive ? '#6366F1' : '#94A3B8';
+        ctx.fill();
+      });
+
+      // Draw timeline
+      ctx.beginPath();
+      ctx.moveTo(0, timelineY + timelineHeight);
+      ctx.lineTo(width, timelineY + timelineHeight);
+      ctx.strokeStyle = isActive ? '#6366F120' : '#94A3B820';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    };
+
+    const animate = () => {
+      drawAutonomic();
+      requestAnimationFrame(animate);
+    };
+
+    animate();
+
+    return () => {
+      cancelAnimationFrame(animate as unknown as number);
+    };
+  }, [flowStates, isActive]);
+
+  const currentState = flowStates[flowStates.length - 1];
+  const averageMetrics = flowStates.reduce(
+    (acc, state) => ({
+      velocity: acc.velocity + state.metrics.velocity,
+      momentum: acc.momentum + state.metrics.momentum,
+      resistance: acc.resistance + state.metrics.resistance,
+      conductivity: acc.conductivity + state.metrics.conductivity,
+    }),
+    { velocity: 0, momentum: 0, resistance: 0, conductivity: 0 }
+  );
+
+  const stateCount = flowStates.length;
+  Object.keys(averageMetrics).forEach(key => {
+    averageMetrics[key as keyof typeof averageMetrics] /= stateCount;
+  });
 
   return (
-    <Container>
+    <AutonomicContainer isActive={isActive}>
+      <Title>Autonomic Development</Title>
+      <Status isActive={isActive}>
+        Active Flow States: {flowStates.length}
+      </Status>
+      <AutonomicCanvas ref={canvasRef} />
       <MetricsGrid>
-        <MetricCard>
-          <MetricTitle>Autonomy Score</MetricTitle>
-          <ProgressBar
-            progress={metrics.autonomyScore}
-            role="progressbar"
-            aria-valuenow={metrics.autonomyScore * 100}
-            aria-valuemin={0}
-            aria-valuemax={100}
-          />
-        </MetricCard>
-        <MetricCard>
-          <MetricTitle>Pattern Strength</MetricTitle>
-          <ProgressBar
-            progress={metrics.patternStrength}
-            role="progressbar"
-            aria-valuenow={metrics.patternStrength * 100}
-            aria-valuemin={0}
-            aria-valuemax={100}
-          />
-        </MetricCard>
-        <MetricCard>
-          <MetricTitle>Adaptability</MetricTitle>
-          <ProgressBar
-            progress={metrics.adaptability}
-            role="progressbar"
-            aria-valuenow={metrics.adaptability * 100}
-            aria-valuemin={0}
-            aria-valuemax={100}
-          />
-        </MetricCard>
-        <MetricCard>
-          <MetricTitle>Stability</MetricTitle>
-          <ProgressBar
-            progress={metrics.stability}
-            role="progressbar"
-            aria-valuenow={metrics.stability * 100}
-            aria-valuemin={0}
-            aria-valuemax={100}
-          />
-        </MetricCard>
+        <Metric value={averageMetrics.velocity * 100}>
+          Velocity: {(averageMetrics.velocity * 100).toFixed(0)}%
+        </Metric>
+        <Metric value={averageMetrics.momentum * 100}>
+          Momentum: {(averageMetrics.momentum * 100).toFixed(0)}%
+        </Metric>
+        <Metric value={averageMetrics.resistance * 100}>
+          Resistance: {(averageMetrics.resistance * 100).toFixed(0)}%
+        </Metric>
+        <Metric value={averageMetrics.conductivity * 100}>
+          Conductivity: {(averageMetrics.conductivity * 100).toFixed(0)}%
+        </Metric>
       </MetricsGrid>
-
-      <PatternList>
-        {activePatterns.map(({ pattern, confidence }) => (
-          <PatternItem key={pattern.id}>
-            <PatternName>{pattern.name}</PatternName>
-            <PatternConfidence>{Math.round(confidence * 100)}%</PatternConfidence>
-          </PatternItem>
-        ))}
-      </PatternList>
-
-      <Button onClick={isActive ? detectPatterns : activate}>
-        {isActive ? 'Detect Patterns' : 'Activate Development'}
-      </Button>
-    </Container>
+    </AutonomicContainer>
   );
 }; 
