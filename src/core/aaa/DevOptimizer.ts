@@ -2,7 +2,7 @@ import { Observable, Subject } from 'rxjs';
 import { SystemHealthIntegrator } from '../system/SystemHealthIntegrator';
 import { ProtectionSystem } from '../protection/ProtectionSystem';
 
-interface DevMetrics {
+export interface DevMetrics {
   // AI-First metrics
   aiAssistanceLevel: number;  // 0-1 AI pair programming effectiveness
   modelCoherence: number;     // 0-1 AI model understanding
@@ -24,7 +24,7 @@ interface DevMetrics {
   repoCoherence: number;      // 0-1 code organization quality
 }
 
-interface DevAction {
+export interface DevAction {
   type: 'AI_ASSIST' | 'MODEL_SYNC' | 'PROMPT_GEN' | 
         'ADAPT' | 'LEARN' | 'OPTIMIZE' |
         'ITERATE' | 'FEEDBACK' | 'DELIVER' |
