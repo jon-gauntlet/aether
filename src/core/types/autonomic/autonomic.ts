@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Field, FlowState } from '../types/base';
-import { ConsciousnessState } from '../types/consciousness';
+import { Field, FlowState } from '../base';
+import { ConsciousnessState } from '../consciousness';
 import { validateAutonomicAction, ActionType, ValidationResult } from './AutonomicValidation';
 import { PatternSystem, Pattern, PatternMatch } from './PatternSystem';
 
@@ -83,7 +83,17 @@ export const useAutonomic = (field: Field, consciousness: ConsciousnessState) =>
     });
 
     if (validation.isValid) {
-      setCurrentState(FlowState.RECOVERING);
+      setCurrentState({
+        id: `recovery-${Date.now()}`,
+        type: 'recovering',
+        metrics: {
+          velocity: 0.5,
+          focus: 0.7,
+          energy: 0.8
+        },
+        active: true,
+        timestamp: Date.now()
+      });
       updateMetrics();
     }
   }, [field, consciousness]);
@@ -108,3 +118,6 @@ export const useAutonomic = (field: Field, consciousness: ConsciousnessState) =>
     recordPattern,
     initiateRecovery
   };
+};
+
+export type { AutonomicMetrics, AutonomicAction };

@@ -1,11 +1,17 @@
-export { useAutonomic } from './useAutonomic';
-export { validateAutonomicAction } from './AutonomicValidation';
-export { PatternSystem } from './PatternSystem';
-export type {
-  ActionType,
-  ValidationResult,
-  Pattern,
-  PatternConditions,
-  PatternMatch,
-  AutonomicAction,
-  AutonomicMetrics
+import type { FlowMetrics } from '../base';
+
+export interface AutonomicState {
+  id: string;
+  type: string;
+  metrics: FlowMetrics;
+  active: boolean;
+  timestamp: number;
+}
+
+export interface AutonomicDevelopmentProps {
+  id: string;
+  type: string;
+  metrics: FlowMetrics;
+  active: boolean;
+  timestamp: number;
+}

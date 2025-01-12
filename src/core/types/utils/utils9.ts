@@ -156,3 +156,6 @@ export function useAutonomicDevelopment(props: AutonomicDevelopmentProps) {
     autonomicState,
     energyState
   };
+
+  return {};
+}

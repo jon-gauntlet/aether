@@ -1,64 +1,55 @@
-import { Field, FlowState } from '../types/base';
-import { ConsciousnessState } from '../types/consciousness';
+import { Observable, Subject } from 'rxjs';
+import type { FlowMetrics } from '../types/base';
 
-export interface PredictionMetrics {
-  flowAlignment: number;
-  resonanceHarmony: number;
-  protectionIntegrity: number;
-  consciousnessAlignment: number;
-}
+export class PredictiveValidation {
+  private typeErrors = new Subject<any[]>();
 
-export interface PredictionResult {
-  isValid: boolean;
-  confidence: number;
-  metrics: PredictionMetrics;
-}
+  observeTypeErrors(): Observable<any[]> {
+    return this.typeErrors.asObservable();
+  }
 
-const calculateFlowAlignment = (field: Field): number => {
-  const { velocity, momentum, resistance, conductivity } = field.flowMetrics;
-  return (velocity * momentum * conductivity * (1 - resistance));
-};
+  validateType(value: any, expectedType: string): boolean {
+    const errors: any[] = [];
+    const actualType = typeof value;
 
-const calculateResonanceHarmony = (field: Field): number => {
-  const { amplitude, harmonics } = field.resonance;
-  const harmonicStrength = harmonics.reduce((sum, h) => sum + h, 0) / harmonics.length;
-  return amplitude * harmonicStrength;
-};
+    if (actualType !== expectedType) {
+      errors.push({
+        value,
+        expectedType,
+        actualType,
+        message: `Expected ${expectedType} but got ${actualType}`
+      });
+      this.typeErrors.next(errors);
+      return false;
+    }
 
-const calculateProtectionIntegrity = (field: Field): number => {
-  const { shields, recovery, resilience, adaptability } = field.protection;
-  return (shields * recovery * resilience * adaptability) ** 0.25;
-};
+    return true;
+  }
 
-const calculateConsciousnessAlignment = (consciousness: ConsciousnessState): number => {
-  const { clarity, coherence, depth, integration, flexibility } = consciousness.metrics;
-  return (clarity * coherence * depth * integration * flexibility) ** 0.2;
-};
+  validateMetrics(metrics: FlowMetrics): boolean {
+    const errors: any[] = [];
+    const requiredFields = ['velocity', 'resistance', 'momentum', 'conductivity'];
 
-export const validatePrediction = (field: Field, consciousness: ConsciousnessState): PredictionResult => {
-  const flowAlignment = calculateFlowAlignment(field);
-  const resonanceHarmony = calculateResonanceHarmony(field);
-  const protectionIntegrity = calculateProtectionIntegrity(field);
-  const consciousnessAlignment = calculateConsciousnessAlignment(consciousness);
+    for (const field of requiredFields) {
+      if (!(field in metrics)) {
+        errors.push({
+          field,
+          message: `Missing required field: ${field}`
+        });
+      } else if (typeof metrics[field as keyof FlowMetrics] !== 'number') {
+        errors.push({
+          field,
+          value: metrics[field as keyof FlowMetrics],
+          message: `Field ${field} must be a number`
+        });
+      }
+    }
 
-  const metrics: PredictionMetrics = {
-    flowAlignment,
-    resonanceHarmony,
-    protectionIntegrity,
-    consciousnessAlignment
-  };
+    if (errors.length > 0) {
+      this.typeErrors.next(errors);
+      return false;
+    }
 
-  const confidence = (
-    field.strength * 0.3 +
-    flowAlignment * 0.3 +
-    resonanceHarmony * 0.2 +
-    protectionIntegrity * 0.1 +
-    consciousnessAlignment * 0.1
-  );
-
-  return {
-    isValid: confidence > 0.7,
-    confidence,
-    metrics
-  };
-}; 
+    return true;
+  }
+} 

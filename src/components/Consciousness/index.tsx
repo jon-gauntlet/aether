@@ -1,10 +1,16 @@
 import React from 'react'
 import styled, { keyframes } from 'styled-components'
+import { useAuth } from '@/core/auth/AuthProvider'
 import { StyledContainerProps } from '@/components/shared/types'
 
+export interface ConsciousnessState {
+  energyLevel: number
+  isCoherent: boolean
+}
+
 interface ConsciousnessProps extends StyledContainerProps {
-  energyLevel?: number
-  isCoherent?: boolean
+  onSignIn?: () => void
+  onSignOut?: () => void
 }
 
 const breatheAnimation = keyframes`
@@ -24,6 +30,7 @@ const ConsciousnessContainer = styled.div<StyledContainerProps>`
   transition: all ${({ theme }) => theme.transitions.normal};
   transform: scale(${({ isActive }) => (isActive ? 1.05 : 1)});
   box-shadow: ${({ theme }) => theme.shadows.medium};
+  cursor: pointer;
 
   &:hover {
     transform: scale(1.02);
@@ -62,16 +69,47 @@ const CoherenceStatus = styled.div<{ isCoherent?: boolean }>`
   transition: background-color ${({ theme }) => theme.transitions.fast};
 `
 
+const AuthButton = styled.button`
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 0.5rem;
+  background: ${({ theme }) => theme.colors.accent};
+  color: ${({ theme }) => theme.colors.text};
+  cursor: pointer;
+  transition: all ${({ theme }) => theme.transitions.fast};
+
+  &:hover {
+    transform: scale(1.05);
+    opacity: 0.9;
+  }
+`
+
 export const ConsciousnessComponent: React.FC<ConsciousnessProps> = ({
-  energyLevel = 50,
-  isCoherent = false,
+  onSignIn,
+  onSignOut
 }) => {
+  const { user, consciousnessState, signIn, signOut } = useAuth()
+
+  const handleAuth = async () => {
+    if (user) {
+      await signOut()
+      onSignOut?.()
+    } else {
+      await signIn()
+      onSignIn?.()
+    }
+  }
+
   return (
-    <ConsciousnessContainer data-testid="consciousness-container" isActive={isCoherent}>
-      <EnergyField energyLevel={energyLevel} />
-      <EnergyLevel>{energyLevel}</EnergyLevel>
+    <ConsciousnessContainer data-testid="consciousness-container" isActive={consciousnessState.isCoherent}>
+      <EnergyField energyLevel={consciousnessState.energyLevel} />
+      <EnergyLevel>{consciousnessState.energyLevel}</EnergyLevel>
       <span>Energy Level</span>
-      <CoherenceStatus data-testid="coherence-status" isCoherent={isCoherent} />
+      <CoherenceStatus data-testid="coherence-status" isCoherent={consciousnessState.isCoherent} />
+      <AuthButton onClick={handleAuth}>
+        {user ? 'Sign Out' : 'Sign In'}
+      </AuthButton>
     </ConsciousnessContainer>
   )
 } 

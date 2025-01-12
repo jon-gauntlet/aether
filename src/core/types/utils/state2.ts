@@ -1,4 +1,4 @@
-import create from 'zustand';
+import { create } from 'zustand';
 import { ContextPoint } from './types';
 
 interface ContextState {
@@ -9,22 +9,23 @@ interface ContextState {
   clearPoint: (id: string) => void;
 }
 
-export const useContextStore = create<ContextState>((set) => ({
+export const useContextStore = create<ContextState>()((set) => ({
   points: [],
   selectedPoint: null,
 
-  addPoint: (point) => 
+  addPoint: (point: ContextPoint) => 
     set((state) => ({ 
       points: [...state.points, point].sort((a, b) => 
         b.timestamp.getTime() - a.timestamp.getTime()
       )
     })),
 
-  selectPoint: (id) => 
+  selectPoint: (id: string) => 
     set({ selectedPoint: id }),
 
-  clearPoint: (id) =>
+  clearPoint: (id: string) =>
     set((state) => ({
-      points: state.points.filter(p => p.id !== id),
+      points: state.points.filter((p) => p.id !== id),
       selectedPoint: state.selectedPoint === id ? null : state.selectedPoint
-    })),
+    }))
+}));

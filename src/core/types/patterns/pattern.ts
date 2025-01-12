@@ -13,3 +13,4 @@ export interface Pattern {
   energyLevel: number;
   successRate: number;
   states: PatternState[];
+}

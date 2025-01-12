@@ -1,17 +1,14 @@
-/// <reference types="jest" />
+/// <reference types="vitest" />
 
-declare global {
-  namespace jest {
-    interface Matchers<R> {
-      toBeInRange(min: number, max: number): R;
-    }
-  }
+import type { Assertion, AsymmetricMatchersContaining } from 'vitest';
+
+interface CustomMatchers<R = unknown> {
+  toBeInRange(min: number, max: number): R;
 }
 
-declare module '@jest/expect' {
-  interface Matchers<R> {
-    toBeInRange(min: number, max: number): R;
-  }
+declare module 'vitest' {
+  interface Assertion extends CustomMatchers {}
+  interface AsymmetricMatchersContaining extends CustomMatchers {}
 }
 
 export * from './setup';

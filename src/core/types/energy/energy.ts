@@ -65,3 +65,4 @@ export interface EnergyEvolution {
   to: EnergyState;
   flowState: FlowState;
   timestamp: string;
+}

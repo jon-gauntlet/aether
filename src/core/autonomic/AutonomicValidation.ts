@@ -1,93 +1,115 @@
-import { Field, FlowState } from '../types/base';
-import { ConsciousnessState } from '../types/consciousness';
+import { Field, FlowState, Protection } from '../types/base';
 
-export enum ActionType {
-  ENHANCE_FLOW = 'ENHANCE_FLOW',
-  FORCE_TRANSITION = 'FORCE_TRANSITION',
-  MODIFY_FIELD = 'MODIFY_FIELD',
-  INITIATE_RECOVERY = 'INITIATE_RECOVERY'
-}
+export type ActionType = 'flow' | 'protection' | 'resonance';
 
 export interface ValidationResult {
   isValid: boolean;
   confidence: number;
-  safetyScore: number;
-  protectionScore: number;
-  coherenceScore: number;
-  resonanceScore: number;
+  context: {
+    flowState: FlowState;
+    protection: Protection;
+    metrics: {
+      stability: number;
+      coherence: number;
+      safety: number;
+    };
+  };
 }
 
-interface ValidationAction {
-  type: ActionType;
-  field: Field;
-  consciousness: ConsciousnessState;
-}
-
-const calculateSafetyScore = (consciousness: ConsciousnessState): number => {
-  const { stability } = consciousness.flowSpace;
-  const { clarity, integration } = consciousness.metrics;
-  return (stability * clarity * integration) ** (1/3);
-};
-
-const calculateProtectionScore = (field: Field): number => {
-  const { shields, resilience, adaptability } = field.protection;
-  return (shields * resilience * adaptability) ** (1/3);
-};
-
-const calculateCoherenceScore = (consciousness: ConsciousnessState): number => {
-  const { coherence, depth, flexibility } = consciousness.metrics;
-  return (coherence * depth * flexibility) ** (1/3);
-};
-
-const calculateResonanceScore = (field: Field): number => {
-  const { amplitude, harmonics } = field.resonance;
-  const harmonicStrength = harmonics.reduce((sum, h) => sum + h, 0) / harmonics.length;
-  return (amplitude * harmonicStrength * field.strength) ** (1/3);
-};
-
-export const validateAutonomicAction = (action: ValidationAction): ValidationResult => {
-  const { type, field, consciousness } = action;
-
-  const safetyScore = calculateSafetyScore(consciousness);
-  const protectionScore = calculateProtectionScore(field);
-  const coherenceScore = calculateCoherenceScore(consciousness);
-  const resonanceScore = calculateResonanceScore(field);
-
-  let confidence = 0;
-  let isValid = false;
-
-  switch (type) {
-    case ActionType.ENHANCE_FLOW:
-      confidence = (safetyScore * coherenceScore * resonanceScore) ** (1/3);
-      isValid = confidence > 0.7 && safetyScore > 0.6 && coherenceScore > 0.6;
-      break;
-
-    case ActionType.FORCE_TRANSITION:
-      confidence = safetyScore * protectionScore;
-      isValid = confidence > 0.8 && safetyScore > 0.7;
-      break;
-
-    case ActionType.MODIFY_FIELD:
-      confidence = (protectionScore * resonanceScore * coherenceScore) ** (1/3);
-      isValid = confidence > 0.7 && protectionScore > 0.6;
-      break;
-
-    case ActionType.INITIATE_RECOVERY:
-      confidence = 0.8; // Recovery is always relatively safe
-      isValid = true;
-      break;
-
+export function validateAutonomicAction(
+  field: Field,
+  actionType: ActionType,
+  context: string[]
+): ValidationResult {
+  switch (actionType) {
+    case 'flow':
+      return validateFlow(field);
+    case 'protection':
+      return validateProtection(field);
+    case 'resonance':
+      return validateResonance(field);
     default:
-      confidence = 0;
-      isValid = false;
+      return {
+        isValid: false,
+        confidence: 0,
+        context: {
+          flowState: 'RESTING',
+          protection: field.protection,
+          metrics: {
+            stability: 0,
+            coherence: 0,
+            safety: 0
+          }
+        }
+      };
   }
+}
+
+function validateFlow(field: Field): ValidationResult {
+  const stability = field.protection.stability;
+  const energy = field.metrics.energy;
+  const focus = field.metrics.focus;
+
+  const isValid = stability > 0.7 && energy > 0.5 && focus > 0.6;
+  const confidence = (stability + energy + focus) / 3;
 
   return {
     isValid,
     confidence,
-    safetyScore,
-    protectionScore,
-    coherenceScore,
-    resonanceScore
+    context: {
+      flowState: isValid ? 'FLOW' : 'RESTING',
+      protection: field.protection,
+      metrics: {
+        stability,
+        coherence: field.resonance.coherence,
+        safety: field.protection.integrity
+      }
+    }
   };
-}; 
+}
+
+function validateProtection(field: Field): ValidationResult {
+  const integrity = field.protection.integrity;
+  const shields = field.protection.shields;
+  const resilience = field.protection.resilience;
+
+  const isValid = integrity > 0.8 && shields > 0.7 && resilience > 0.6;
+  const confidence = (integrity + shields + resilience) / 3;
+
+  return {
+    isValid,
+    confidence,
+    context: {
+      flowState: isValid ? 'PROTECTED' : 'RESTING',
+      protection: field.protection,
+      metrics: {
+        stability: field.protection.stability,
+        coherence: field.resonance.coherence,
+        safety: integrity
+      }
+    }
+  };
+}
+
+function validateResonance(field: Field): ValidationResult {
+  const coherence = field.resonance.coherence;
+  const harmony = field.resonance.harmony;
+  const stability = field.protection.stability;
+
+  const isValid = coherence > 0.7 && harmony > 0.6 && stability > 0.5;
+  const confidence = (coherence + harmony + stability) / 3;
+
+  return {
+    isValid,
+    confidence,
+    context: {
+      flowState: isValid ? 'FLOW' : 'RESTING',
+      protection: field.protection,
+      metrics: {
+        stability,
+        coherence,
+        safety: field.protection.integrity
+      }
+    }
+  };
+} 

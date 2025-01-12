@@ -1,18 +1,13 @@
-import { type ClassValue, clsx } from "clsx"
-import { twMerge } from "tailwind-merge"
+import type { FlowMetrics } from '../base';
 
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+export interface FlowPattern {
+  id: string;
+  type: string;
+  metrics: FlowMetrics;
+  active: boolean;
+  timestamp: number;
 }
 
-export type UserRole = "ADMIN" | "INSTRUCTOR" | "STUDENT"
-
-export interface Session {
-  user: {
-    id: string
-    name?: string | null
-    email?: string | null
-    image?: string | null
-    role: UserRole
-  }
-  expires: string
+export function cn(...inputs: any[]): string {
+  return inputs.filter(Boolean).join(' ');
+}

@@ -1,62 +1,60 @@
 import { useState, useCallback } from 'react';
-import { FlowState } from '../types/base';
-import { Energy, EnergyMetrics } from '../energy/types';
-import { EnergyPattern, PatternState, PatternContext } from '../pattern/types';
+import type { FlowState } from '../types/base';
+import type { Energy, EnergyMetrics } from '../energy/types';
+import type { EnergyPattern, PatternState } from '../pattern/types';
 import { PatternSystem } from '../pattern/PatternSystem';
 
-export const usePattern = () => {
-  const [activePattern, setActivePattern] = useState<EnergyPattern | null>(null);
+export function usePattern() {
   const [patternSystem] = useState(() => new PatternSystem());
+  const [activePatterns, setActivePatterns] = useState<Array<{
+    id: string;
+    state: PatternState;
+    confidence: number;
+  }>>([]);
 
-  const createPattern = useCallback((
-    flowState: FlowState,
-    energy: Energy,
-    metrics: EnergyMetrics,
-    context?: Partial<PatternContext>
-  ) => {
-    const pattern = patternSystem.createPattern(flowState, energy, metrics, context);
-    setActivePattern(pattern);
-    return pattern;
+  const addPattern = useCallback((pattern: EnergyPattern) => {
+    patternSystem.addPattern({
+      id: pattern.id,
+      name: pattern.name,
+      conditions: {
+        flowState: pattern.flowState,
+        minFieldStrength: pattern.energyLevels.mental + pattern.energyLevels.physical + pattern.energyLevels.emotional,
+        minResonance: pattern.metrics.efficiency
+      },
+      weight: pattern.evolution.version,
+      activations: 0
+    });
+    
+    setActivePatterns(prev => [...prev, { 
+      id: pattern.id,
+      state: pattern.state,
+      confidence: 1
+    }]);
   }, [patternSystem]);
 
-  const findMatchingPattern = useCallback((
-    flowState: FlowState,
-    energy: Energy,
-    context?: Partial<PatternContext>
-  ) => {
-    const match = patternSystem.findMatchingPattern(flowState, energy, context);
-    if (match && match.confidence > 0.8) {
-      setActivePattern(match.pattern);
-    }
-    return match;
+  const removePattern = useCallback((id: string) => {
+    patternSystem.removePattern(id);
+    setActivePatterns(prev => prev.filter(p => p.id !== id));
   }, [patternSystem]);
 
-  const evolvePattern = useCallback((
-    pattern: EnergyPattern,
-    context: {
-      energyLevels: Energy;
-      metrics: EnergyMetrics;
-    },
-    wasSuccessful: boolean
-  ) => {
-    const evolvedPattern = patternSystem.evolvePattern(pattern, context, wasSuccessful);
-    
-    if (activePattern?.id === pattern.id) {
-      setActivePattern(evolvedPattern);
-    }
-    
-    return evolvedPattern;
-  }, [patternSystem, activePattern]);
-
-  const clearActivePattern = useCallback(() => {
-    setActivePattern(null);
-  }, []);
+  const updatePattern = useCallback((pattern: EnergyPattern) => {
+    patternSystem.updatePattern({
+      id: pattern.id,
+      name: pattern.name,
+      conditions: {
+        flowState: pattern.flowState,
+        minFieldStrength: pattern.energyLevels.mental + pattern.energyLevels.physical + pattern.energyLevels.emotional,
+        minResonance: pattern.metrics.efficiency
+      },
+      weight: pattern.evolution.version,
+      activations: 0
+    });
+  }, [patternSystem]);
 
   return {
-    activePattern,
-    createPattern,
-    findMatchingPattern,
-    evolvePattern,
-    clearActivePattern
+    activePatterns,
+    addPattern,
+    removePattern,
+    updatePattern
   };
-}; 
+} 

@@ -19,3 +19,24 @@ export const hasReserves = (state: EnergyState): boolean => {
 
 export const isStable = (state: EnergyState): boolean => {
   return state.stability > 0.8;
+};
+
+export const calculateResonance = (state: EnergyState): Resonance => {
+  return {
+    frequency: state.flow * state.level,
+    amplitude: state.capacity * state.stability,
+    phase: state.reserves / state.capacity
+  };
+};
+
+export const validateState = (state: EnergyState): boolean => {
+  return (
+    state.level >= 0 && 
+    state.level <= 1 &&
+    state.capacity > 0 &&
+    state.stability >= 0 && 
+    state.stability <= 1 &&
+    state.reserves >= 0 &&
+    state.reserves <= state.capacity
+  );
+};

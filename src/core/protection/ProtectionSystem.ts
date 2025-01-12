@@ -1,152 +1,156 @@
-import { BehaviorSubject, Observable } from 'rxjs';
-import { Field } from '../types/base';
-import { ConsciousnessState } from '../types/consciousness';
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
+import { NaturalSystem } from '../natural/NaturalSystem';
 
-export interface ProtectionState {
-  isProtected: boolean;
-  shields: number;
+interface Boundary {
+  strength: number;
   resilience: number;
-  recovery: number;
   adaptability: number;
 }
 
-export interface ProtectionEvent {
-  timestamp: number;
-  type: 'BREACH' | 'RECOVERY' | 'ADAPTATION' | 'REINFORCEMENT';
-  severity: number;
-  source: string;
+interface Boundaries {
+  flow: Boundary;
+  energy: Boundary;
+  presence: Boundary;
 }
 
-export class ProtectionSystem {
-  private state$: BehaviorSubject<ProtectionState>;
-  private events: ProtectionEvent[] = [];
-  private readonly MIN_SHIELDS = 0.2;
-  private readonly RECOVERY_RATE = 0.1;
-  private readonly ADAPTATION_THRESHOLD = 0.7;
+export class ProtectionSystem extends NaturalSystem {
+  private protectionPatterns = new Map<string, number>();
+  private boundaries: Boundaries = {
+    flow: { strength: 1, resilience: 1, adaptability: 1 },
+    energy: { strength: 1, resilience: 1, adaptability: 1 },
+    presence: { strength: 1, resilience: 1, adaptability: 1 }
+  };
 
-  constructor(initialState?: Partial<ProtectionState>) {
-    this.state$ = new BehaviorSubject<ProtectionState>({
-      isProtected: true,
-      shields: 1.0,
-      resilience: 0.8,
-      recovery: 0.7,
-      adaptability: 0.6,
-      ...initialState
-    });
-  }
-
-  public getState(): Observable<ProtectionState> {
-    return this.state$.asObservable();
-  }
-
-  public updateProtection(field: Field, consciousness: ConsciousnessState): void {
-    const currentState = this.state$.getValue();
-    const { protection } = field;
-    const { stability } = consciousness.flowSpace;
-
-    const newShields = Math.max(
-      this.MIN_SHIELDS,
-      protection.shields * stability
-    );
-
-    const newResilience = protection.resilience * consciousness.metrics.coherence;
-    const newRecovery = protection.recovery * consciousness.metrics.integration;
-    const newAdaptability = protection.adaptability * consciousness.metrics.flexibility;
-
-    this.state$.next({
-      ...currentState,
-      shields: newShields,
-      resilience: newResilience,
-      recovery: newRecovery,
-      adaptability: newAdaptability,
-      isProtected: newShields > this.MIN_SHIELDS
-    });
-  }
-
-  public handleBreach(severity: number, source: string): void {
-    const currentState = this.state$.getValue();
-    const newShields = Math.max(
-      this.MIN_SHIELDS,
-      currentState.shields - severity * (1 - currentState.resilience)
-    );
-
-    this.state$.next({
-      ...currentState,
-      shields: newShields,
-      isProtected: newShields > this.MIN_SHIELDS
-    });
-
-    this.recordEvent({
-      timestamp: Date.now(),
-      type: 'BREACH',
-      severity,
-      source
-    });
-  }
-
-  public initiateRecovery(): void {
-    const currentState = this.state$.getValue();
-    const recoveryAmount = this.RECOVERY_RATE * currentState.recovery;
-
-    this.state$.next({
-      ...currentState,
-      shields: Math.min(1.0, currentState.shields + recoveryAmount),
-      isProtected: true
-    });
-
-    this.recordEvent({
-      timestamp: Date.now(),
-      type: 'RECOVERY',
-      severity: recoveryAmount,
-      source: 'system'
-    });
-  }
-
-  public adapt(field: Field): void {
-    const currentState = this.state$.getValue();
-    if (currentState.adaptability > this.ADAPTATION_THRESHOLD) {
-      const adaptationStrength = currentState.adaptability * field.protection.adaptability;
-
+  protected onCycleComplete(): void {
+    const state = this.state$.value;
+    
+    // Protection pattern recognition
+    const protectionSignature = this.calculateProtectionSignature(state);
+    this.updateProtectionPatterns(protectionSignature);
+    
+    // Protection state evolution
+    const optimalProtection = this.calculateOptimalProtection();
+    const currentProtection = state.protection;
+    const protectionDelta = optimalProtection - currentProtection;
+    
+    // Natural adaptation
+    if (Math.abs(protectionDelta) > 0.1 || this.shouldAdjustBoundaries(state)) {
+      const updatedBoundaries = this.evolveBoundaries(this.boundaries, state);
+      this.boundaries = updatedBoundaries;
+      
       this.state$.next({
-        ...currentState,
-        resilience: Math.min(1.0, currentState.resilience + adaptationStrength * 0.1),
-        recovery: Math.min(1.0, currentState.recovery + adaptationStrength * 0.05)
-      });
-
-      this.recordEvent({
-        timestamp: Date.now(),
-        type: 'ADAPTATION',
-        severity: adaptationStrength,
-        source: field.id
+        ...state,
+        protection: this.adaptProtection(state.protection, protectionDelta),
+        coherence: this.adaptCoherence(state.coherence, protectionDelta),
+        resonance: this.adaptResonance(state.resonance, protectionDelta),
+        patterns: this.evolveProtectionPatterns(state.patterns, protectionDelta)
       });
     }
   }
 
-  public reinforce(amount: number): void {
-    const currentState = this.state$.getValue();
-    this.state$.next({
-      ...currentState,
-      shields: Math.min(1.0, currentState.shields + amount),
-      resilience: Math.min(1.0, currentState.resilience + amount * 0.2)
-    });
-
-    this.recordEvent({
-      timestamp: Date.now(),
-      type: 'REINFORCEMENT',
-      severity: amount,
-      source: 'system'
-    });
+  private calculateProtectionSignature(state: any): string {
+    const { protection, coherence, resonance } = state;
+    return `${protection.toFixed(2)}_${coherence.toFixed(2)}_${resonance.toFixed(2)}`;
   }
 
-  public getEvents(): ProtectionEvent[] {
-    return this.events;
-  }
-
-  private recordEvent(event: ProtectionEvent): void {
-    this.events.push(event);
-    // Keep last 100 events
-    if (this.events.length > 100) {
-      this.events.shift();
+  private updateProtectionPatterns(signature: string): void {
+    const currentStrength = this.protectionPatterns.get(signature) || 0;
+    this.protectionPatterns.set(signature, Math.min(1, currentStrength + 0.1));
+    
+    // Prune weak patterns
+    for (const [pattern, strength] of this.protectionPatterns.entries()) {
+      if (strength < 0.3) {
+        this.protectionPatterns.delete(pattern);
+      }
     }
+    
+    // Keep only strongest patterns
+    if (this.protectionPatterns.size > 5) {
+      const sortedPatterns = Array.from(this.protectionPatterns.entries())
+        .sort(([, a], [, b]) => b - a);
+      this.protectionPatterns = new Map(sortedPatterns.slice(0, 5));
+    }
+  }
+
+  private calculateOptimalProtection(): number {
+    if (this.protectionPatterns.size === 0) return 0.8; // Default optimal protection
+    
+    // Weight patterns by strength
+    let weightedSum = 0;
+    let totalWeight = 0;
+    
+    for (const [pattern, strength] of this.protectionPatterns.entries()) {
+      const [protection] = pattern.split('_').map(Number);
+      weightedSum += protection * strength;
+      totalWeight += strength;
+    }
+    
+    return totalWeight > 0 ? weightedSum / totalWeight : 0.8;
+  }
+
+  private shouldAdjustBoundaries(state: any): boolean {
+    return state.protection < 0.5 || 
+           state.coherence < 0.4 || 
+           state.resonance < 0.3;
+  }
+
+  private evolveBoundaries(boundaries: Boundaries, state: any): Boundaries {
+    const evolutionRate = 0.1;
+    const coherenceFactor = state.coherence;
+    
+    return {
+      flow: this.evolveBoundary(boundaries.flow, state.presence, evolutionRate, coherenceFactor),
+      energy: this.evolveBoundary(boundaries.energy, state.energy, evolutionRate, coherenceFactor),
+      presence: this.evolveBoundary(boundaries.presence, state.presence, evolutionRate, coherenceFactor)
+    };
+  }
+
+  private evolveBoundary(boundary: Boundary, stateValue: number, rate: number, coherence: number): Boundary {
+    const delta = stateValue - 0.5; // Optimal state reference
+    
+    return {
+      strength: Math.min(1, Math.max(0.3, boundary.strength + delta * rate * coherence)),
+      resilience: Math.min(1, Math.max(0.3, boundary.resilience + Math.abs(delta) * rate)),
+      adaptability: Math.min(1, Math.max(0.3, boundary.adaptability + rate * coherence))
+    };
+  }
+
+  private adaptProtection(current: number, delta: number): number {
+    return Math.min(1, Math.max(0.3, current + delta * 0.3));
+  }
+
+  private adaptCoherence(current: number, delta: number): number {
+    return Math.min(1, Math.max(0, current + delta * 0.2));
+  }
+
+  private adaptResonance(current: number, delta: number): number {
+    return Math.min(1, Math.max(0, current + delta * 0.1));
+  }
+
+  private evolveProtectionPatterns(patterns: any[], delta: number): any[] {
+    return patterns.map(pattern => ({
+      ...pattern,
+      strength: Math.min(1, pattern.strength + Math.abs(delta) * 0.1),
+      resonance: Math.min(1, pattern.resonance + delta * 0.05)
+    }));
+  }
+
+  public observeProtection(): Observable<number> {
+    return this.state$.pipe(
+      map(state => state.protection)
+    );
+  }
+
+  public observeBoundaries(): Observable<Boundaries> {
+    return this.observe().pipe(
+      map(() => this.boundaries)
+    );
+  }
+
+  public observePatterns(): Observable<Map<string, number>> {
+    return this.observe().pipe(
+      map(() => new Map(this.protectionPatterns))
+    );
   }
 } 

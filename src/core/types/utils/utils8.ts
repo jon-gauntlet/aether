@@ -62,3 +62,6 @@ export function useAutonomicValidation(
     validate,
     predictive: predictive.current
   };
+
+  return {};
+}

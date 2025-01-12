@@ -14,3 +14,4 @@ export enum PatternState {
   PROTECTED = 'PROTECTED',
   EVOLVING = 'EVOLVING',
   STABLE = 'STABLE'
+}

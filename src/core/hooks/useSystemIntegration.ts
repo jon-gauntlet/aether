@@ -1,61 +1,47 @@
 import { useState, useCallback, useEffect } from 'react';
-import { BehaviorSubject } from 'rxjs';
-import { Field, FlowState } from '../types/base';
-import { ConsciousnessState } from '../types/consciousness';
-import { Energy, EnergyMetrics } from '../energy/types';
-import { SystemIntegration, IntegrationState } from '../integration/SystemIntegration';
+import { BehaviorSubject, Observable } from 'rxjs';
+import type { Field, FlowState } from '../types/base';
+import type { ConsciousnessState } from '../types/consciousness';
+import type { Energy, EnergyMetrics } from '../energy/types';
+import { SystemIntegration } from '../integration/SystemIntegration';
 
-export const useSystemIntegration = () => {
-  const [integration] = useState(() => new SystemIntegration());
-  const [state, setState] = useState<IntegrationState>({
-    isInitialized: false,
-    isStable: false,
-    systemHealth: 0,
-    activeSubsystems: []
-  });
+export function useSystemIntegration() {
+  const [integration] = useState(() => new SystemIntegration({
+    observeFlow: () => new BehaviorSubject<FlowState>('RESTING'),
+    observeEnergy: () => new BehaviorSubject({ level: 1, quality: 1, stability: 1, protection: 1 }),
+    observeSpaces: () => new BehaviorSubject([]),
+    updateSpace: () => {},
+    updateFlow: () => {},
+    updateEnergy: () => {}
+  }));
+
+  const [state, setState] = useState<ConsciousnessState | null>(null);
+  const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    const subscription = (integration.getState() as BehaviorSubject<IntegrationState>)
-      .subscribe(newState => setState(newState));
-    return () => subscription.unsubscribe();
+    const subscription = integration.observeSystemState().subscribe({
+      next: (newState) => setState(newState),
+      error: (err) => setError(err)
+    });
+
+    const errorSubscription = integration.observeErrors().subscribe({
+      next: (err) => setError(err)
+    });
+
+    return () => {
+      subscription.unsubscribe();
+      errorSubscription.unsubscribe();
+    };
   }, [integration]);
 
-  const initialize = useCallback(() => {
-    integration.initialize();
-  }, [integration]);
-
-  const shutdown = useCallback(() => {
-    integration.shutdown();
-  }, [integration]);
-
-  const updateField = useCallback((field: Field) => {
-    integration.updateField(field);
-  }, [integration]);
-
-  const updateEnergy = useCallback((energy: Energy, metrics: EnergyMetrics) => {
-    integration.updateEnergy(energy, metrics);
-  }, [integration]);
-
-  const updateConsciousness = useCallback((consciousness: ConsciousnessState) => {
-    integration.updateConsciousness(consciousness);
-  }, [integration]);
-
-  const handleStateTransition = useCallback((newState: FlowState) => {
-    integration.handleStateTransition(newState);
-  }, [integration]);
-
-  const handleSystemBreach = useCallback((severity: number, source: string) => {
-    integration.handleSystemBreach(severity, source);
-  }, [integration]);
+  const evolveSystemState = useCallback(async (targetState: Partial<ConsciousnessState>) => {
+    if (!state) return;
+    await integration.evolveSystemState(state, targetState);
+  }, [integration, state]);
 
   return {
     state,
-    initialize,
-    shutdown,
-    updateField,
-    updateEnergy,
-    updateConsciousness,
-    handleStateTransition,
-    handleSystemBreach
+    error,
+    evolveSystemState
   };
-}; 
+} 

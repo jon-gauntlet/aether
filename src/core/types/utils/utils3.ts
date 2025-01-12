@@ -58,3 +58,6 @@ export function useAutoIntegrate(
 
     return () => clearInterval(timer);
   }, [wave, onFlow, checkInterval]);
+
+  return {};
+}

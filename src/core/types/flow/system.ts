@@ -57,3 +57,5 @@ export interface FlowAnalytics {
   coherence: number;
   patterns: Pattern[];
   transitions: FlowTransitionResult[];
+
+}

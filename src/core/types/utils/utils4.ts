@@ -93,3 +93,6 @@ export function useEnergy() {
     isCritical,
     inFlow
   };
+
+  return {};
+}

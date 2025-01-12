@@ -47,3 +47,4 @@ export interface Space {
   stability: number;  // Steadiness
   flexibility: number; // Adaptability
   recovery: number;   // Bounce-back
+}

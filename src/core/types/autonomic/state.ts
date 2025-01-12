@@ -1,5 +1,41 @@
-import { FlowState, FlowMetrics, Protection, Resonance, Pattern, DevelopmentPhase } from './base';
+import { FlowState, Protection, Resonance } from '../base';
+import { Pattern, PatternState } from '../patterns/types';
 import { Observable } from 'rxjs';
+
+export enum DevelopmentPhase {
+  CONFIGURATION = 'CONFIGURATION',
+  HEALING = 'HEALING',
+  OPTIMIZATION = 'OPTIMIZATION',
+  PROTECTION = 'PROTECTION'
+}
+
+export interface FlowMetrics {
+  velocity: number;
+  focus: number;
+  energy: number;
+  coherence: number;
+  resonance: number;
+}
+
+export interface Flow {
+  metrics: FlowMetrics;
+  state: FlowState;
+  timestamp: number;
+}
+
+export interface Energy {
+  level: number;
+  capacity: number;
+  current: number;
+  timestamp: number;
+}
+
+export interface Context {
+  depth: number;
+  metrics: FlowMetrics;
+  protection: Protection;
+  timestamp: number;
+}
 
 export interface AutonomicState {
   id: string;
@@ -69,3 +105,9 @@ export interface ValidationPattern {
 export interface AutonomicDevelopmentProps {
   autonomic: AutonomicSystem;
   energy: EnergySystem;
+}
+
+export interface AutonomicDevelopmentHook {
+  state: AutonomicState;
+  patterns: Pattern[];
+}

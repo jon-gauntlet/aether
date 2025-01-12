@@ -1,4 +1,4 @@
-import { FlowMetrics, NaturalFlow, Resonance } from './core';
+import { FlowMetrics, Resonance } from '../base';
 
 export type StreamId = string;
 
@@ -8,7 +8,6 @@ export interface Stream {
   id: StreamId;
   type: PresenceType;
   metrics: FlowMetrics;
-  flow: NaturalFlow;
   resonance: Resonance;
   timestamp: number;
   lastActivity?: number;
@@ -19,3 +18,4 @@ export interface Stream {
   clarity?: number;
   near?: any[];
   harmony?: number;
+}

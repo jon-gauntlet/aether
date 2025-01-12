@@ -8,3 +8,4 @@ export interface EnergyState {
   flow: number;
   recovery: number;
   timestamp: number;
+}

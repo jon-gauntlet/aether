@@ -150,3 +150,4 @@ export interface State {
   focus: Stage;
   flow: Stage;
   depth: number;
+}

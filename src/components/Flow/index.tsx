@@ -1,16 +1,28 @@
-import React from 'react'
+import React, { useEffect, useRef } from 'react'
 import styled, { keyframes } from 'styled-components'
+import { useDeployment } from '@/core/protection/DeployGuard'
 import { StyledContainerProps } from '@/components/shared/types'
+import { BehaviorSubject } from 'rxjs'
 
 interface FlowProps extends StyledContainerProps {
   flowIntensity?: number
   isInFlow?: boolean
+  naturalResonance?: number
 }
 
+const GOLDEN_RATIO = 1.618033988749895
+const NATURAL_CYCLE = 8000
+
 const flowAnimation = keyframes`
-  0% { transform: translateY(0) scale(1); }
-  50% { transform: translateY(-10px) scale(1.02); }
-  100% { transform: translateY(0) scale(1); }
+  0% { transform: scale(1) rotate(0deg); opacity: 0.8; }
+  50% { transform: scale(${GOLDEN_RATIO}) rotate(180deg); opacity: 1; }
+  100% { transform: scale(1) rotate(360deg); opacity: 0.8; }
+`
+
+const resonanceAnimation = keyframes`
+  0% { filter: hue-rotate(0deg) brightness(1); }
+  50% { filter: hue-rotate(180deg) brightness(${GOLDEN_RATIO}); }
+  100% { filter: hue-rotate(360deg) brightness(1); }
 `
 
 const FlowContainer = styled.div<StyledContainerProps>`
@@ -21,63 +33,56 @@ const FlowContainer = styled.div<StyledContainerProps>`
   padding: 2rem;
   border-radius: 1rem;
   background: ${({ theme }) => theme.colors.background};
-  transition: all ${({ theme }) => theme.transitions.normal};
-  transform: scale(${({ isActive }) => (isActive ? 1.05 : 1)});
   box-shadow: ${({ theme }) => theme.shadows.medium};
+  transition: all ${({ theme }) => theme.transitions.normal};
+  transform: scale(${({ isActive }) => (isActive ? GOLDEN_RATIO : 1)});
   position: relative;
   overflow: hidden;
-
-  &:hover {
-    transform: scale(1.02);
-  }
 `
 
-const FlowField = styled.div<{ flowIntensity?: number }>`
+const FlowField = styled.div<{ intensity?: number; resonance?: number }>`
   width: 200px;
   height: 200px;
-  background: linear-gradient(
-    45deg,
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
     ${({ theme }) => theme.colors.primary} 0%,
     ${({ theme }) => theme.colors.secondary} 100%
   );
-  border-radius: 1rem;
-  opacity: ${({ flowIntensity }) => (flowIntensity ? flowIntensity / 100 : 0.5)};
-  animation: ${flowAnimation} 3s ease-in-out infinite;
+  opacity: ${({ intensity }) => (intensity ? intensity / 100 : 0.5)};
+  animation: ${flowAnimation} 10s linear infinite,
+             ${resonanceAnimation} ${NATURAL_CYCLE}ms ease-in-out infinite;
+  filter: brightness(${({ resonance }) => resonance || 1});
 `
 
-const FlowIntensity = styled.div`
-  font-size: 2rem;
-  font-weight: bold;
-  color: ${({ theme }) => theme.colors.text};
+const ProtectionStatus = styled.div`
+  display: flex;
+  gap: 1rem;
   margin-top: 1rem;
-`
+  opacity: 0.8;
+  transition: opacity 0.3s ease;
 
-const FlowIndicator = styled.div<{ isInFlow?: boolean; flowIntensity?: number }>`
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: ${({ theme }) => theme.colors.accent};
-  opacity: ${({ isInFlow, flowIntensity }) =>
-    isInFlow && flowIntensity ? flowIntensity / 100 : 0.2};
-  transition: opacity ${({ theme }) => theme.transitions.fast};
+  &:hover {
+    opacity: 1;
+  }
 `
 
 export const FlowComponent: React.FC<FlowProps> = ({
-  flowIntensity = 50,
+  flowIntensity = 1,
   isInFlow = false,
+  naturalResonance = 1,
+  ...props
 }) => {
+  const { isProtected } = useDeployment()
+  
   return (
-    <FlowContainer data-testid="flow-container" isActive={isInFlow}>
-      <FlowIndicator
-        data-testid="flow-indicator"
-        isInFlow={isInFlow}
-        flowIntensity={flowIntensity}
+    <FlowContainer isActive={isInFlow} {...props}>
+      <FlowField 
+        intensity={flowIntensity}
+        resonance={naturalResonance}
       />
-      <FlowField flowIntensity={flowIntensity} />
-      <FlowIntensity>{flowIntensity}</FlowIntensity>
-      <span>Flow Intensity</span>
     </FlowContainer>
   )
-} 
+}
+
+export default FlowComponent 
