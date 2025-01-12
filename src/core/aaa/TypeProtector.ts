@@ -1,8 +1,30 @@
-import { Observable, Subject } from 'rxjs';
+import { Observable, Subject, BehaviorSubject } from 'rxjs';
 import type { DevMetrics, DevAction } from './DevOptimizer';
 
+export interface TypePattern {
+  trigger: 'import' | 'export' | 'type' | 'boundary';
+  frequency: number;
+  solution: string;
+  flowImpact: number;
+  lastSeen: number;
+}
+
+export interface Prevention {
+  pattern: TypePattern;
+  protection: {
+    type: 'autofix' | 'warning' | 'block';
+    action: string;
+  };
+  confidence: number;
+}
+
 interface TypeMetrics {
-  // Type Safety Metrics
+  // Flow Protection Metrics
+  flowProtection: number;     // 0-1 flow state protection
+  patternLearning: number;    // 0-1 pattern recognition
+  autoHealing: number;        // 0-1 self-repair success
+  
+  // Existing metrics
   typeCoherence: number;      // 0-1 type system consistency
   validationCoverage: number; // 0-1 runtime validation coverage
   boundaryIntegrity: number;  // 0-1 type boundary protection
@@ -34,7 +56,14 @@ interface TypeAction {
  * - Agile: Rapid validation and recovery
  */
 export class TypeProtector {
+  protected patterns = new Map<string, TypePattern>();
+  protected preventions = new Map<string, Prevention>();
+  private flowState = new BehaviorSubject<number>(1); // 1 = optimal flow
+
   private metrics: TypeMetrics = {
+    flowProtection: 1,
+    patternLearning: 1,
+    autoHealing: 1,
     typeCoherence: 1,
     validationCoverage: 1,
     boundaryIntegrity: 1,
@@ -124,6 +153,95 @@ export class TypeProtector {
     };
   }
 
+  /**
+   * Predicts potential issues before they break flow
+   */
+  predictIssues(): Prevention[] {
+    const predictions: Prevention[] = [];
+    
+    for (const [_, pattern] of this.patterns) {
+      if (pattern.frequency > 3 && pattern.flowImpact > 0.3) {
+        const prevention = this.preventions.get(pattern.trigger) || {
+          pattern,
+          protection: {
+            type: 'warning',
+            action: `Consider ${pattern.solution}`
+          },
+          confidence: pattern.frequency * pattern.flowImpact
+        };
+        predictions.push(prevention);
+      }
+    }
+    
+    return predictions.sort((a, b) => b.confidence - a.confidence);
+  }
+
+  /**
+   * Automatically heals type issues when possible
+   */
+  autoHeal(error: TypeError): boolean {
+    const errorKey = error.message;
+    const pattern = this.patterns.get(errorKey);
+    
+    if (pattern && pattern.frequency > 5) {
+      try {
+        eval(pattern.solution); // Note: Replace with safe execution
+        this.metrics.autoHealing = Math.min(1, this.metrics.autoHealing + 0.1);
+        return true;
+      } catch {
+        this.metrics.autoHealing = Math.max(0, this.metrics.autoHealing - 0.1);
+        return false;
+      }
+    }
+    
+    return false;
+  }
+
+  /**
+   * Learns from new error patterns
+   */
+  learnPattern(error: TypeError, solution: string, flowImpact: number) {
+    const errorKey = error.message;
+    const existing = this.patterns.get(errorKey);
+    
+    if (existing) {
+      existing.frequency++;
+      existing.flowImpact = (existing.flowImpact + flowImpact) / 2;
+      existing.lastSeen = Date.now();
+      this.patterns.set(errorKey, existing);
+    } else {
+      this.patterns.set(errorKey, {
+        trigger: this.detectTrigger(error),
+        frequency: 1,
+        solution,
+        flowImpact,
+        lastSeen: Date.now()
+      });
+    }
+    
+    this.metrics.patternLearning = Math.min(1, this.metrics.patternLearning + 0.05);
+  }
+
+  /**
+   * Monitors flow state impact
+   */
+  observeFlowState(): Observable<number> {
+    return this.flowState.asObservable();
+  }
+
+  private detectTrigger(error: TypeError): TypePattern['trigger'] {
+    if (error.message.includes('import') || error.message.includes('require')) {
+      return 'import';
+    }
+    if (error.message.includes('export')) {
+      return 'export';
+    }
+    if (error.message.includes('type')) {
+      return 'type';
+    }
+    return 'boundary';
+  }
+
   private optimizeFromAction(action: TypeAction): void {
     const impact = action.metadata?.impact ?? 0.1;
     
@@ -168,6 +286,18 @@ export class TypeProtector {
 
     // Update overall type coherence
     this.metrics.typeCoherence = this.calculateTypeSystemHealth();
+
+    // Add flow impact tracking
+    const flowImpact = action.metadata?.impact ?? 0.1;
+    const currentFlow = this.flowState.value;
+    
+    if (!action.success) {
+      this.flowState.next(Math.max(0, currentFlow - flowImpact));
+      this.metrics.flowProtection = Math.max(0, this.metrics.flowProtection - flowImpact);
+    } else {
+      this.flowState.next(Math.min(1, currentFlow + flowImpact * 0.5));
+      this.metrics.flowProtection = Math.min(1, this.metrics.flowProtection + flowImpact * 0.5);
+    }
   }
 
   private calculateTypeSystemHealth(): number {
