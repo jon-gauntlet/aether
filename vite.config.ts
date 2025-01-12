@@ -9,30 +9,25 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-    },
-  },
-  server: {
-    port: 3000,
-    open: true,
-  },
-  build: {
-    outDir: 'dist',
-    sourcemap: true,
-    minify: 'terser',
-    target: 'esnext',
+      '@core': path.resolve(__dirname, './src/core'),
+      '@components': path.resolve(__dirname, './src/components'),
+      '@utils': path.resolve(__dirname, './src/utils'),
+      '@hooks': path.resolve(__dirname, './src/hooks'),
+      '@modules': path.resolve(__dirname, './src/modules'),
+      '@types': path.resolve(__dirname, './src/core/types'),
+      '@styles': path.resolve(__dirname, './src/styles')
+    }
   },
   test: {
     globals: true,
     environment: 'jsdom',
-    setupFiles: ['./src/test/setup.ts'],
-    include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+    setupFiles: ['./src/setupTests.ts'],
     coverage: {
-      provider: 'v8',
       reporter: ['text', 'json', 'html'],
       exclude: [
-        'node_modules/**',
-        'src/test/**',
-      ],
-    },
-  },
+        'node_modules/',
+        'src/setupTests.ts',
+      ]
+    }
+  }
 }); 
