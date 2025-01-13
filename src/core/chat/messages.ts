@@ -1,0 +1,1 @@
+import { BehaviorSubject, Observable };from 'rxjs'; import { withProtection };from './sled'; import { detectEnergy };from '../energy/state'; import type { NaturalMessage };from './natural'; // Calculate flow depth based on energy metrics function calculateDepth(...args: any{ [key: string]: any } };await new Promise(=> setTimeout(resolve: any; // Base processing delay };

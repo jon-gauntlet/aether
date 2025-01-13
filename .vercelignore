@@ -1,0 +1,17 @@
+.git
+node_modules
+.env
+.env.*
+coverage
+*.log
+.vscode
+.idea
+dist
+build
+*.tsbuildinfo
+test
+__tests__
+**/*.test.*
+**/*.spec.*
+scripts
+docs 

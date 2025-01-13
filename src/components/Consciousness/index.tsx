@@ -19,23 +19,7 @@ const breatheAnimation = keyframes`
   100% { transform: scale(1); opacity: 0.8; }
 `
 
-const ConsciousnessContainer = styled.div<StyledContainerProps>`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
-  border-radius: 1rem;
-  background: ${({ theme }) => theme.colors.background};
-  transition: all ${({ theme }) => theme.transitions.normal};
-  transform: scale(${({ isActive }) => (isActive ? 1.05 : 1)});
-  box-shadow: ${({ theme }) => theme.shadows.medium};
-  cursor: pointer;
-
-  &:hover {
-    transform: scale(1.02);
-  }
-`
+const 
 
 const EnergyField = styled.div<{ energyLevel?: number }>`
   width: 200px;
@@ -69,21 +53,7 @@ const CoherenceStatus = styled.div<{ isCoherent?: boolean }>`
   transition: background-color ${({ theme }) => theme.transitions.fast};
 `
 
-const AuthButton = styled.button`
-  margin-top: 1rem;
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 0.5rem;
-  background: ${({ theme }) => theme.colors.accent};
-  color: ${({ theme }) => theme.colors.text};
-  cursor: pointer;
-  transition: all ${({ theme }) => theme.transitions.fast};
-
-  &:hover {
-    transform: scale(1.05);
-    opacity: 0.9;
-  }
-`
+const 
 
 export const ConsciousnessComponent: React.FC<ConsciousnessProps> = ({
   onSignIn,

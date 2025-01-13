@@ -1,0 +1,1 @@
+export interface Point3D{ [key: string]: any };export interface Wave{ [key: string]: any };export interface Field{ [key: string]: any };

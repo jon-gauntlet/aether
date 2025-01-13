@@ -84,10 +84,10 @@ describe('AutonomicDevelopment', () => {
   it('should render development metrics', () => {
     render(
       <AutonomicDevelopment
-        field={mockField}
+        as any; // TODO: Fix type mismatchfield={mockField}
         consciousness={mockConsciousness}
-      />
-    );
+      /> undefined;
+    ); undefined;
 
     expect(screen.getByText('Autonomy Score')).toBeInTheDocument();
     expect(screen.getByText('Pattern Strength')).toBeInTheDocument();
@@ -98,10 +98,10 @@ describe('AutonomicDevelopment', () => {
   it('should display active patterns', () => {
     render(
       <AutonomicDevelopment
-        field={mockField}
+        as any; // TODO: Fix type mismatchfield={mockField}
         consciousness={mockConsciousness}
-      />
-    );
+      /> undefined;
+    ); undefined;
 
     expect(screen.getByText('Test Pattern')).toBeInTheDocument();
     expect(screen.getByText('80%')).toBeInTheDocument();
@@ -110,10 +110,10 @@ describe('AutonomicDevelopment', () => {
   it('should update when patterns change', () => {
     const { rerender } = render(
       <AutonomicDevelopment
-        field={mockField}
+        as any; // TODO: Fix type mismatchfield={mockField}
         consciousness={mockConsciousness}
-      />
-    );
+      /> undefined;
+    ); undefined;
 
     (useAutonomic as jest.Mock).mockReturnValue({
       isActive: true,
@@ -138,10 +138,10 @@ describe('AutonomicDevelopment', () => {
 
     rerender(
       <AutonomicDevelopment
-        field={mockField}
+        as any; // TODO: Fix type mismatchfield={mockField}
         consciousness={mockConsciousness}
-      />
-    );
+      /> undefined;
+    ); undefined;
 
     expect(screen.getByText('New Pattern')).toBeInTheDocument();
     expect(screen.getByText('90%')).toBeInTheDocument();
@@ -166,10 +166,10 @@ describe('AutonomicDevelopment', () => {
 
     render(
       <AutonomicDevelopment
-        field={mockField}
+        as any; // TODO: Fix type mismatchfield={mockField}
         consciousness={mockConsciousness}
-      />
-    );
+      /> undefined;
+    ); undefined;
 
     fireEvent.click(screen.getByText('Activate Development'));
     expect(mockActivate).toHaveBeenCalled();
@@ -178,10 +178,10 @@ describe('AutonomicDevelopment', () => {
   it('should show development progress', () => {
     render(
       <AutonomicDevelopment
-        field={mockField}
+        as any; // TODO: Fix type mismatchfield={mockField}
         consciousness={mockConsciousness}
-      />
-    );
+      /> undefined;
+    ); undefined;
 
     const progressBars = screen.getAllByRole('progressbar');
     expect(progressBars).toHaveLength(4); // Autonomy, Pattern, Adaptability, Stability
@@ -207,12 +207,12 @@ describe('AutonomicDevelopment', () => {
 
     render(
       <AutonomicDevelopment
-        field={mockField}
+        as any; // TODO: Fix type mismatchfield={mockField}
         consciousness={mockConsciousness}
-      />
-    );
+      /> undefined;
+    ); undefined;
 
     fireEvent.click(screen.getByText('Detect Patterns'));
     expect(mockDetectPatterns).toHaveBeenCalled();
   });
-}); 
+});

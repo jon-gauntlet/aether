@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useRef } from 'react'
+
 import { db } from '@/core/firebase'
 import { collection, addDoc, onSnapshot, query, orderBy, Timestamp } from 'firebase/firestore'
 import { useAuth } from '@/core/auth/AuthProvider'
@@ -29,7 +29,7 @@ interface MessageContextType {
   systemResonance: number
 }
 
-const MessageContext = createContext<MessageContextType | undefined>(undefined)
+const MessageContext = createContext<MessageContextType | undefined>()
 
 export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [messages, setMessages] = useState<Message[]>([])
@@ -103,8 +103,8 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ child
 }
 
 export const useMessages = () => {
-  const context = useContext(MessageContext)
-  if (context === undefined) {
+  const 
+  if (context === ) { undefined
     throw new Error('useMessages must be used within a MessageProvider')
   }
   return context

@@ -13,17 +13,7 @@ interface FieldProps extends StyledContainerProps {
   metrics?: Metric[]
 }
 
-const FieldContainer = styled.div<StyledContainerProps>`
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  padding: 2rem;
-  border-radius: 1rem;
-  background: ${({ theme }) => theme.colors.background};
-  box-shadow: ${({ theme }) => theme.shadows.medium};
-  transition: all ${({ theme }) => theme.transitions.normal};
-  transform: scale(${({ isActive }) => (isActive ? 1.05 : 1)});
-`
+const 
 
 const MessageList = styled.div`
   display: flex;
@@ -141,7 +131,7 @@ export const FieldComponent: React.FC<FieldProps> = ({
         value={messageText}
         onChange={(e) => setMessageText(e.target.value)}
         onKeyPress={handleSendMessage}
-        placeholder="Type a message..."
+        
       />
     </FieldContainer>
   )

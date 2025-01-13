@@ -7,13 +7,7 @@ interface EnergyAwareProps {
   isActive?: boolean;
 }
 
-const EnergyContainer = styled.div<{ isActive?: boolean }>`
-  padding: ${({ theme }) => theme.space.lg};
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: ${({ theme }) => theme.radii.lg};
-  opacity: ${({ isActive }) => (isActive ? 1 : 0.7)};
-  transition: opacity 0.3s ease;
-`;
+const ;
 
 const EnergyLevel = styled.div<{ level: number }>`
   width: ${({ level }) => level * 100}%;
@@ -23,9 +17,7 @@ const EnergyLevel = styled.div<{ level: number }>`
   transition: width 0.3s ease;
 `;
 
-const EnergyMetric = styled.div`
-  margin: ${({ theme }) => theme.space.sm} 0;
-`;
+const ;
 
 export const EnergyAware: React.FC<EnergyAwareProps> = ({
   energy,

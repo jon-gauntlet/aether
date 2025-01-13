@@ -58,7 +58,7 @@ export const SpaceNav: React.FC<SpaceNavProps> = ({
             disabled={isTransitioning}
             title={label}
             aria-label={`Navigate to ${label}`}
-            aria-current={type === currentSpace.config.type ? 'page' : undefined}
+            aria-current={type === currentSpace.config.type ? 'page' : } undefined
           >
             <span className="nav-icon" role="img" aria-hidden="true">
               {icon}

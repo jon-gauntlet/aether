@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react'
+
 import { auth } from '@/core/firebase'
 import { 
   signInWithPopup, 
@@ -16,7 +16,7 @@ interface AuthContextType {
   loading: boolean
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
+const AuthContext = createContext<AuthContextType | undefined>()
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
@@ -73,8 +73,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 }
 
 export const useAuth = () => {
-  const context = useContext(AuthContext)
-  if (undefined === context) {
+  const 
+  if ( === context) { undefined
     throw new Error('useAuth must be used within AuthProvider')
   }
   return context

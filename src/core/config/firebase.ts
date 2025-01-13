@@ -1,0 +1,1 @@
+ // Natural type protection let shield: any;d;({ instant: any; export ap_;

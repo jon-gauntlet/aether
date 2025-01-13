@@ -16,6 +16,19 @@ const CONFIG = {
     buildCheck: 10000,  // 10 seconds
     stateCheck: 30000,  // 30 seconds
     systemCheck: 60000  // 1 minute
+  },
+  patterns: {
+    typeErrors: new Map(),
+    flowStates: new Map(),
+    healingCycles: [],
+    deployStates: new Map()
+  },
+  deployment: {
+    minEnergyLevel: 0.7,
+    typeErrorThreshold: 0,
+    buildCacheEnabled: true,
+    flowProtection: true,
+    recoveryPoints: true
   }
 };
 
@@ -38,6 +51,7 @@ async function initializeProtection() {
     startBuildProtection();
     startStateProtection();
     startSystemProtection();
+    await startDeploymentProtection();
 
     console.log('✨ Protection active');
   } catch (error) {
@@ -58,32 +72,161 @@ function ensureDirectories() {
 
 // Protection layers
 function startTypeProtection() {
-  console.log('🔍 Activating type protection...');
+  console.log('🛡️ Starting type protection...');
   
-  // Start TypeScript watch process
-  const tsc = spawn('tsc', ['--watch', '--preserveWatchOutput', '--noEmit']);
+  let flowState = 'stable';
+  let healingActive = false;
+
+  // Natural type checking
+  setInterval(async () => {
+    try {
+      const { stdout } = await execAsync('npm run typecheck', { 
+        encoding: 'utf8',
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
+
+      // Pattern recognition
+      const errors = parseTypeErrors(stdout);
+      updateTypePatterns(errors);
+
+      // Flow-aware healing
+      if (errors.length > 0 && !healingActive) {
+        const shouldHeal = await checkHealingConditions();
+        if (shouldHeal) {
+          healingActive = true;
+          await naturalTypeHealing();
+          healingActive = false;
+        }
+      }
+
+      // Update flow state
+      flowState = determineFlowState(errors.length);
+      
+    } catch (error) {
+      handleTypeError(error);
+    }
+  }, CONFIG.intervals.typeCheck);
+}
+
+// Natural pattern recognition
+function parseTypeErrors(output) {
+  return output
+    .split('\n')
+    .filter(line => line.includes('error TS'))
+    .map(line => {
+      const [file, ...message] = line.split(':');
+      return { file, message: message.join(':').trim() };
+    });
+}
+
+function updateTypePatterns(errors) {
+  for (const error of errors) {
+    const pattern = identifyPattern(error.message);
+    if (pattern) {
+      const current = CONFIG.patterns.typeErrors.get(pattern) || [];
+      CONFIG.patterns.typeErrors.set(pattern, [...current, error]);
+    }
+  }
+}
+
+// Flow-aware healing
+async function checkHealingConditions() {
+  const systemLoad = os.loadavg()[0];
+  const memoryUsage = process.memoryUsage().heapUsed / 1024 / 1024;
   
-  // Log output
-  const typeLog = fs.createWriteStream(path.join(CONFIG.logsDir, 'type-protection.log'));
-  tsc.stdout.pipe(typeLog);
-  tsc.stderr.pipe(typeLog);
+  return systemLoad < 2 && memoryUsage < 512; // Example thresholds
+}
 
-  // Monitor for errors
-  let errorBuffer = '';
-  tsc.stdout.on('data', (data) => {
-    const output = data.toString();
-    if (output.includes('error TS')) {
-      errorBuffer += output;
-      console.log('⚠️ Type issue detected');
-    }
-  });
+async function naturalTypeHealing() {
+  console.log('🌱 Starting natural type healing...');
+  
+  try {
+    // Sort patterns by energy level for natural flow
+    const patterns = Array.from(CONFIG.patterns.typeErrors.entries())
+      .map(([pattern, errors]) => ({
+        pattern,
+        errors,
+        energy: errors[0].energy
+      }))
+      .sort((a, b) => b.energy - a.energy);
 
-  // Clear buffer on successful compilation
-  tsc.stdout.on('data', (data) => {
-    if (data.toString().includes('Found 0 errors')) {
-      errorBuffer = '';
+    // Heal in natural order
+    for (const { pattern, errors, energy } of patterns) {
+      if (energy > 0.3) { // Only heal if enough energy
+        console.log(`\n🌿 Healing pattern (${(energy * 100).toFixed()}% energy): ${pattern}`);
+        await healPattern(pattern, errors);
+        
+        // Allow system to stabilize
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      } else {
+        console.log(`\n💫 Deferring low-energy pattern: ${pattern}`);
+      }
     }
-  });
+
+    // Record healing cycle with energy levels
+    CONFIG.patterns.healingCycles.push({
+      timestamp: Date.now(),
+      patterns: patterns.map(p => ({
+        type: p.pattern,
+        energy: p.energy,
+        count: p.errors.length
+      })),
+      success: true
+    });
+
+    CONFIG.patterns.typeErrors.clear();
+    
+  } catch (error) {
+    console.error('❌ Healing disrupted:', error);
+    CONFIG.patterns.healingCycles.push({
+      timestamp: Date.now(),
+      error: error.message,
+      success: false
+    });
+  }
+}
+
+// Pattern-based healing
+async function healPattern(pattern, errors) {
+  // Group errors by file for natural cohesion
+  const fileGroups = new Map();
+  for (const error of errors) {
+    const group = fileGroups.get(error.file) || [];
+    fileGroups.set(error.file, [...group, error]);
+  }
+
+  // Heal files in natural order (most errors first)
+  const sortedFiles = Array.from(fileGroups.entries())
+    .sort((a, b) => b[1].length - a[1].length);
+
+  for (const [file, fileErrors] of sortedFiles) {
+    try {
+      console.log(`  🔸 Healing ${file} (${fileErrors.length} errors)`);
+      await execAsync(`npm run heal:types -- --file "${file}" --pattern "${pattern.type}" --energy ${pattern.energy}`);
+      
+      // Verify healing
+      const { stdout } = await execAsync(`tsc "${file}" --noEmit`, { stdio: 'pipe' });
+      if (!stdout.includes('error TS')) {
+        console.log(`  ✨ Healed successfully`);
+      }
+    } catch (error) {
+      console.warn(`  ⚠️ Could not heal ${file}:`, error.message);
+    }
+  }
+}
+
+function determineFlowState(errorCount) {
+  if (errorCount === 0) return 'flow';
+  if (errorCount < 10) return 'stable';
+  return 'recovery';
+}
+
+function handleTypeError(error) {
+  console.error('❌ Type protection error:', error.message);
+  fs.appendFileSync(
+    path.join(CONFIG.logsDir, 'type-protection.log'),
+    `${new Date().toISOString()} - ${error.message}\n`
+  );
 }
 
 function startBuildProtection() {
@@ -259,4 +402,173 @@ async function checkProtectionStatus() {
   } catch (error) {
     console.log('Environment: ⚠️ Needs Attention');
   }
+} 
+
+// Core protection systems
+const systems = [
+  {
+    name: 'Type Protection',
+    command: 'npm',
+    args: ['run', 'validate:types'],
+    frequency: 5000, // Check every 5 seconds
+  },
+  {
+    name: 'Flow Protection',
+    command: 'npm',
+    args: ['run', 'flow:status'],
+    frequency: 10000,
+  },
+  {
+    name: 'Energy Protection', 
+    command: 'npm',
+    args: ['run', 'protect:status'],
+    frequency: 30000,
+  }
+];
+
+function startMonitoring() {
+  console.log('🛡️ Development Sled Protection Systems Active');
+  
+  systems.forEach(system => {
+    const monitor = () => {
+      const process = spawn(system.command, system.args);
+      
+      process.on('error', (error) => {
+        console.error(`${system.name} Error:`, error);
+      });
+
+      process.on('exit', (code) => {
+        if (code !== 0) {
+          console.error(`⚠️ ${system.name} Warning: Protection check failed`);
+        }
+      });
+    };
+
+    // Initial check
+    monitor();
+    
+    // Periodic checks
+    setInterval(monitor, system.frequency);
+  });
+}
+
+// Start monitoring if not in test mode
+if (process.argv[2] !== 'test') {
+  startMonitoring();
+}
+
+module.exports = { startMonitoring }; 
+
+async function startDeploymentProtection() {
+  console.log('🚀 Activating deployment protection...');
+
+  // Natural deployment flow
+  const flow = require('./flow');
+  
+  async function checkDeploymentReadiness() {
+    const metrics = flow.getCurrentMetrics();
+    const state = {
+      timestamp: Date.now(),
+      energy: metrics.energy,
+      typeErrors: metrics.typeErrors,
+      flowState: flow.getFlowState(),
+      buildStatus: await getBuildStatus()
+    };
+
+    CONFIG.patterns.deployStates.set(Date.now(), state);
+    return state;
+  }
+
+  async function getBuildStatus() {
+    try {
+      const { stdout } = await execAsync('npm run build', { stdio: 'pipe' });
+      return {
+        success: !stdout.includes('error'),
+        output: stdout
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  // Natural deployment preparation
+  async function prepareForDeployment() {
+    console.log('🌱 Preparing natural deployment...');
+
+    // Ensure high energy state
+    const metrics = flow.getCurrentMetrics();
+    if (metrics.energy < CONFIG.deployment.minEnergyLevel) {
+      console.log('⚡ Energy too low for deployment, initiating recovery...');
+      await execAsync('npm run protect:recovery');
+      return false;
+    }
+
+    // Ensure type safety
+    if (metrics.typeErrors > CONFIG.deployment.typeErrorThreshold) {
+      console.log('🛡️ Type issues detected, initiating healing...');
+      await naturalTypeHealing();
+      return false;
+    }
+
+    // Verify build
+    const buildStatus = await getBuildStatus();
+    if (!buildStatus.success) {
+      console.log('🏗️ Build issues detected, needs attention...');
+      return false;
+    }
+
+    return true;
+  }
+
+  // Natural deployment process
+  async function naturalDeploy() {
+    console.log('🌿 Starting natural deployment...');
+
+    try {
+      // Create recovery point
+      if (CONFIG.deployment.recoveryPoints) {
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        await execAsync(`git checkout -b deploy-recovery/${timestamp}`);
+      }
+
+      // Optimize build cache
+      if (CONFIG.deployment.buildCacheEnabled) {
+        await execAsync('npm run analyze');
+      }
+
+      // Deploy with flow protection
+      if (CONFIG.deployment.flowProtection) {
+        await execAsync('npx vercel --prod --no-clipboard');
+      } else {
+        await execAsync('npx vercel --prod');
+      }
+
+      console.log('✨ Deployment successful');
+      return true;
+    } catch (error) {
+      console.error('❌ Deployment failed:', error.message);
+      return false;
+    }
+  }
+
+  // Monitor deployment readiness
+  setInterval(async () => {
+    const state = await checkDeploymentReadiness();
+    
+    // Log deployment state
+    fs.appendFileSync(
+      path.join(CONFIG.logsDir, 'deployment.log'),
+      `${JSON.stringify(state)}\n`
+    );
+  }, CONFIG.intervals.stateCheck);
+
+  // Export deployment functions
+  return {
+    checkDeploymentReadiness,
+    prepareForDeployment,
+    naturalDeploy
+  };
 } 

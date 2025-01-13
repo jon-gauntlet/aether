@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+
 import styled from 'styled-components';
 import { Field } from '@/core/types/system';
 
@@ -8,34 +8,7 @@ interface FlowComponentProps {
   value: number;
 }
 
-const FlowContainer = styled.div<{ isInFlow: boolean }>`
-  padding: ${({ theme }) => theme.space.xl};
-  border-radius: ${({ theme }) => theme.borderRadius.large};
-  background: ${({ theme, isInFlow }) =>
-    isInFlow
-      ? `linear-gradient(135deg, ${theme.colors.primary}20, ${theme.colors.secondary}20)`
-      : theme.colors.surface};
-  color: ${({ theme }) => theme.colors.text};
-  transition: all ${({ theme }) => theme.transitions.normal};
-  position: relative;
-  overflow: hidden;
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(
-      45deg,
-      ${({ theme }) => theme.colors.primary}10,
-      ${({ theme }) => theme.colors.secondary}10
-    );
-    opacity: ${({ isInFlow }) => (isInFlow ? 1 : 0)};
-    transition: opacity ${({ theme }) => theme.transitions.normal};
-  }
-`;
+const ;
 
 const FlowCanvas = styled.canvas`
   width: 100%;
@@ -45,12 +18,7 @@ const FlowCanvas = styled.canvas`
   background: ${({ theme }) => theme.colors.background}40;
 `;
 
-const FlowMetrics = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: ${({ theme }) => theme.space.md};
-  margin-top: ${({ theme }) => theme.space.lg};
-`;
+const ;
 
 const Metric = styled.div<{ value: number }>`
   padding: ${({ theme }) => theme.space.md};

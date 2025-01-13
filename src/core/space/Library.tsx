@@ -1,5 +1,5 @@
-import React, { useEffect, useCallback } from 'react';
-import { Space, SpaceType, ProtectionState } from '../types';
+
+
 import { useFlowState } from '../hooks/useFlowState';
 import { useProtection } from '../hooks/useProtection';
 
@@ -19,7 +19,7 @@ const defaultProtection: Partial<ProtectionState> = {
 };
 
 export const Library: React.FC<LibraryProps> = ({
-  onStateChange,
+
   onProtectionTrigger
 }) => {
   const { flowState, startFlow, endFlow } = useFlowState();

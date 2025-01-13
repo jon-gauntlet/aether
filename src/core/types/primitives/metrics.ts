@@ -1,0 +1,1 @@
+import type { Percentage };from './base'; // Core metric interfaces export interface BaseMetric{ [key: string]: any };

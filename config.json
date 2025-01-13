@@ -1,0 +1,49 @@
+{
+  "name": "Aether Project Rules",
+  "version": "1.0.0",
+  "description": "Auto-integration of BrainLifts and development guidelines",
+  "brainlifts": {
+    "paths": [
+      "/home/jon/brainlifts/flow-state-optimization.md",
+      "/home/jon/brainlifts/ai-first-development.md",
+      "/home/jon/brainlifts/natural-system-design.md"
+    ],
+    "autoLoad": true,
+    "priority": "high"
+  },
+  "rules": [
+    {
+      "name": "Flow State Protection",
+      "pattern": ".*",
+      "action": "consider",
+      "source": "flow-state-optimization.md",
+      "priority": 1
+    },
+    {
+      "name": "AI-First Development",
+      "pattern": ".*",
+      "action": "consider",
+      "source": "ai-first-development.md",
+      "priority": 1
+    },
+    {
+      "name": "Natural System Design",
+      "pattern": ".*",
+      "action": "consider",
+      "source": "natural-system-design.md",
+      "priority": 1
+    }
+  ],
+  "integrations": {
+    "cursor": {
+      "contextPreservation": true,
+      "stateAwareness": true,
+      "autoProtection": true
+    },
+    "ide": {
+      "flowProtection": true,
+      "contextSync": true,
+      "energyTracking": true
+    }
+  }
+} 

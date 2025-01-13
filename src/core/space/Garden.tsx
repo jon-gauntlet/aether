@@ -1,8 +1,8 @@
 import React, { useEffect, useCallback, useState } from 'react';
-import { Space, SpaceType } from '../types';
+
 import { ProtectionState } from '../types/protection';
 import { useFlowState } from '../hooks/useFlowState';
-import { useProtection } from '../hooks/useProtection';
+
 
 interface GardenProps {
   onStateChange?: (state: Partial<Space>) => void;
@@ -24,7 +24,7 @@ export const Garden: React.FC<GardenProps> = ({
   onProtectionTrigger
 }) => {
   const { flowState, startFlow, endFlow, updateIntensity } = useFlowState();
-  const { protection, checkHealth, reinforce } = useProtection();
+
   const [activeZone, setActiveZone] = useState<string>('seedling');
 
   // Start in a low-intensity flow state for exploration

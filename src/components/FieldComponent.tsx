@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+
 import styled from 'styled-components';
 import { Field } from '@/core/types/system';
 
@@ -8,40 +8,7 @@ interface FieldComponentProps {
   isResonating: boolean;
 }
 
-const FieldContainer = styled.div<{ isActive: boolean }>`
-  padding: ${({ theme }) => theme.space.lg};
-  border-radius: ${({ theme }) => theme.borderRadius.large};
-  background: ${({ theme, isActive }) =>
-    isActive
-      ? `linear-gradient(135deg, ${theme.colors.primary}15, ${theme.colors.secondary}15)`
-      : theme.colors.surface};
-  color: ${({ theme }) => theme.colors.text};
-  transition: all ${({ theme }) => theme.transitions.normal};
-  position: relative;
-  overflow: hidden;
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(
-      45deg,
-      ${({ theme }) => theme.colors.primary}10,
-      ${({ theme }) => theme.colors.secondary}10
-    );
-    opacity: ${({ isActive }) => (isActive ? 1 : 0)};
-    transition: opacity ${({ theme }) => theme.transitions.normal};
-    animation: ${({ isActive }) => isActive ? 'pulse 4s ease-in-out infinite' : 'none'};
-  }
-
-  @keyframes pulse {
-    0%, 100% { transform: scale(1); opacity: 0.7; }
-    50% { transform: scale(1.02); opacity: 1; }
-  }
-`;
+const ;
 
 const FieldCanvas = styled.canvas`
   width: 100%;
@@ -51,12 +18,7 @@ const FieldCanvas = styled.canvas`
   background: ${({ theme }) => theme.colors.background}40;
 `;
 
-const MetricsGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: ${({ theme }) => theme.space.md};
-  margin-top: ${({ theme }) => theme.space.lg};
-`;
+const ;
 
 const Metric = styled.div<{ value: number }>`
   padding: ${({ theme }) => theme.space.md};

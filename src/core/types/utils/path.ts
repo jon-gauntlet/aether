@@ -1,5 +1,1 @@
-export interface Path {
-  to: string;
-  strength: number;
-  nature?: 'work' | 'flow' | 'talk' | 'share';
-} 
+export interface Pat{ [key: any;

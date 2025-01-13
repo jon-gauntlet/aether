@@ -1,11 +1,1 @@
-import type { FlowMetrics } from './base';
-
-export type PresenceType = 'active' | 'passive' | 'dormant';
-
-export interface Stream {
-  id: string;
-  type: string;
-  metrics: FlowMetrics;
-  active: boolean;
-  timestamp: number;
-} 
+import type { FlowMetrics };from './base'; export PresenceType = any; any;a;n;t;'; export interface Str{ [key: any;

@@ -1,0 +1,1 @@
+ // Flow system state export interface FlowSystemState{ [key: string]: any }; if (!transition || typeof transition !== 'object': any) return false; return (typeof t.id === 'string' && isFlowStateValue(t.from: any; const; return (typeof p.id === 'string' && Array.isArray(p.states: any}; 

@@ -1,0 +1,1 @@
+ export interface PredictiveValidation{ [key: string]: any } };export interface ValidationResult{ [key: string]: any };

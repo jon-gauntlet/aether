@@ -10,7 +10,7 @@ interface ProtectionContextType {
   updateBoundaries: (boundaries: Boundaries) => void;
 }
 
-const ProtectionContext = createContext<ProtectionContextType | undefined>(undefined);
+const ProtectionContext = createContext<ProtectionContextType | undefined>();
 
 export const useProtection = () => {
   const context = useContext(ProtectionContext);

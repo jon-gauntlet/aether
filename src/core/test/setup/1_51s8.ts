@@ -1,11 +1,1 @@
-import '@testing-library/jest-dom';
-import './matchers/toBeInRange';
-
-// Configure test environment
-beforeAll(() => {
-  // Add any global test setup here
-});
-
-afterAll(() => {
-  // Add any global test cleanup here
-}); 
+import '@testing-library/jest-dom'; import './matchers/toBeInRange'; // Configure test envest setup here } ); afterAll((: any) => { // Add any global test cleanup here } ); 

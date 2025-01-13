@@ -10,6 +10,9 @@ interface ProtectionState {
   systemCoherent: boolean;
   integrationSafe: boolean;
   recoveryPointCreated: boolean;
+  typePatterns: Map<string, any[]>;
+  healingActive: boolean;
+  energy: number;
 }
 
 async function verifyEnvironment() {
@@ -48,19 +51,54 @@ async function setupFlowProtection() {
   console.log('⚡ Setting up flow protection...');
   
   try {
-    // Create flow directories
-    await fs.mkdir('.flow/states', { recursive: true });
-    await fs.mkdir('.flow/recovery', { recursive: true });
+    // Import flow metrics
+    const flow = require('./flow');
     
-    // Save current state
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    await execAsync('git add .');
-    await execAsync(`git commit -m "chore: integration protection point ${timestamp}" || true`);
-    await execAsync(`git checkout -b protection/integration-${timestamp}`);
-    
+    // Initialize protection state
+    const state: ProtectionState = {
+      flowActive: false,
+      systemCoherent: true,
+      integrationSafe: true,
+      recoveryPointCreated: false,
+      typePatterns: new Map(),
+      healingActive: false,
+      energy: flow.getEnergy()
+    };
+
+    // Monitor type patterns
+    const monitor = require('./monitor');
+    monitor.on('typePattern', (pattern) => {
+      flow.trackFlowMetrics('type_pattern', pattern);
+      state.typePatterns = monitor.getTypePatterns();
+    });
+
+    // Monitor healing cycles
+    monitor.on('healingCycle', (cycle) => {
+      flow.trackFlowMetrics('healing_cycle', cycle);
+      state.healingActive = cycle.active;
+    });
+
+    // Flow state coordination
+    setInterval(() => {
+      const flowState = flow.getFlowState();
+      state.flowActive = flowState === 'flow';
+      state.energy = flow.getEnergy();
+
+      // Adjust protection based on state
+      if (flowState === 'flow') {
+        // Minimize interruptions
+        monitor.pauseHealing();
+      } else if (flowState === 'recovery') {
+        // Opportunistic healing
+        monitor.resumeHealing();
+      }
+    }, 5000);
+
     console.log('✅ Flow protection active');
-  } catch (e) {
-    console.log('⚠️ Flow protection partially active');
+    
+  } catch (error) {
+    console.error('❌ Flow protection failed:', error);
+    throw error;
   }
 }
 

@@ -14,8 +14,10 @@ export enum EnergyType {
 }
 
 export interface FlowMetrics {
-  velocity: number;
-  momentum: number;
-  resistance: number;
-  conductivity: number;
-} 
+  focus: number;
+  productivity: number;
+  timeInState: number;
+  energyLevel: number;
+  flowState: FlowState;
+  energyType: EnergyType;
+}
