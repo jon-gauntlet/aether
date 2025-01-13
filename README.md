@@ -1,6 +1,6 @@
 # Aether
 
-Natural system for high-velocity development with zero cognitive overhead.
+Natural Communication system supporting high-velocity development with zero cognitive overhead.
 
 ## Core Features
 - **Flow Protection**: Automatic state preservation
