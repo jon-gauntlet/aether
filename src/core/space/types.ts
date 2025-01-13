@@ -1,0 +1,1 @@
+export enum SpaceType { Sanctuary = 'sanctuary', Workshop = 'workshop', Garden = 'garden', Commons = 'commons' };export interface Sp{ [key: string]: any };

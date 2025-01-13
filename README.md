@@ -1,89 +1,53 @@
 # Aether
 
-A natural system for optimizing human digital communication, designed from first principles to enhance presence, authenticity, and flow in the digital realm.
+Natural system for high-velocity development with zero cognitive overhead.
 
-## Core Objectives
+## Core Features
+- **Flow Protection**: Automatic state preservation
+- **Type Safety**: Full immutable type system
+- **Natural Growth**: Pattern-based evolution
 
-1. **Natural Communication Flow**
-   - Seamless transitions between communication modes
-   - Intuitive context preservation
-   - Enhanced presence and engagement
-   - Organic interaction patterns
-
-2. **Digital Presence Optimization**
-   - Authentic representation across modalities
-   - Context-aware communication
-   - Natural attention management
-   - Sustained engagement patterns
-
-3. **AI Augmentation**
-   - Human-centric enhancement
-   - Natural system design
-   - Context-aware assistance
-   - Pattern recognition and evolution
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js 18+
-- npm 9+
-
-### Installation
-
-1. Clone the repository:
+## Quick Start
 ```bash
-git clone https://github.com/yourusername/aether.git
-cd aether
+# Start protected development
+flow start
+
+# Enter flow state
+flow deep
+
+# Natural routing
+flow to garden
 ```
 
-2. Install dependencies:
-```bash
-npm install
+## Documentation
+- [Context](CONTEXT.md) - Current project state and requirements
+- [Essence](ESSENCE.md) - Core patterns and principles
+- [Flow SLED](docs/FLOW_SLED.md) - Flow state protection
+- [Standards](docs/STANDARDS.md) - Development standards
+- [TypeScript](docs/TYPESCRIPT.md) - Type system architecture
+- [Vision](docs/VISION.md) - Core project vision and principles
+- [Sled Vision](docs/SLED_VISION.md) - Sled system design and integration guidelines
+
+## Best Practices
+1. Trust the system's natural protection
+2. Follow energy paths for development
+3. Let patterns emerge naturally
+4. Focus on core development
+5. Enable automatic learning
+
+## Development
+```typescript
+// Protected operation
+const result = await withFlow(async () => {
+  return await operation();
+});
+
+// Natural routing
+await flow.to(SpaceType.GARDEN);
+
+// Pattern learning
+system.learn(pattern);
 ```
-
-### Development
-
-```bash
-npm run dev        # Start development server
-npm test          # Run tests
-npm run build     # Build for production
-```
-
-## System Architecture
-
-### Core Systems
-- **Flow**: Natural communication patterns
-- **Presence**: Digital state management
-- **Context**: Understanding and adaptation
-- **Protection**: System stability and privacy
-
-### Documentation
-- [Flow System](docs/systems/flow.md)
-- [Core Architecture](docs/architecture/core.md)
-- [Development Principles](docs/development/principles.md)
-
-## Project Structure
-
-```
-src/
-  ├── components/     # React components
-  ├── core/          # Core business logic
-  ├── hooks/         # Custom React hooks
-  ├── styles/        # Global styles and themes
-  ├── test/          # Test setup and utilities
-  ├── types/         # TypeScript definitions
-  └── utils/         # Utility functions
-```
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch
-3. Commit your changes
-4. Push to the branch
-5. Open a Pull Request
 
 ## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details. 
+MIT 

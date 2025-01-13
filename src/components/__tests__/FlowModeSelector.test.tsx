@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { render } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { FlowModeSelector } from '../FlowModeSelector';
@@ -132,18 +132,17 @@ describe('FlowModeSelector', () => {
     expect(progressBar).toHaveAttribute('aria-valuenow', '50');
   });
 
-  it('disables all buttons during cooldown', () => {
-    const { container } = render(
+  it('disables all buttons during coiner } = render(
       <FlowModeSelector
-        currentState={createFlowState(FlowStateType.FOCUS)}
-        onSelect={mockOnSelect}
-        cooldown={true}
-      />
-    );
+;,
+        onSelect={mockOnSelect},
+cooldown={true};,
+      /> undefined
+    ); undefined;
 
     const buttons = container.querySelectorAll('button');
     buttons.forEach((button: HTMLButtonElement) => {
       expect(button).toBeDisabled();
     });
   });
-}); 
+});

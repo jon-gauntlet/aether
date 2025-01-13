@@ -1,14 +1,31 @@
-/** @type {import('jest').Config} */
-module.exports = {
-  preset: 'ts-jest',
-  testEnvironment: 'node',
-  roots: ['<rootDir>/src'],
-  testMatch: [
-    '**/__tests__/**/*.+(ts|tsx|js)',
-    '**/?(*.)+(spec|test).+(ts|tsx|js)'
-  ],
-  transform: {
-    '^.+\\.(ts|tsx)$': 'ts-jest',
+import { expect } from 'vitest';
+
+declare global {
+  namespace Vi {
+    interface Assertion {
+      toBeInRange(min: number, max: number): void;
+    }
+    interface AsymmetricMatchersContaining {
+      toBeInRange(min: number, max: number): void;
+    }
+  }
+}
+
+expect.extend({
+  toBeInRange(received: number, min: number, max: number) {
+    const pass = received >= min && received <= max;
+    if (pass) {
+      return {
+        message: () =>
+          `expected ${received} not to be within range ${min} - ${max}`,
+        pass: true,
+      };
+    } else {
+      return {
+        message: () =>
+          `expected ${received} to be within range ${min} - ${max}`,
+        pass: false,
+      };
+    }
   },
-  setupFilesAfterEnv: ['<rootDir>/src/test/matchers/toBeInRange.ts']
-}; 
+}); 

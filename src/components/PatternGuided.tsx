@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import styled from 'styled-components';
+
+
 
 interface PatternGuidedProps {
   children: React.ReactNode;
@@ -14,29 +14,27 @@ interface Pattern {
   active: boolean;
 }
 
-const Container = styled.div`
-  position: relative;
-`;
+const ;
 
-const PatternIndicator = styled.div<{ active: boolean }>`
+
   position: absolute;
   top: 8px;
   left: 8px;
-  padding: 4px 8px;
-  background: ${props => props.active ? '#4CAF50' : '#757575'};
+padding: 4x 8px;
+  background: {props => props.active ? '#4CAF50' : '#757575'};
   color: white;
-  border-radius: 4px;
-  font-size: 0.8rem;
+border-radius: 4px;
+font-size: 0.8rem;
   opacity: 0.8;
   cursor: pointer;
-  transition: all 0.3s ease;
+transition: ll 0.3s ease;
 
-  &:hover {
+  &: any {
     opacity: 1;
   }
 `;
 
-const PatternList = styled.div`
+
   position: absolute;
   top: 40px;
   left: 8px;
@@ -47,33 +45,33 @@ const PatternList = styled.div`
   z-index: 100;
 `;
 
-const PatternItem = styled.div<{ active: boolean }>`
+
   padding: 8px;
-  margin-bottom: 4px;
-  background: ${props => props.active ? '#1e1e1e' : 'transparent'};
-  border-radius: 4px;
+margin-bottom: 4px;
+  background: {props => props.active ? '#1e1e1e' : 'transparent'};
+border-radius: 4px;
   cursor: pointer;
 
-  &:hover {
-    background: #1e1e1e;
+  &: any {
+background: #1e1e1e;
   }
 
-  h4 {
-    margin: 0 0 4px 0;
-    color: ${props => props.active ? '#4CAF50' : '#ffffff'};
+4 {;,
+margin: 0 0 4px 0;
+    color: {props => props.active ? '#4CAF50' : '#ffffff'};
   }
 
-  p {
+   {
     margin: 0;
-    font-size: 0.9rem;
+font-size: 0.9rem;
     color: #a0a0a0;
   }
 `;
 
 export const PatternGuided: React.FC<PatternGuidedProps> = ({
-  children,
+  ,: any; undefined: any; undefined;
   onPatternChange
-}) => {
+}) => {;
   const [patterns, setPatterns] = useState<Pattern[]>([
     {
       id: 'flow_state',
@@ -90,11 +88,11 @@ export const PatternGuided: React.FC<PatternGuidedProps> = ({
       active: false
     }
   ]);
-  const [showPatterns, setShowPatterns] = useState(false);
+
 
   const activePatterns = patterns.filter(p => p.active);
 
-  const togglePattern = useCallback((id: string) => {
+
     setPatterns(prev => prev.map(p => 
       p.id === id ? { ...p, active: !p.active } : p
     ));

@@ -25,7 +25,10 @@ const METRICS = {
   resourceUsage: [],
   workspacePatterns: new Map(),
   errorPatterns: new Map(),
-  buildDurations: []
+  buildDurations: [],
+  typePatterns: new Map(),
+  healingCycles: [],
+  energyLevels: []
 };
 
 // Create required directories
@@ -582,4 +585,102 @@ async function optimizeBuildCache() {
   } catch (error) {
     console.warn('⚠️  Build cache optimization failed:', error.message);
   }
-} 
+}
+
+// Enhanced flow tracking
+function trackFlowMetrics(type, data) {
+  switch (type) {
+    case 'type_pattern':
+      const { pattern, count, timestamp, energy } = data;
+      const patterns = METRICS.typePatterns.get(pattern) || [];
+      METRICS.typePatterns.set(pattern, [...patterns, { 
+        count, 
+        timestamp,
+        energy,
+        flowState: determineFlowState(getCurrentMetrics())
+      }]);
+      break;
+      
+    case 'healing_cycle':
+      const cycleEnergy = calculateEnergy();
+      METRICS.healingCycles.push({
+        ...data,
+        energyLevel: cycleEnergy,
+        patterns: data.patterns.map(p => ({
+          ...p,
+          effectiveEnergy: p.energy * cycleEnergy // Adjust for system energy
+        }))
+      });
+      break;
+      
+    case 'energy_level':
+      METRICS.energyLevels.push({
+        level: data.level,
+        timestamp: Date.now(),
+        typePatterns: METRICS.typePatterns.size,
+        healingActive: isHealingActive()
+      });
+      break;
+  }
+  
+  // Update flow state based on all metrics
+  updateFlowState();
+}
+
+function getCurrentMetrics() {
+  return {
+    typeErrors: METRICS.typePatterns.size,
+    healingActive: isHealingActive(),
+    energy: calculateEnergy(),
+    systemLoad: METRICS.systemLoad[METRICS.systemLoad.length - 1] || 0,
+    recentHealingSuccess: calculateHealingSuccess()
+  };
+}
+
+function isHealingActive() {
+  const lastCycle = METRICS.healingCycles[METRICS.healingCycles.length - 1];
+  return lastCycle && Date.now() - lastCycle.timestamp < 5000;
+}
+
+function calculateHealingSuccess() {
+  const recentCycles = METRICS.healingCycles.slice(-5);
+  if (recentCycles.length === 0) return 1.0;
+  
+  return recentCycles.filter(c => c.success).length / recentCycles.length;
+}
+
+function determineFlowState(metrics) {
+  // Natural flow state determination
+  if (metrics.typeErrors === 0 && metrics.energy > 0.8) {
+    return 'flow';
+  }
+  
+  if (metrics.healingActive) {
+    return metrics.recentHealingSuccess > 0.7 ? 'healing' : 'recovery';
+  }
+  
+  if (metrics.energy < 0.3 || metrics.systemLoad > 2.0) {
+    return 'recovery';
+  }
+  
+  if (metrics.typeErrors > 0 && metrics.energy > 0.6) {
+    return 'ready_to_heal';
+  }
+  
+  return 'stable';
+}
+
+// Export enhanced metrics
+module.exports = {
+  trackFlowMetrics,
+  getFlowState: () => {
+    const states = Array.from(METRICS.flowStates.entries());
+    return states[states.length - 1]?.[1] || 'stable';
+  },
+  getEnergy: calculateEnergy,
+  getCurrentMetrics,
+  shouldStartHealing: () => {
+    const metrics = getCurrentMetrics();
+    return metrics.energy > 0.6 && !metrics.healingActive && metrics.typeErrors > 0;
+  }
+}; 

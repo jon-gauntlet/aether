@@ -1,4 +1,4 @@
-import { useState } from 'react';
+
 import styled from 'styled-components';
 import { FlowState, FlowStateType } from '../core/types/flow/types';
 
@@ -14,14 +14,7 @@ interface StateButtonProps {
   isDisabled: boolean;
 }
 
-const Container = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 15px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-`;
+const ;
 
 const ButtonGroup = styled.div`
   display: flex;
@@ -166,7 +159,7 @@ export const FlowModeSelector: React.FC<FlowModeSelectorProps> = ({
           role="progressbar"
           aria-valuenow={recoveryProgress * 100}
           aria-valuemin={0}
-          aria-valuemax={100}
+          
         />
       )}
     </Container>

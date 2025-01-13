@@ -40,7 +40,7 @@ export const SpaceContainer: React.FC<SpaceContainerProps> = ({
   });
 
   // Space transition history
-  const [transitions, setTransitions] = useState<SpaceTransition[]>([]);
+
 
   // Handle space changes
   const handleSpaceChange = useCallback((to: SpaceType, preserveState = false) => {
@@ -152,17 +152,4 @@ function getSpaceName(type: SpaceType): string {
   }
 }
 
-function getSpaceDescription(type: SpaceType): string {
-  switch (type) {
-    case 'sanctuary':
-      return 'A protected space for deep focus and flow';
-    case 'library':
-      return 'Organize and access your knowledge base';
-    case 'garden':
-      return 'Explore and grow new ideas';
-    case 'workshop':
-      return 'Build and create with powerful tools';
-    case 'commons':
-      return 'Share and collaborate with the community';
-  }
-} 
+ 

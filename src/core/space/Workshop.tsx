@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
-import { useSpace } from './SpaceProvider';
+
 import { useFlowState } from '../hooks/useFlowState';
-import { useProtection } from '../hooks/useProtection';
+
 import './Workshop.css';
 
 interface Tool {
@@ -29,9 +29,9 @@ export const Workshop: React.FC<WorkshopProps> = ({
   onToolSelect,
   onMetricsUpdate
 }) => {
-  const { currentSpace, transitionTo } = useSpace();
+
   const { flowState, startFlow, updateIntensity } = useFlowState();
-  const { protection, checkHealth } = useProtection();
+
 
   // Auto-start flow state when entering workshop
   useEffect(() => {

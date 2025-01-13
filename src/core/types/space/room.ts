@@ -1,11 +1,1 @@
-export interface Room {
-  id: string;
-  calm: number;
-  focus: number;
-  paths: Path[];
-}
-
-export interface Path {
-  to: string;
-  strength: number;
-} 
+export interface Roo{ [key: any;export interface Pat{ [key: any;

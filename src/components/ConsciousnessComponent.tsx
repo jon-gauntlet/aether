@@ -1,201 +1,56 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import styled from 'styled-components';
-import { ConsciousnessState, Field } from '@/core/types/system';
+import { Theme } from '../styles/theme';
 
-interface ConsciousnessComponentProps {
-  consciousness: ConsciousnessState;
-  fields: Field[];
-  isCoherent: boolean;
+interface Props {
+  theme: Theme;
 }
 
-const ConsciousnessContainer = styled.div<{ isCoherent: boolean }>`
-  padding: ${({ theme }) => theme.space.xl};
-  border-radius: ${({ theme }) => theme.borderRadius.large};
-  background: ${({ theme, isCoherent }) =>
-    isCoherent
-      ? `linear-gradient(135deg, ${theme.colors.primary}20, ${theme.colors.secondary}20)`
-      : theme.colors.surface};
-  color: ${({ theme }) => theme.colors.text};
-  transition: all ${({ theme }) => theme.transitions.normal};
-  position: relative;
-  overflow: hidden;
+const ;
 
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(
-      45deg,
-      ${({ theme }) => theme.colors.primary}10,
-      ${({ theme }) => theme.colors.secondary}10
-    );
-    opacity: ${({ isCoherent }) => (isCoherent ? 1 : 0)};
-    transition: opacity ${({ theme }) => theme.transitions.normal};
-    animation: ${({ isCoherent }) => isCoherent ? 'breathe 4s ease-in-out infinite' : 'none'};
-  }
-
-  @keyframes breathe {
-    0%, 100% { transform: scale(1); opacity: 0.7; }
-    50% { transform: scale(1.03); opacity: 1; }
-  }
-`;
-
-const ConsciousnessCanvas = styled.canvas`
-  width: 100%;
-  height: 200px;
-  margin: ${({ theme }) => theme.space.md} 0;
-  border-radius: ${({ theme }) => theme.borderRadius.medium};
-  background: ${({ theme }) => theme.colors.background}40;
-`;
-
-const MetricsGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: ${({ theme }) => theme.space.md};
-  margin-top: ${({ theme }) => theme.space.lg};
-`;
-
-const Metric = styled.div<{ value: number }>`
+const Header = styled.div<Props>`
   padding: ${({ theme }) => theme.space.md};
-  border-radius: ${({ theme }) => theme.borderRadius.medium};
-  background: ${({ theme }) => theme.colors.background}40;
-  position: relative;
-  overflow: hidden;
-
-  &::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: ${({ value }) => value}%;
-    height: 2px;
-    background: linear-gradient(
-      to right,
-      ${({ theme }) => theme.colors.primary},
-      ${({ theme }) => theme.colors.secondary}
-    );
-    transition: width ${({ theme }) => theme.transitions.normal};
-  }
+  margin-bottom: ${({ theme }) => theme.space.md};
+  background: ${({ theme }) => theme.colors.surface};
+  border-radius: ${({ theme }) => theme.borderRadius.md};
 `;
 
-const Title = styled.h3`
-  font-size: ${({ theme }) => theme.fontSizes.xl};
-  margin-bottom: ${({ theme }) => theme.space.md};
-  background: linear-gradient(
-    135deg,
-    ${({ theme }) => theme.colors.primary},
-    ${({ theme }) => theme.colors.secondary}
-  );
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+const Title = styled.h2<Props>`
+  margin: 0;
+  color: ${({ theme }) => theme.colors.textAlt};
+  font-size: ${({ theme }) => theme.space.lg};
 `;
 
-const StateIndicator = styled.div<{ state: string }>`
-  font-size: ${({ theme }) => theme.fontSizes.lg};
-  font-weight: 600;
-  text-align: center;
+const ;
+
+const Status = styled.div<Props & { status: 'success' | 'warning' | 'error' }>`
+  padding: ${({ theme }) => theme.space.md};
   margin-bottom: ${({ theme }) => theme.space.md};
-  color: ${({ theme, state }) => {
-    switch (state) {
-      case 'FLOW':
-        return theme.colors.primary;
-      case 'HYPERFOCUS':
-        return theme.colors.secondary;
-      case 'FOCUS':
+  background: ${({ theme, status }) => {
+    switch (status) {
+      case 'success':
         return theme.colors.success;
-      case 'RECOVERING':
+      case 'warning':
         return theme.colors.warning;
       default:
-        return theme.colors.textAlt;
+        return theme.colors.error;
     }
   }};
+  color: ${({ theme }) => theme.colors.textAlt};
+  border-radius: ${({ theme }) => theme.borderRadius.md};
 `;
 
-export const ConsciousnessComponent = ({
-  consciousness,
-  fields,
-  isCoherent,
-}: ConsciousnessComponentProps) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const drawConsciousness = () => {
-      const { width, height } = canvas;
-      ctx.clearRect(0, 0, width, height);
-
-      // Draw consciousness field
-      const centerX = width / 2;
-      const centerY = height / 2;
-      const maxRadius = Math.min(width, height) / 3;
-      
-      // Draw expanding circles
-      for (let i = 0; i < 5; i++) {
-        const radius = maxRadius * (0.4 + i * 0.15);
-        const alpha = (1 - i * 0.2) * (isCoherent ? 1 : 0.5);
-        
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-        ctx.strokeStyle = `rgba(${isCoherent ? '99, 102, 241' : '148, 163, 184'}, ${alpha})`;
-        ctx.lineWidth = 2;
-        ctx.stroke();
-      }
-
-      // Draw consciousness particles
-      for (let i = 0; i < 50; i++) {
-        const angle = (i / 50) * Math.PI * 2;
-        const radius = maxRadius * (0.8 + Math.sin(Date.now() * 0.001 + i) * 0.2);
-        const x = centerX + Math.cos(angle) * radius;
-        const y = centerY + Math.sin(angle) * radius;
-        
-        ctx.beginPath();
-        ctx.arc(x, y, 2, 0, Math.PI * 2);
-        ctx.fillStyle = isCoherent ? '#8B5CF640' : '#94A3B840';
-        ctx.fill();
-      }
-    };
-
-    const animate = () => {
-      drawConsciousness();
-      requestAnimationFrame(animate);
-    };
-
-    animate();
-
-    return () => {
-      cancelAnimationFrame(animate as unknown as number);
-    };
-  }, [consciousness, isCoherent]);
-
+export const ConsciousnessComponent: React.FC = () => {
   return (
-    <ConsciousnessContainer isCoherent={isCoherent}>
-      <Title>Consciousness State</Title>
-      <StateIndicator state={consciousness.currentState}>
-        {consciousness.currentState}
-      </StateIndicator>
-      <ConsciousnessCanvas ref={canvasRef} />
-      <MetricsGrid>
-        <Metric value={consciousness.metrics.focus * 100}>
-          Focus: {(consciousness.metrics.focus * 100).toFixed(0)}%
-        </Metric>
-        <Metric value={consciousness.metrics.clarity * 100}>
-          Clarity: {(consciousness.metrics.clarity * 100).toFixed(0)}%
-        </Metric>
-        <Metric value={consciousness.metrics.presence * 100}>
-          Presence: {(consciousness.metrics.presence * 100).toFixed(0)}%
-        </Metric>
-        <Metric value={consciousness.protection.integrity * 100}>
-          Integrity: {(consciousness.protection.integrity * 100).toFixed(0)}%
-        </Metric>
-      </MetricsGrid>
-    </ConsciousnessContainer>
+    <Container>
+      <Header>
+        <Title>Natural Consciousness</Title>
+      </Header>
+      <Content>
+        <Status status="success">
+          System is naturally flowing
+        </Status>
+      </Content>
+    </Container>
   );
 }; 

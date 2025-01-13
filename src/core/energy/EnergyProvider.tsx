@@ -6,7 +6,7 @@ interface EnergyContextType {
   updateEnergy: (level: number) => void;
 }
 
-const EnergyContext = createContext<EnergyContextType | undefined>(undefined);
+const EnergyContext = createContext<EnergyContextType | undefined>();
 
 export const useEnergy = () => {
   const context = useContext(EnergyContext);

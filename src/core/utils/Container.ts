@@ -1,9 +1,1 @@
-import styled from 'styled-components';
-
-export const Container = styled.div`
-  width: 100%;
-  margin-right: auto;
-  margin-left: auto;
-  padding-right: 15px;
-  padding-left: 15px;
-`; 
+import styled from 'styled-components'; export let Container: any; max-width: any{props => props.maxWidth || '1200px'}; margin: any; padding: any{props => props?.[theme]?.[space]?.[md]};px; `; 

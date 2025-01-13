@@ -1,124 +1,94 @@
-# Guiding Principles
+# Core Principles
 
 ## Natural Flow
-Our system recognizes and respects the natural rhythms of human presence and attention. Like a river finding its course, we do not force but rather support the natural tendencies of consciousness.
-
-### Depth and Stillness
-- Depth emerges naturally from sustained stillness
-- Each moment builds upon the previous
-- Protection increases with depth
-- Different activities have their natural rhythms
-
-### Presence and Clarity
-- True presence cannot be forced
-- Clarity arises from the combination of depth and stillness
-- Each type of presence has its own character
-- Natural transitions between states
-
-### Spaces
-- Different spaces support different modes of being
-- Each space has its natural qualities
-- Some spaces gather, others protect
-- Movement between spaces follows natural patterns
-
-## Connection Patterns
-The system recognizes that human connection follows organic patterns, each with its own nature and rhythm.
-
-### Resonance
-- Builds naturally between compatible states
-- Flows more freely in some spaces than others
-- Different activities have natural affinities
-- Shared depth creates stronger bonds
-
-### Protection
-- Deep states require protection
-- Protection increases gradually
-- Different spaces offer different levels of shelter
-- Natural boundaries emerge organically
-
-## Flow States
-The system recognizes and protects valuable states of consciousness:
-
-1. **Gathering** - The natural collection of attention
-2. **Deepening** - The gradual movement into depth
-3. **Deep** - The achievement of true focus
-4. **Protected** - The highest state of immersion
+```typescript
+interface Flow {
+  // Core patterns
+  depth: {
+    state: FlowState;      // Current depth
+    protection: Shield;    // Auto-protection
+    transitions: natural;  // No forced changes
+  };
+  
+  // Natural presence
+  presence: {
+    type: PresenceType;   // Current mode
+    energy: EnergyField;  // Natural state
+    context: preserved;   // Auto-maintained
+  };
+}
+```
 
 ## Spaces
-Each space has its own character and purpose:
+1. **Sanctuary**
+   - Deep focus
+   - High protection
+   - Natural recovery
 
-### Sanctuary
-- For deep contemplation
-- Highest stillness
-- Protected presence
-- Limited resonance
+2. **Workshop**
+   - Active creation
+   - Flow preservation
+   - Natural tools
 
-### Library
-- For focused study
-- High stillness
-- Deeper presence
-- Selective connection
+3. **Garden**
+   - Organic growth
+   - Natural patterns
+   - Free exploration
 
-### Garden
-- For natural conversation
-- Good stillness
-- High presence gathering
-- Strong resonance
+4. **Commons**
+   - Natural gathering
+   - Light presence
+   - Open flow
 
-### Workshop
-- For active creation
-- Moderate stillness
-- Strong presence
-- Good resonance
+## Protection
+```typescript
+interface Protection {
+  // Natural shields
+  shields: {
+    focus: automatic;     // No disruption
+    energy: preserved;    // Natural state
+    flow: maintained;     // No breaks
+  };
+  
+  // Recovery
+  recovery: {
+    points: automatic;    // Auto-save
+    paths: natural;       // Easy return
+    healing: organic;     // No force
+  };
+}
+```
 
-### Commons
-- For open gathering
-- Light stillness
-- Highest presence gathering
-- Free-flowing resonance
+## Implementation
+1. **Natural Over Forced**
+   - Follow system wisdom
+   - Trust natural paths
+   - Enable organic growth
 
-## Implementation Principles
+2. **Protection Over Speed**
+   - Guard flow states
+   - Preserve energy
+   - Natural recovery
 
-### Natural Over Forced
-- Work with natural tendencies
-- Support rather than enforce
-- Allow organic transitions
-- Respect natural rhythms
+3. **Depth Over Activity**
+   - Value real focus
+   - Natural progress
+   - Organic results
 
-### Protection Over Productivity
-- Protect valuable states
-- Guard against disruption
-- Support sustained depth
-- Enable natural recovery
-
-### Connection Over Collection
-- Foster genuine resonance
-- Support natural grouping
-- Enable deep sharing
-- Preserve individual space
-
-### Depth Over Activity
-- Value true depth over mere movement
-- Support sustained presence
-- Protect growing stillness
-- Honor natural cycles
-
-## Building Practices
-
-### Mindful Development
-- Each addition should respect natural patterns
-- New features should support, not disrupt
-- Changes should feel organic
-- Growth should be natural
-
-### Hidden Harmony
-- Components should work in harmony
-- Transitions should be smooth
-- Protection should be unobtrusive
-- Support should feel natural
-
-### Living System
-- The system grows like a garden
-- Each part influences the whole
-- Natural patterns emerge
-- Balance is maintained 
+## Growth
+```typescript
+interface Growth {
+  // Natural evolution
+  evolution: {
+    path: organic;        // No forcing
+    speed: natural;       // Own rhythm
+    direction: guided;    // Not controlled
+  };
+  
+  // Learning
+  learning: {
+    style: natural;       // Own patterns
+    pace: protected;      // No pressure
+    depth: organic;       // Real growth
+  };
+} 

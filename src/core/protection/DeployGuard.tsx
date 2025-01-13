@@ -1,7 +1,7 @@
-import React, { createContext, useContext, useEffect, useState } from 'react'
+
 import { db } from '@/core/firebase'
 import { doc, onSnapshot, setDoc, Timestamp } from 'firebase/firestore'
-import { useAuth } from '@/core/auth/AuthProvider'
+
 
 interface DeploymentState {
   lastDeployment: Timestamp | null
@@ -34,11 +34,11 @@ const initialState: DeploymentState = {
   }
 }
 
-const DeployContext = createContext<DeployContextType | undefined>(undefined)
+const DeployContext = createContext<DeployContextType | undefined>()
 
 export const DeployGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [deploymentState, setDeploymentState] = useState<DeploymentState>(initialState)
-  const { user, consciousnessState } = useAuth()
+
 
   const isProtected = React.useMemo(() => {
     return deploymentState.protection.flowGuard && 
@@ -89,7 +89,7 @@ export const DeployGuard: React.FC<{ children: React.ReactNode }> = ({ children 
 }
 
 export const useDeployment = () => {
-  const context = useContext(DeployContext)
+  const 
   if (!context) {
     throw new Error('useDeployment must be used within DeployGuard')
   }

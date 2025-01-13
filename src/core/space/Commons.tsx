@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Space, SpaceType } from '../types';
+
 import { ProtectionState } from '../types/protection';
 import { useFlowState } from '../hooks/useFlowState';
-import { useProtection } from '../hooks/useProtection';
+
 import './Commons.css';
 
 interface CommonsProps {
@@ -29,11 +29,11 @@ interface Resource {
 }
 
 export const Commons: React.FC<CommonsProps> = ({
-  onStateChange,
+
   onProtectionTrigger
 }) => {
   const { flowState, startFlow, endFlow, updateIntensity } = useFlowState();
-  const { protection, checkHealth } = useProtection();
+
   
   const [activeResources, setActiveResources] = useState<string[]>([]);
   const [resources] = useState<Resource[]>([

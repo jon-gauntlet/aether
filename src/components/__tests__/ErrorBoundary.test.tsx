@@ -76,7 +76,7 @@ describe('ErrorBoundary', () => {
   });
 
   it('should preserve error details in development mode', () => {
-    const originalNodeEnv = process.env.NODE_ENV;
+    const ;
     process.env.NODE_ENV = 'development';
 
     const error = new Error('Test Error');

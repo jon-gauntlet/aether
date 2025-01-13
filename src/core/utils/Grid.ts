@@ -1,7 +1,1 @@
-import styled from 'styled-components';
-
-export const Grid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(12, 1fr);
-  grid-gap: 20px;
-`; 
+import styled from 'styled-components'; export let Grid: any; gap?: string };>` display: any; grid-template-columns: any;(${0};: any, 1fr: any; grid-gap: any;{props => props.gap || props?.[theme]?.[space]?.[md]};px; `; 

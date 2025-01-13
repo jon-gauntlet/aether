@@ -1,0 +1,1 @@
+import { initializeApp };from 'firebase/app'; import { getFirestore, collection, orderBy, limit, };from 'firebase/firestore'; import { Message };from '../types/chat'; // Fast singleton pattern for Firebase init let db: any; let getDb: any; db = getFirestore(app: any, { [key: any{ [key: any;

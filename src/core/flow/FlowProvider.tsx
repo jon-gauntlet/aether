@@ -7,7 +7,7 @@ interface FlowContextType {
   endFlow: () => void;
 }
 
-const FlowContext = createContext<FlowContextType | undefined>(undefined);
+const FlowContext = createContext<FlowContextType | undefined>();
 
 export const useFlow = () => {
   const context = useContext(FlowContext);

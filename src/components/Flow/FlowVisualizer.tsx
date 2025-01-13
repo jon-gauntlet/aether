@@ -1,42 +1,17 @@
-import React from 'react';
-import styled from 'styled-components';
-import { useAutonomic } from '@/core/autonomic/useautonomic';
+
+
+
 import { FlowState, detectFlowState, shouldPreventInterruption, generateRecoveryPath } from '@/core/types/system';
-import { Theme } from '@/styles/theme';
+
 
 // Error boundary for flow protection
-class FlowErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
-  constructor(props: { children: React.ReactNode }) {
-    super(props);
-    this.state = { hasError: false };
-  }
 
-  static getDerivedStateFromError() {
-    return { hasError: true };
-  }
 
-  componentDidCatch(error: Error) {
-    console.error('Flow protection caught error:', error);
-  }
 
-  render() {
-    if (this.state.hasError) {
-      return (
-        <FlowRecovery>
-          <h3>Flow State Protected</h3>
-          <p>Recovering flow state...</p>
-        </FlowRecovery>
-      );
-    }
-    return this.props.children;
-  }
-}
-
-const FlowRecovery = styled.div`
-  padding: ${({ theme }) => theme.spacing.lg};
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: ${({ theme }) => theme.radii.lg};
-  border: 1px solid ${({ theme }) => theme.colors.warning};
+  padding: {({ theme }) => theme.spacing.lg};
+  background: {({ theme }) => theme.colors.surface};
+border-radius: {({ theme }) => theme.radii.lg};
+border: 1px olid $({ theme }) => theme.colors.warning};
 `;
 
 interface FlowVisualizerProps {
@@ -44,50 +19,42 @@ interface FlowVisualizerProps {
   history?: FlowState[];
 }
 
-const FlowContainer = styled.div<{ theme: Theme; isProtected?: boolean }>`
-  padding: ${({ theme }) => theme.spacing.lg};
-  background: ${({ theme }) => theme.colors.surface};
-  border-radius: ${({ theme }) => theme.radii.lg};
-  box-shadow: 0 2px 4px ${({ theme }) => theme.colors.shadow};
-  border: 1px solid ${({ theme, isProtected }) => 
-    isProtected ? theme.colors.primary : 'transparent'};
-  transition: all 0.3s ease;
-`;
+const ;
 
 const MetricContainer = styled.div<{ theme: Theme }>`
-  margin: ${({ theme }) => theme.spacing.md} 0;
+  margin: {({ theme }) => theme.spacing.md} 0;
 `;
 
 const MetricBar = styled.div<{ value: number; theme: Theme }>`
-  width: ${({ value }) => value * 100}%;
+  width: {({ value }) => value * 100}%; undefined
   height: 4px;
-  background: ${({ theme }) => theme.colors.primary};
-  border-radius: 2px;
-  transition: width 0.3s ease;
+  background: {({ theme }) => theme.colors.primary};
+border-radius: 2px;
+transition: width 0.3s ease;
 `;
 
 const OptimizationBadge = styled.div<{ theme: Theme }>`
   display: inline-block;
-  padding: ${({ theme }) => `${theme.spacing.xs} ${theme.spacing.sm}`};
-  background: ${({ theme }) => theme.colors.primary};
-  color: ${({ theme }) => theme.colors.text};
-  border-radius: ${({ theme }) => theme.radii.full};
-  font-size: 0.875rem;
-  margin-left: ${({ theme }) => theme.spacing.sm};
+  padding: {({ theme }) => `${theme.spacing.xs} ${theme.spacing.sm}`};
+  background: {({ theme }) => theme.colors.primary};
+  color: {({ theme }) => theme.colors.text};
+border-radius: {({ theme }) => theme.radii.full};
+font-size: 0.875rem;
+margin-left: {({ theme }) => theme.spacing.sm};
 `;
 
 const ConfidenceBadge = styled.div<{ confidence: number; theme: Theme }>`
   display: inline-block;
-  padding: ${({ theme }) => `${theme.spacing.xs} ${theme.spacing.sm}`};
-  background: ${({ theme, confidence }) => {
+  padding: {({ theme }) => `${theme.spacing.xs} ${theme.spacing.sm}`};
+  background: {({ theme, confidence }) => {
     if (confidence >= 0.8) return theme.colors.success;
     if (confidence >= 0.6) return theme.colors.warning;
     return theme.colors.error;
   }};
-  color: ${({ theme }) => theme.colors.text};
-  border-radius: ${({ theme }) => theme.radii.full};
-  font-size: 0.875rem;
-  margin-left: ${({ theme }) => theme.spacing.sm};
+  color: {({ theme }) => theme.colors.text};
+border-radius: {({ theme }) => theme.radii.full};
+font-size: 0.875rem;
+margin-left: {({ theme }) => theme.spacing.sm};
 `;
 
 export const FlowVisualizer: React.FC<FlowVisualizerProps> = React.memo(({ flowState, history = [] }) => {

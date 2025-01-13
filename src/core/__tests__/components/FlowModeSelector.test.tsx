@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { render } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { FlowModeSelector } from '../../FlowModeSelector';
@@ -74,7 +74,7 @@ describe('FlowModeSelector', () => {
     for (const mode of modes) {
       const button = getByText(mode);
       await userEvent.hover(button);
-      expect(button).toHaveStyle({ background: 'rgba(255, 255, 255, 0.25)' });
+      expect(button).toHaveStyle({  });
     }
   });
 }); 
