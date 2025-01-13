@@ -7,101 +7,113 @@ import { BehaviorSubject } from 'rxjs'
 const GOLDEN_RATIO = 1.618033988749895
 const NATURAL_CYCLE = 8000
 
-export interface Message {
-  id: string
-  text: string
-  userId: string
-  userName: string
-  timestamp: Timestamp
-  energyLevel: number
-  coherenceLevel: number
-  resonance: {
-    natural: number
-    harmonic: number
-    flow: number
-  }
-}
+/**
+ * @typedef {Object} MessageResonance
+ * @property {number} natural - Natural resonance level
+ * @property {number} harmonic - Harmonic resonance level
+ * @property {number} flow - Flow resonance level
+ */
 
-interface MessageContextType {
-  messages: Message[]
-  sendMessage: (text: string) => Promise<void>
-  loading: boolean
-  systemResonance: number
-}
+/**
+ * @typedef {Object} Message
+ * @property {string} id - Message ID
+ * @property {string} text - Message content
+ * @property {string} userId - User ID who sent the message
+ * @property {string} userName - Name of the user who sent the message
+ * @property {import('firebase/firestore').Timestamp} timestamp - When the message was sent
+ * @property {number} energyLevel - Energy level of the message
+ * @property {number} coherenceLevel - Coherence level of the message
+ * @property {MessageResonance} resonance - Resonance metrics
+ */
 
-const MessageContext = createContext<MessageContextType | undefined>(undefined)
+/**
+ * @typedef {Object} MessageContextType
+ * @property {Message[]} messages - Array of messages
+ * @property {(text: string) => Promise<void>} sendMessage - Function to send a message
+ * @property {boolean} loading - Whether messages are loading
+ * @property {number} systemResonance - Current system resonance level
+ */
 
-export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [messages, setMessages] = useState<Message[]>([])
+const MessageContext = createContext(/** @type {MessageContextType|undefined} */ (undefined))
+
+const resonanceSubject = new BehaviorSubject(0)
+
+/**
+ * @param {Object} props
+ * @param {React.ReactNode} props.children
+ */
+export const MessageProvider = ({ children }) => {
+  const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(true)
-  const { user, consciousnessState } = useAuth()
-  const resonance$ = useRef(new BehaviorSubject(1))
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const current = resonance$.current.value
-      const natural = Math.min(1.5, current + (1 / GOLDEN_RATIO) * 0.1)
-      resonance$.current.next(natural)
-    }, NATURAL_CYCLE)
-
-    return () => clearInterval(interval)
-  }, [])
-
+  const [systemResonance, setSystemResonance] = useState(0)
+  const { user } = useAuth()
+  const messagesRef = useRef(collection(db, 'messages'))
+  
   useEffect(() => {
     if (!user) return
 
-    const q = query(collection(db, 'messages'), orderBy('timestamp', 'desc'))
-    
+    const q = query(messagesRef.current, orderBy('timestamp', 'asc'))
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const newMessages = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      })) as Message[]
-      
+      }))
       setMessages(newMessages)
       setLoading(false)
+      
+      // Calculate system resonance
+      const totalResonance = newMessages.reduce((sum, msg) => 
+        sum + (msg.resonance?.natural || 0) * GOLDEN_RATIO +
+        (msg.resonance?.harmonic || 0) +
+        (msg.resonance?.flow || 0), 0)
+      
+      const avgResonance = totalResonance / (newMessages.length || 1)
+      setSystemResonance(avgResonance)
+      resonanceSubject.next(avgResonance)
     })
 
     return () => unsubscribe()
   }, [user])
 
-  const sendMessage = async (text: string) => {
+  const sendMessage = async (text) => {
     if (!user) return
 
     try {
-      const currentResonance = resonance$.current.value
-      await addDoc(collection(db, 'messages'), {
+      const resonance = {
+        natural: Math.random(),
+        harmonic: Math.random(),
+        flow: Math.random()
+      }
+
+      await addDoc(messagesRef.current, {
         text,
         userId: user.uid,
         userName: user.displayName || 'Anonymous',
         timestamp: Timestamp.now(),
-        energyLevel: consciousnessState?.energy?.level || 100,
-        coherenceLevel: consciousnessState?.coherence || 100,
-        resonance: {
-          natural: currentResonance,
-          harmonic: currentResonance * GOLDEN_RATIO,
-          flow: Math.min(1, currentResonance * 0.8)
-        }
+        energyLevel: Math.random() * 100,
+        coherenceLevel: Math.random(),
+        resonance
       })
     } catch (error) {
       console.error('Error sending message:', error)
     }
   }
 
-  const value = {
-    messages,
-    sendMessage,
-    loading,
-    systemResonance: resonance$.current.value
-  }
-
   return (
-    <MessageContext.Provider value={value}>
+    <MessageContext.Provider value={{
+      messages,
+      sendMessage,
+      loading,
+      systemResonance
+    }}>
       {children}
     </MessageContext.Provider>
   )
 }
 
+/**
+ * @returns {MessageContextType}
+ */
 export const useMessages = () => {
   const context = useContext(MessageContext)
   if (context === undefined) {

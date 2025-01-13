@@ -59,7 +59,7 @@ export const GlobalStyle = createGlobalStyle`
   a {
     color: ${({ theme }) => theme.colors.primary};
     text-decoration: none;
-    transition: color ${({ theme }) => theme.transitions.fast};
+    transition: color ${({ theme }) => theme.transitions.normal};
 
     &:hover {
       color: ${({ theme }) => theme.colors.secondary};
@@ -68,106 +68,5 @@ export const GlobalStyle = createGlobalStyle`
 
   button {
     font-family: ${({ theme }) => theme.fonts.body};
-    font-size: ${({ theme }) => theme.fontSizes.md};
-    padding: ${({ theme }) => theme.space.sm} ${({ theme }) => theme.space.md};
-    border: none;
-    border-radius: ${({ theme }) => theme.borderRadius.medium};
-    background: ${({ theme }) => theme.colors.primary};
-    color: ${({ theme }) => theme.colors.text};
-    cursor: pointer;
-    transition: all ${({ theme }) => theme.transitions.fast};
-
-    &:hover:not(:disabled) {
-      background: ${({ theme }) => theme.colors.secondary};
-      transform: translateY(-1px);
-    }
-
-    &:active:not(:disabled) {
-      transform: translateY(0);
-    }
-
-    &:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
   }
-
-  input, textarea {
-    font-family: ${({ theme }) => theme.fonts.body};
-    font-size: ${({ theme }) => theme.fontSizes.md};
-    padding: ${({ theme }) => theme.space.sm} ${({ theme }) => theme.space.md};
-    border: 1px solid ${({ theme }) => theme.colors.textAlt}40;
-    border-radius: ${({ theme }) => theme.borderRadius.medium};
-    background: ${({ theme }) => theme.colors.surface};
-    color: ${({ theme }) => theme.colors.text};
-    transition: all ${({ theme }) => theme.transitions.fast};
-
-    &:focus {
-      outline: none;
-      border-color: ${({ theme }) => theme.colors.primary};
-      box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.primary}40;
-    }
-
-    &::placeholder {
-      color: ${({ theme }) => theme.colors.textAlt};
-    }
-  }
-
-  code {
-    font-family: ${({ theme }) => theme.fonts.mono};
-    font-size: 0.9em;
-    padding: ${({ theme }) => theme.space.xs} ${({ theme }) => theme.space.sm};
-    border-radius: ${({ theme }) => theme.borderRadius.small};
-    background: ${({ theme }) => theme.colors.surface};
-  }
-
-  ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-
-  ::-webkit-scrollbar-track {
-    background: ${({ theme }) => theme.colors.background};
-  }
-
-  ::-webkit-scrollbar-thumb {
-    background: ${({ theme }) => theme.colors.textAlt}40;
-    border-radius: ${({ theme }) => theme.borderRadius.full};
-
-    &:hover {
-      background: ${({ theme }) => theme.colors.textAlt}60;
-    }
-  }
-
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
-  }
-
-  @keyframes slideUp {
-    from {
-      transform: translateY(20px);
-      opacity: 0;
-    }
-    to {
-      transform: translateY(0);
-      opacity: 1;
-    }
-  }
-
-  @keyframes pulse {
-    0% {
-      transform: scale(1);
-    }
-    50% {
-      transform: scale(1.05);
-    }
-    100% {
-      transform: scale(1);
-    }
-  }
-` 
+`; 

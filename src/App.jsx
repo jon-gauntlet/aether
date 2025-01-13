@@ -4,9 +4,12 @@ import { ConsciousnessComponent } from './components/ConsciousnessComponent';
 import { FieldComponent } from './components/FieldComponent';
 import { PatternVisualization } from './components/PatternVisualization';
 import { AutonomicDevelopment } from './components/AutonomicDevelopment';
-import { createDefaultField, createDefaultConsciousness, createDefaultPattern } from '@/core/types/system';
-import { theme } from '@/styles/theme';
-import { GlobalStyle } from '@/styles/global';
+import { Chat } from './components/Chat/Chat';
+import { createDefaultField, createDefaultConsciousness, createDefaultPattern } from './core/types/system';
+import { theme } from './styles/theme';
+import { GlobalStyle } from './styles/global';
+import { AuthProvider } from './core/auth/AuthProvider';
+import { MessageProvider } from './core/messaging/MessageProvider';
 
 const AppContainer = styled.div`
   min-height: 100vh;
@@ -18,102 +21,42 @@ const AppContainer = styled.div`
 const Grid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
-  gap: ${({ theme }) => theme.space.xl};
-  max-width: 1800px;
-  margin: 0 auto;
+  gap: ${({ theme }) => theme.space.lg};
+  margin-bottom: ${({ theme }) => theme.space.xl};
 `;
 
-const defaultField = createDefaultField();
-const defaultPattern = createDefaultPattern();
-const defaultConsciousness = {
-  ...createDefaultConsciousness(),
-  fields: [defaultField],
-};
+const ChatWrapper = styled.div`
+  grid-column: 1 / -1;
+  max-width: 800px;
+  margin: 0 auto;
+  width: 100%;
+`;
 
-const defaultFlowStates = [
-  {
-    type: 'RESTING',
-    metrics: {
-      velocity: 0.3,
-      momentum: 0.4,
-      resistance: 0.2,
-      conductivity: 0.6,
-      focus: 0.5,
-      energy: 0.7,
-      clarity: 0.6,
-      quality: 0.5,
-    },
-    active: false,
-    intensity: 0.4,
-    duration: 300000,
-    timestamp: Date.now() - 600000,
-  },
-  {
-    type: 'FOCUS',
-    metrics: {
-      velocity: 0.6,
-      momentum: 0.7,
-      resistance: 0.3,
-      conductivity: 0.8,
-      focus: 0.8,
-      energy: 0.9,
-      clarity: 0.7,
-      quality: 0.8,
-    },
-    active: true,
-    intensity: 0.7,
-    duration: 900000,
-    timestamp: Date.now() - 300000,
-  },
-  {
-    type: 'HYPERFOCUS',
-    metrics: {
-      velocity: 0.9,
-      momentum: 0.95,
-      resistance: 0.1,
-      conductivity: 0.9,
-      focus: 1.0,
-      energy: 1.0,
-      clarity: 0.9,
-      quality: 0.95,
-    },
-    active: true,
-    intensity: 1.0,
-    duration: 1800000,
-    timestamp: Date.now(),
-  },
-];
-
-export const App = () => {
-  const [isFieldActive, setIsFieldActive] = useState(true);
-  const [isFieldResonating, setIsFieldResonating] = useState(false);
-  const [isPatternActive, setIsPatternActive] = useState(true);
+const App = () => {
+  const [field] = useState(createDefaultField());
+  const [consciousness] = useState(createDefaultConsciousness());
+  const [pattern] = useState(createDefaultPattern());
 
   return (
     <ThemeProvider theme={theme}>
       <GlobalStyle />
-      <AppContainer>
-        <Grid>
-          <ConsciousnessComponent
-            consciousness={defaultConsciousness}
-            fields={[defaultField]}
-            isCoherent={isFieldActive}
-          />
-          <FieldComponent
-            field={defaultField}
-            isActive={isFieldActive}
-            isResonating={isFieldResonating}
-          />
-          <PatternVisualization
-            pattern={defaultPattern}
-            isActive={isPatternActive}
-          />
-          <AutonomicDevelopment
-            flowStates={defaultFlowStates}
-            isActive={isFieldActive}
-          />
-        </Grid>
-      </AppContainer>
+      <AuthProvider>
+        <MessageProvider>
+          <AppContainer>
+            <Grid>
+              <ConsciousnessComponent consciousness={consciousness} />
+              <FieldComponent field={field} />
+              <PatternVisualization pattern={pattern} />
+              <AutonomicDevelopment />
+            </Grid>
+            <ChatWrapper>
+              <Chat />
+            </ChatWrapper>
+          </AppContainer>
+        </MessageProvider>
+      </AuthProvider>
     </ThemeProvider>
   );
-}; 
+};
+
+export default App; 
