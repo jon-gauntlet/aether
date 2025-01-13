@@ -1,3 +1,4 @@
+import 'jest';
 import { FlowState, FlowStateType, FlowIntensity } from '../../types/flow/types';
 import { FlowMetrics, DEFAULT_FLOW_METRICS } from '../../types/flow/metrics';
 import { ProtectionState, ProtectionMetrics } from '../../types/protection/protection';
@@ -136,4 +137,11 @@ expect.extend({
       pass
     };
   }
-}); 
+});
+
+export const validateSystemHealth = (systemState: any) => {
+  if (!systemState || typeof systemState !== 'object') {
+    throw new Error('Invalid system state');
+  }
+  // Add more validation logic as needed
+}; 

@@ -101,6 +101,15 @@ const Status = styled.div<{ isActive: boolean }>`
     isActive ? theme.colors.primary : theme.colors.textAlt};
 `;
 
+const defaultPattern = {
+  activations: 0,
+  strength: 0,
+  metrics: {
+    coherence: { current: 0 },
+    stability: { current: 0 },
+  },
+};
+
 export const PatternVisualization = ({
   pattern,
   isActive,
@@ -183,22 +192,24 @@ export const PatternVisualization = ({
     };
   }, [pattern, isActive]);
 
+  const { activations, strength, metrics } = { ...defaultPattern, ...pattern };
+
   return (
     <PatternContainer isActive={isActive}>
       <Title>Pattern Visualization</Title>
       <Status isActive={isActive}>
-        Activations: {pattern.activations}
+        Activations: {activations}
       </Status>
       <PatternCanvas ref={canvasRef} />
       <MetricsGrid>
-        <Metric value={pattern.strength * 100}>
-          Strength: {(pattern.strength * 100).toFixed(0)}%
+        <Metric value={strength * 100}>
+          Strength: {(strength * 100).toFixed(0)}%
         </Metric>
-        <Metric value={pattern.metrics.coherence.current * 100}>
-          Coherence: {(pattern.metrics.coherence.current * 100).toFixed(0)}%
+        <Metric value={metrics.coherence.current * 100}>
+          Coherence: {(metrics.coherence.current * 100).toFixed(0)}%
         </Metric>
-        <Metric value={pattern.metrics.stability.current * 100}>
-          Stability: {(pattern.metrics.stability.current * 100).toFixed(0)}%
+        <Metric value={metrics.stability.current * 100}>
+          Stability: {(metrics.stability.current * 100).toFixed(0)}%
         </Metric>
         <Metric value={pattern.resonance * 100}>
           Resonance: {(pattern.resonance * 100).toFixed(0)}%

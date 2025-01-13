@@ -1,38 +1,34 @@
-import { Field, Resonance } from '../base';
-import { useCallback } from 'react';
+import { Field } from '../base';
 
-export interface EnergyState {
-  level: number;
-  capacity: number;
-  resonance: Resonance;
-  field: Field;
-  flow: number;
-  recovery: number;
-  timestamp: number;
-}
+export type EnergyState = 'charging' | 'draining' | 'stable';
 
 export interface EnergyMetrics {
   level: number;
   capacity: number;
-  stability: number;
-  flow: number;
-  coherence: number;
+  recovery: number;
+  sustainability: number;
+  efficiency: number;
 }
 
-export interface EnergyAnalytics {
-  averageFlowDuration: number;
-  peakFlowFrequency: number;
-  entropyTrend: number;
-  flowEfficiency: number;
-  protectionRate: number;
+export interface Energy {
+  state: EnergyState;
+  metrics: EnergyMetrics;
 }
 
-export function useEnergySystem() {
-  return useCallback(() => {
-    // Implementation will be added later
-    return {
-      getFlowAnalytics: () => null,
-      getPatternAnalytics: () => null
-    };
-  }, []);
+export interface EnergyFlow {
+  source: Field;
+  target: Field;
+  strength: number;
+  direction: 'in' | 'out';
 }
+
+export interface EnergySystem {
+  getCurrentEnergy(): number;
+  updateEnergy(delta: number): void;
+  getMetrics(): EnergyMetrics;
+  setMetrics(metrics: Partial<EnergyMetrics>): void;
+}
+
+export * from './state';
+export * from './metrics';
+export * from './flow';

@@ -17,7 +17,7 @@ npm run flow
 tmux attach -t flow
 
 # 2. Enable protection
-./scripts/divine_sled.sh
+./scripts/base_sled.sh
 
 # 3. Monitor state
 ./scripts/flow_sled.sh --status
@@ -25,7 +25,7 @@ tmux attach -t flow
 
 ## Core Systems 🏗️
 
-### 1. Divine Sled
+### 1. Base Sled
 Natural flow protection system that:
 - Monitors energy levels
 - Verifies environment
@@ -35,7 +35,7 @@ Natural flow protection system that:
 - Activates protection
 
 ```bash
-./scripts/divine_sled.sh  # Full protection
+./scripts/base_sled.sh  # Full protection
 ```
 
 ### 2. Flow Sled

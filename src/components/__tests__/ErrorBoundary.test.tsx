@@ -1,5 +1,8 @@
+import 'jest';
 import { render } from '@testing-library/react';
-import ErrorBoundary from '../ErrorBoundary';
+import { ErrorBoundary } from '../ErrorBoundary';
+
+const FallbackComponent = ({ error }: { error: Error }) => <div>Error: {error.message}</div>;
 
 describe('ErrorBoundary', () => {
   const originalConsoleError = console.error;
@@ -13,7 +16,7 @@ describe('ErrorBoundary', () => {
 
   it('should render children when there is no error', () => {
     const { getByText } = render(
-      <ErrorBoundary>
+      <ErrorBoundary fallback={FallbackComponent}>
         <div>Test Content</div>
       </ErrorBoundary>
     );
@@ -28,7 +31,7 @@ describe('ErrorBoundary', () => {
     };
 
     const { getByText } = render(
-      <ErrorBoundary>
+      <ErrorBoundary fallback={FallbackComponent}>
         <ThrowError />
       </ErrorBoundary>
     );
@@ -47,7 +50,7 @@ describe('ErrorBoundary', () => {
     };
 
     render(
-      <ErrorBoundary onError={onError}>
+      <ErrorBoundary fallback={FallbackComponent}>
         <ThrowError />
       </ErrorBoundary>
     );
@@ -62,7 +65,7 @@ describe('ErrorBoundary', () => {
     };
 
     const { getByText, queryByText } = render(
-      <ErrorBoundary>
+      <ErrorBoundary fallback={FallbackComponent}>
         <ThrowError />
       </ErrorBoundary>
     );
@@ -88,7 +91,7 @@ describe('ErrorBoundary', () => {
     };
 
     const { getByText } = render(
-      <ErrorBoundary>
+      <ErrorBoundary fallback={FallbackComponent}>
         <ThrowError />
       </ErrorBoundary>
     );

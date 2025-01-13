@@ -89,7 +89,14 @@ export const validateState = (state: unknown): BaseState => {
 };
 
 // Flow state types
-export type FlowState = 'FLOW' | 'FOCUS' | 'HYPERFOCUS' | 'RECOVERING' | 'RESTING' | 'PROTECTED';
+export enum FlowState {
+  FLOW = 'FLOW',
+  FOCUS = 'FOCUS',
+  HYPERFOCUS = 'HYPERFOCUS',
+  RECOVERING = 'RECOVERING',
+  RESTING = 'RESTING',
+  PROTECTED = 'PROTECTED'
+}
 
 // Base interfaces
 export interface Connection {
@@ -109,6 +116,20 @@ export interface Field {
   readonly strength: number;
   readonly coherence: number;
   readonly stability: number;
+  readonly resonance: Resonance;
+  readonly protection: {
+    readonly shields: number;
+    readonly resilience: number;
+    readonly adaptability: number;
+    readonly stability: number;
+    readonly integrity: number;
+    readonly type: 'natural' | 'enhanced' | 'autonomous' | 'standard';
+    readonly level: number;
+    readonly strength: number;
+    readonly recovery: number;
+  };
+  readonly flowMetrics: FlowMetrics;
+  readonly metrics: BaseMetrics;
 }
 
 export interface NaturalFlow {
