@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Natural digital consciousness and communication",
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
