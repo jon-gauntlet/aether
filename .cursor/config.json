@@ -1,0 +1,48 @@
+{
+  "performance": {
+    "composer": {
+      "maxInstances": 5,
+      "timeoutMs": 600000,
+      "memoryLimitMb": 8192,
+      "gcIntervalMs": 120000,
+      "preserveContext": true,
+      "autoSave": true
+    },
+    "indexing": {
+      "excludeDirs": ["node_modules", "dist", ".git", "deploy-tmp", "coverage", ".cache"],
+      "maxFileSizeMb": 15,
+      "useGitignore": true,
+      "indexParallel": true,
+      "watchMode": "aggressive",
+      "preloadCommonPaths": true
+    },
+    "codeIntel": {
+      "cacheSize": "4GB",
+      "workerThreads": 8,
+      "typeCheckMode": "background",
+      "memoryBackedCache": true,
+      "incrementalSync": true
+    },
+    "optimization": {
+      "flowStateProtection": true,
+      "contextPreservation": true,
+      "backgroundProcessing": true,
+      "intelligentGC": true
+    }
+  },
+  "editor": {
+    "formatOnSave": true,
+    "quickSuggestions": true,
+    "semanticHighlighting": true,
+    "inlayHints": false,
+    "minimap": false,
+    "largeFileOptimizations": true,
+    "experimentalFeatures": true
+  },
+  "system": {
+    "memoryManagement": "aggressive",
+    "diskCacheLocation": "/tmp/cursor-cache",
+    "persistentCache": true,
+    "backgroundIndexing": true
+  }
+} 

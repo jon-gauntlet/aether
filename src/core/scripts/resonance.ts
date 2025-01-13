@@ -1,0 +1,1 @@
+export interface Resonance{ [key: string]: any };
