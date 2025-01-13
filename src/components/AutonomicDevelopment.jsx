@@ -1,13 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import styled from 'styled-components';
-import { FlowState } from '@/core/types/system';
 
-interface AutonomicDevelopmentProps {
-  flowStates: FlowState[];
-  isActive: boolean;
-}
-
-const AutonomicContainer = styled.div<{ isActive: boolean }>`
+const AutonomicContainer = styled.div`
   padding: ${({ theme }) => theme.space.lg};
   border-radius: ${({ theme }) => theme.borderRadius.large};
   background: ${({ theme, isActive }) =>
@@ -57,7 +51,7 @@ const MetricsGrid = styled.div`
   margin-top: ${({ theme }) => theme.space.lg};
 `;
 
-const Metric = styled.div<{ value: number }>`
+const Metric = styled.div`
   padding: ${({ theme }) => theme.space.md};
   border-radius: ${({ theme }) => theme.borderRadius.medium};
   background: ${({ theme }) => theme.colors.background}40;
@@ -92,7 +86,7 @@ const Title = styled.h3`
   -webkit-text-fill-color: transparent;
 `;
 
-const Status = styled.div<{ isActive: boolean }>`
+const Status = styled.div`
   font-size: ${({ theme }) => theme.fontSizes.lg};
   font-weight: 600;
   text-align: center;
@@ -101,11 +95,8 @@ const Status = styled.div<{ isActive: boolean }>`
     isActive ? theme.colors.primary : theme.colors.textAlt};
 `;
 
-export const AutonomicDevelopment = ({
-  flowStates,
-  isActive,
-}: AutonomicDevelopmentProps) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+export const AutonomicDevelopment = ({ flowStates, isActive }) => {
+  const canvasRef = useRef(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -166,7 +157,7 @@ export const AutonomicDevelopment = ({
     animate();
 
     return () => {
-      cancelAnimationFrame(animate as unknown as number);
+      cancelAnimationFrame(animate);
     };
   }, [flowStates, isActive]);
 
@@ -183,7 +174,7 @@ export const AutonomicDevelopment = ({
 
   const stateCount = flowStates.length;
   Object.keys(averageMetrics).forEach(key => {
-    averageMetrics[key as keyof typeof averageMetrics] /= stateCount;
+    averageMetrics[key] /= stateCount;
   });
 
   return (

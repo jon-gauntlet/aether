@@ -1,14 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import styled from 'styled-components';
-import { Field } from '@/core/types/system';
 
-interface FieldComponentProps {
-  field: Field;
-  isActive: boolean;
-  isResonating: boolean;
-}
-
-const FieldContainer = styled.div<{ isActive: boolean }>`
+const FieldContainer = styled.div`
   padding: ${({ theme }) => theme.space.lg};
   border-radius: ${({ theme }) => theme.borderRadius.large};
   background: ${({ theme, isActive }) =>
@@ -58,7 +51,7 @@ const MetricsGrid = styled.div`
   margin-top: ${({ theme }) => theme.space.lg};
 `;
 
-const Metric = styled.div<{ value: number }>`
+const Metric = styled.div`
   padding: ${({ theme }) => theme.space.md};
   border-radius: ${({ theme }) => theme.borderRadius.medium};
   background: ${({ theme }) => theme.colors.background}40;
@@ -93,7 +86,7 @@ const Title = styled.h3`
   -webkit-text-fill-color: transparent;
 `;
 
-const Status = styled.div<{ isActive: boolean; isResonating: boolean }>`
+const Status = styled.div`
   font-size: ${({ theme }) => theme.fontSizes.lg};
   font-weight: 600;
   text-align: center;
@@ -104,12 +97,8 @@ const Status = styled.div<{ isActive: boolean; isResonating: boolean }>`
   }};
 `;
 
-export const FieldComponent = ({
-  field,
-  isActive,
-  isResonating,
-}: FieldComponentProps) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+export const FieldComponent = ({ field, isActive, isResonating }) => {
+  const canvasRef = useRef(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -161,7 +150,7 @@ export const FieldComponent = ({
     animate();
 
     return () => {
-      cancelAnimationFrame(animate as unknown as number);
+      cancelAnimationFrame(animate);
     };
   }, [field, isActive, isResonating]);
 

@@ -1,14 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import styled from 'styled-components';
-import { ConsciousnessState, Field } from '@/core/types/system';
 
-interface ConsciousnessComponentProps {
-  consciousness: ConsciousnessState;
-  fields: Field[];
-  isCoherent: boolean;
-}
-
-const ConsciousnessContainer = styled.div<{ isCoherent: boolean }>`
+const ConsciousnessContainer = styled.div`
   padding: ${({ theme }) => theme.space.xl};
   border-radius: ${({ theme }) => theme.borderRadius.large};
   background: ${({ theme, isCoherent }) =>
@@ -58,7 +51,7 @@ const MetricsGrid = styled.div`
   margin-top: ${({ theme }) => theme.space.lg};
 `;
 
-const Metric = styled.div<{ value: number }>`
+const Metric = styled.div`
   padding: ${({ theme }) => theme.space.md};
   border-radius: ${({ theme }) => theme.borderRadius.medium};
   background: ${({ theme }) => theme.colors.background}40;
@@ -93,7 +86,7 @@ const Title = styled.h3`
   -webkit-text-fill-color: transparent;
 `;
 
-const StateIndicator = styled.div<{ state: string }>`
+const StateIndicator = styled.div`
   font-size: ${({ theme }) => theme.fontSizes.lg};
   font-weight: 600;
   text-align: center;
@@ -114,12 +107,8 @@ const StateIndicator = styled.div<{ state: string }>`
   }};
 `;
 
-export const ConsciousnessComponent = ({
-  consciousness,
-  fields,
-  isCoherent,
-}: ConsciousnessComponentProps) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+export const ConsciousnessComponent = ({ consciousness, fields, isCoherent }) => {
+  const canvasRef = useRef(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -171,7 +160,7 @@ export const ConsciousnessComponent = ({
     animate();
 
     return () => {
-      cancelAnimationFrame(animate as unknown as number);
+      cancelAnimationFrame(animate);
     };
   }, [consciousness, isCoherent]);
 

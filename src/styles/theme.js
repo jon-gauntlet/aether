@@ -1,32 +1,4 @@
-export interface Theme {
-  colors: {
-    primary: string;
-    secondary: string;
-    background: string;
-    surface: string;
-    text: string;
-    textAlt: string;
-    success: string;
-    warning: string;
-    error: string;
-    shadow: string;
-  };
-  spacing: {
-    xs: string;
-    sm: string;
-    md: string;
-    lg: string;
-    xl: string;
-  };
-  radii: {
-    sm: string;
-    md: string;
-    lg: string;
-    full: string;
-  };
-}
-
-export const theme: Theme = {
+export const theme = {
   colors: {
     primary: '#6366f1',
     secondary: '#a855f7',

@@ -4,7 +4,7 @@ import { ConsciousnessComponent } from './components/ConsciousnessComponent';
 import { FieldComponent } from './components/FieldComponent';
 import { PatternVisualization } from './components/PatternVisualization';
 import { AutonomicDevelopment } from './components/AutonomicDevelopment';
-import { createDefaultField, createDefaultConsciousness, createDefaultPattern, FlowState } from '@/core/types/system';
+import { createDefaultField, createDefaultConsciousness, createDefaultPattern } from '@/core/types/system';
 import { theme } from '@/styles/theme';
 import { GlobalStyle } from '@/styles/global';
 
@@ -30,9 +30,9 @@ const defaultConsciousness = {
   fields: [defaultField],
 };
 
-const defaultFlowStates: FlowState[] = [
+const defaultFlowStates = [
   {
-    type: 'RESTING' as const,
+    type: 'RESTING',
     metrics: {
       velocity: 0.3,
       momentum: 0.4,
@@ -49,7 +49,7 @@ const defaultFlowStates: FlowState[] = [
     timestamp: Date.now() - 600000,
   },
   {
-    type: 'FOCUS' as const,
+    type: 'FOCUS',
     metrics: {
       velocity: 0.6,
       momentum: 0.7,
@@ -66,7 +66,7 @@ const defaultFlowStates: FlowState[] = [
     timestamp: Date.now() - 300000,
   },
   {
-    type: 'HYPERFOCUS' as const,
+    type: 'HYPERFOCUS',
     metrics: {
       velocity: 0.9,
       momentum: 0.95,
