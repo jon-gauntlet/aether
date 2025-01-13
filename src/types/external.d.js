@@ -1,26 +1,34 @@
-declare module '@prisma/client' {
-  export class PrismaClient {
-    constructor(options?: any)
-    $connect(): Promise<void>
-    $disconnect(): Promise<void>
-    $queryRaw<T = any>(query: string): Promise<T>
-  }
-}
+/**
+ * @typedef {Object} PrismaClient
+ * @property {function(): Promise<void>} $connect
+ * @property {function(): Promise<void>} $disconnect
+ * @property {function(string): Promise<any>} $queryRaw
+ */
 
-declare module '@meilisearch/instant-meilisearch' {
-  export interface MeiliSearchConfig {
-    host: string
-    apiKey?: string
-  }
-  export default function instantMeiliSearch(host: string, apiKey?: string, options?: MeiliSearchConfig): any
-}
+/**
+ * @typedef {Object} MeiliSearchConfig
+ * @property {string} host
+ * @property {string} [apiKey]
+ */
 
-declare module '*.css' {
-  const classes: { [key: string]: string }
-  export default classes
-}
+/**
+ * @param {string} host
+ * @param {string} [apiKey]
+ * @param {MeiliSearchConfig} [options]
+ * @returns {any}
+ */
+export function instantMeiliSearch(host, apiKey, options) {}
 
-declare module '*.scss' {
-  const classes: { [key: string]: string }
-  export default classes
-} 
+/**
+ * @typedef {Object.<string, string>} CSSModule
+ */
+
+/**
+ * @type {CSSModule}
+ */
+export const cssClasses = {};
+
+/**
+ * @type {CSSModule}
+ */
+export const scssClasses = {}; 

@@ -3,65 +3,69 @@ import { Pattern } from '../autonomic/types';
 import { Energy } from '../energy/types';
 import { Flow } from '../flow/types';
 
-export interface ConsciousnessPattern extends Pattern {
-  type: PatternType;
-  energy: Energy;
-  flow: Flow;
-  meta: {
-    depth: number;
-    clarity: number;
-    presence: number;
-  };
-}
+/**
+ * @typedef {Object} ConsciousnessPattern
+ * @property {PatternType} type
+ * @property {Energy} energy
+ * @property {Flow} flow
+ * @property {Object} meta
+ * @property {number} meta.depth
+ * @property {number} meta.clarity
+ * @property {number} meta.presence
+ * @augments Pattern
+ */
 
-export interface EnergyFlow {
-  type: EnergyFlowType;
-  strength: number;
-  direction: 'inward' | 'outward';
-  meta: {
-    quality: number;
-    stability: number;
-    resonance: number;
-  };
-}
+/**
+ * @typedef {Object} EnergyFlow
+ * @property {EnergyFlowType} type
+ * @property {number} strength
+ * @property {'inward'|'outward'} direction
+ * @property {Object} meta
+ * @property {number} meta.quality
+ * @property {number} meta.stability
+ * @property {number} meta.resonance
+ */
 
-export interface FlowPattern extends Pattern {
-  flow: Flow;
-  energy: Energy;
-  meta: {
-    velocity: number;
-    coherence: number;
-    harmony: number;
-  };
-}
+/**
+ * @typedef {Object} FlowPattern
+ * @property {Flow} flow
+ * @property {Energy} energy
+ * @property {Object} meta
+ * @property {number} meta.velocity
+ * @property {number} meta.coherence
+ * @property {number} meta.harmony
+ * @augments Pattern
+ */
 
-export interface AutonomicState {
-  patterns: Pattern[];
-  energy: Energy;
-  flow: Flow;
-  meta: {
-    balance: number;
-    stability: number;
-    adaptability: number;
-  };
-}
+/**
+ * @typedef {Object} AutonomicState
+ * @property {Pattern[]} patterns
+ * @property {Energy} energy
+ * @property {Flow} flow
+ * @property {Object} meta
+ * @property {number} meta.balance
+ * @property {number} meta.stability
+ * @property {number} meta.adaptability
+ */
 
-export interface SystemPattern extends Pattern {
-  type: PatternType;
-  state: AutonomicState;
-  meta: {
-    complexity: number;
-    resilience: number;
-    evolution: number;
-  };
-}
+/**
+ * @typedef {Object} SystemPattern
+ * @property {PatternType} type
+ * @property {AutonomicState} state
+ * @property {Object} meta
+ * @property {number} meta.complexity
+ * @property {number} meta.resilience
+ * @property {number} meta.evolution
+ * @augments Pattern
+ */
 
-export interface EnergyIndex {
-  patterns: Map<string, Pattern>;
-  flows: Map<string, EnergyFlow>;
-  meta: {
-    lastUpdated: Date;
-    totalEnergy: number;
-    averageFlow: number;
-  };
-}
+/**
+ * @typedef {Object} EnergyIndex
+ * @property {number} current
+ * @property {number} optimal
+ * @property {number} threshold
+ * @property {Object} meta
+ * @property {number} meta.stability
+ * @property {number} meta.volatility
+ * @property {number} meta.sustainability
+ */

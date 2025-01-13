@@ -1,40 +1,32 @@
 import { useState, useEffect } from 'react';
-import { User } from 'firebase/auth';
-import { auth } from '../core/firebase';
+import { auth } from '../firebase';
 
-interface AuthState {
-  user: User | null;
-  loading: boolean;
-  error: Error | null;
-}
+/**
+ * @typedef {Object} AuthState
+ * @property {import('firebase/auth').User|null} user
+ * @property {boolean} loading
+ */
 
+/**
+ * Hook for managing authentication state
+ * @returns {AuthState}
+ */
 export function useAuth() {
-  const [authState, setAuthState] = useState<AuthState>({
+  const [state, setState] = useState({
     user: null,
-    loading: true,
-    error: null
+    loading: true
   });
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(
-      (user) => {
-        setAuthState({
-          user,
-          loading: false,
-          error: null
-        });
-      },
-      (error) => {
-        setAuthState({
-          user: null,
-          loading: false,
-          error: error instanceof Error ? error : new Error('Auth error')
-        });
-      }
-    );
+    const unsubscribe = auth.onAuthStateChanged(user => {
+      setState({
+        user,
+        loading: false
+      });
+    });
 
     return () => unsubscribe();
   }, []);
 
-  return authState;
+  return state;
 } 

@@ -1,59 +1,74 @@
 import { useState, useEffect } from 'react';
-import { 
-  collection, 
-  query, 
-  orderBy, 
-  onSnapshot,
-  addDoc, 
-  serverTimestamp 
-} from 'firebase/firestore';
-import { db } from '../core/firebase';
-import { Message, MessageType } from '../core/types/chat';
+import { db } from '../firebase';
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
 
-interface UseMessagesReturn {
-  messages: Message[];
-  loading: boolean;
-  error: Error | null;
-  sendMessage: (content: string, type: MessageType, attachments?: string[]) => Promise<void>;
-}
+/**
+ * @typedef {'text'|'image'|'file'} MessageType
+ */
 
-export function useMessages(chatId: string): UseMessagesReturn {
-  const [messages, setMessages] = useState<Message[]>([]);
+/**
+ * @typedef {Object} Message
+ * @property {string} id
+ * @property {string} content
+ * @property {MessageType} type
+ * @property {string[]} attachments
+ * @property {Date} timestamp
+ * @property {string} senderId
+ */
+
+/**
+ * @typedef {Object} UseMessagesReturn
+ * @property {Message[]} messages
+ * @property {boolean} loading
+ * @property {function(string, MessageType, string[]): Promise<void>} sendMessage
+ */
+
+/**
+ * Hook for managing chat messages
+ * @param {string} chatId - ID of the chat to manage messages for
+ * @returns {UseMessagesReturn}
+ */
+export function useMessages(chatId) {
+  const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
     const messagesRef = collection(db, 'chats', chatId, 'messages');
-    const messagesQuery = query(messagesRef, orderBy('timestamp', 'asc'));
+    const q = query(messagesRef, orderBy('timestamp', 'asc'));
 
-    const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
+    const unsubscribe = onSnapshot(q, snapshot => {
       const newMessages = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      })) as Message[];
-      
+      }));
       setMessages(newMessages);
-      setLoading(false);
-    }, (err) => {
-      setError(err as Error);
       setLoading(false);
     });
 
     return () => unsubscribe();
   }, [chatId]);
 
-  const sendMessage = async (content: string, type: MessageType, attachments: string[] = []) => {
-    try {
-      await addDoc(collection(db, 'chats', chatId, 'messages'), {
-        content,
-        type,
-        attachments,
-        timestamp: serverTimestamp()
-      });
-    } catch (err) {
-      setError(err as Error);
-    }
+  /**
+   * Send a new message
+   * @param {string} content - Message content
+   * @param {MessageType} type - Type of message
+   * @param {string[]} [attachments=[]] - Optional attachments
+   * @returns {Promise<void>}
+   */
+  const sendMessage = async (content, type, attachments = []) => {
+    const messagesRef = collection(db, 'chats', chatId, 'messages');
+    await addDoc(messagesRef, {
+      content,
+      type,
+      attachments,
+      timestamp: serverTimestamp(),
+      senderId: auth.currentUser?.uid
+    });
   };
 
-  return { messages, loading, error, sendMessage };
+  return {
+    messages,
+    loading,
+    sendMessage
+  };
 }

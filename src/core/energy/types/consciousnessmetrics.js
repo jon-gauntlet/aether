@@ -1,33 +1,39 @@
 import { Field, FlowState } from './base';
 import { Energy } from '../energy/types';
 
-export interface ConsciousnessMetrics {
-  clarity: number;
-  depth: number;
-  coherence: number;
-  integration: number;
-  flexibility: number;
-}
+/**
+ * @typedef {Object} ConsciousnessMetrics
+ * @property {number} clarity
+ * @property {number} depth
+ * @property {number} coherence
+ * @property {number} integration
+ * @property {number} flexibility
+ */
 
-export interface FlowSpace {
-  dimensions: number;
-  capacity: number;
-  utilization: number;
-  stability: number;
-  fields: Field[];
-  boundaries: any[];
-}
+/**
+ * @typedef {Object} FlowSpace
+ * @property {number} dimensions
+ * @property {number} capacity
+ * @property {number} utilization
+ * @property {number} stability
+ * @property {Field[]} fields
+ * @property {Array} boundaries
+ */
 
-export interface ConsciousnessState {
-  currentState: FlowState;
-  fields: Field[];
-  flowSpace: FlowSpace;
-  lastTransition: Date;
-  stateHistory: Array<{
-    timestamp: Date;
-    state: FlowState;
-    duration: number;
-  }>;
-  metrics: ConsciousnessMetrics;
-  energy: Energy;
-} 
+/**
+ * @typedef {Object} StateHistoryEntry
+ * @property {Date} timestamp
+ * @property {FlowState} state
+ * @property {number} duration
+ */
+
+/**
+ * @typedef {Object} ConsciousnessState
+ * @property {FlowState} currentState
+ * @property {Field[]} fields
+ * @property {FlowSpace} flowSpace
+ * @property {Date} lastTransition
+ * @property {StateHistoryEntry[]} stateHistory
+ * @property {ConsciousnessMetrics} metrics
+ * @property {Energy} energy
+ */ 

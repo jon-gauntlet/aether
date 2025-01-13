@@ -1,13 +1,5 @@
 import { expect } from '@jest/globals';
 
-declare global {
-  namespace jest {
-    interface Matchers<R> {
-      toBeInRange(min: number, max: number): R;
-    }
-  }
-}
-
 describe('toBeInRange matcher', () => {
   test('passes when number is within range', () => {
     expect(5).toBeInRange(1, 10);

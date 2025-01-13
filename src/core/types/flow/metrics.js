@@ -1,22 +1,20 @@
-import { FlowMetrics as BaseFlowMetrics } from '../../../types/base';
+/**
+ * @typedef {Object} FlowMetrics
+ * @property {number} velocity - Speed of flow state progression
+ * @property {number} momentum - Sustained flow intensity
+ * @property {number} resistance - Barriers to flow
+ * @property {number} conductivity - Ease of entering flow
+ * @property {number} focus - Mental concentration
+ * @property {number} energy - Available resources
+ * @property {number} clarity - Mental acuity
+ * @property {number} quality - Overall flow quality
+ */
 
-// Base flow metrics that form the foundation of flow measurement
-export interface FlowMetrics {
-  // Core metrics
-  velocity: number;    // Speed of flow state progression
-  momentum: number;    // Sustained flow intensity
-  resistance: number;  // Barriers to flow
-  conductivity: number; // Ease of entering flow
-
-  // Extended metrics
-  focus: number;      // Mental concentration
-  energy: number;     // Available resources
-  clarity: number;    // Mental acuity
-  quality: number;    // Overall flow quality
-}
-
-// Default values for flow metrics
-export const DEFAULT_FLOW_METRICS: FlowMetrics = {
+/**
+ * Default values for flow metrics
+ * @type {FlowMetrics}
+ */
+export const DEFAULT_FLOW_METRICS = {
   // Core metrics
   velocity: 0.8,
   momentum: 0.8,
@@ -30,20 +28,31 @@ export const DEFAULT_FLOW_METRICS: FlowMetrics = {
   quality: 0.85
 };
 
-// Utility functions for metrics
-export const isOptimalMetrics = (metrics: FlowMetrics): boolean => {
+/**
+ * @param {FlowMetrics} metrics
+ * @returns {boolean}
+ */
+export const isOptimalMetrics = (metrics) => {
   return Object.values(metrics).every(value => 
     value >= 0.8 || (metrics.resistance === value && value <= 0.2)
   );
 };
 
-export const calculateMetricsAverage = (metrics: FlowMetrics): number => {
+/**
+ * @param {FlowMetrics} metrics
+ * @returns {number}
+ */
+export const calculateMetricsAverage = (metrics) => {
   const values = Object.values(metrics).filter(value => value !== metrics.resistance);
   const resistanceContribution = 1 - metrics.resistance;
   return (values.reduce((sum, value) => sum + value, 0) + resistanceContribution) / (values.length + 1);
 };
 
-export const calculateFlowQuality = (metrics: FlowMetrics): number => {
+/**
+ * @param {FlowMetrics} metrics
+ * @returns {number}
+ */
+export const calculateFlowQuality = (metrics) => {
   const weights = {
     velocity: 0.2,
     momentum: 0.2,
@@ -55,28 +64,34 @@ export const calculateFlowQuality = (metrics: FlowMetrics): number => {
   };
 
   return Object.entries(weights).reduce((quality, [key, weight]) => {
-    const value = metrics[key as keyof FlowMetrics];
+    const value = metrics[key];
     return quality + (key === 'resistance' ? (1 - value) * weight : value * weight);
   }, 0);
 };
 
-// Session-level metrics that track flow performance over time
-export interface SessionMetrics {
-  averageFlowDuration: number;  // Average duration of flow states
-  peakFlowFrequency: number;    // Frequency of achieving peak flow states
-  entropyTrend: number;         // Trend in system entropy over time
-  flowEfficiency: number;       // Ratio of productive flow time to total time
-  protectionRate: number;       // Success rate of flow state protection
-  recoverySpeed: number;        // Average time to recover optimal flow
-  stateTransitions: {           // Counts of different state transitions
-    toFlow: number;
-    toHyperfocus: number;
-    toRecovery: number;
-    toExhaustion: number;
-  };
-}
+/**
+ * @typedef {Object} StateTransitions
+ * @property {number} toFlow
+ * @property {number} toHyperfocus
+ * @property {number} toRecovery
+ * @property {number} toExhaustion
+ */
 
-export const DEFAULT_SESSION_METRICS: SessionMetrics = {
+/**
+ * @typedef {Object} SessionMetrics
+ * @property {number} averageFlowDuration - Average duration of flow states
+ * @property {number} peakFlowFrequency - Frequency of achieving peak flow states
+ * @property {number} entropyTrend - Trend in system entropy over time
+ * @property {number} flowEfficiency - Ratio of productive flow time to total time
+ * @property {number} protectionRate - Success rate of flow state protection
+ * @property {number} recoverySpeed - Average time to recover optimal flow
+ * @property {StateTransitions} stateTransitions - Counts of different state transitions
+ */
+
+/**
+ * @type {SessionMetrics}
+ */
+export const DEFAULT_SESSION_METRICS = {
   averageFlowDuration: 0,
   peakFlowFrequency: 0,
   entropyTrend: 0,

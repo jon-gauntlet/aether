@@ -3,79 +3,106 @@
  * Instead of messages in channels, we have energy flowing through space
  */
 
-export interface EnergyField {
-  id: string;
-  intensity: number;      // Current energy level
-  velocity: Vector3D;     // Direction and speed of information flow
-  gravity: number;        // How strongly it attracts attention
-  wavelength: number;     // Type of energy (focus, communication, etc)
-  charge: number;         // Positive or negative impact on flow
-}
+/**
+ * @typedef {Object} Vector3D
+ * @property {number} x
+ * @property {number} y
+ * @property {number} z
+ */
 
-export interface InformationParticle {
-  id: string;
-  content: any;
-  energy: number;
-  momentum: Vector3D;
-  spin: number;          // How actively it's being discussed
-  lifetime: number;      // How long it remains relevant
-  bonds: Bond[];         // Connections to other particles
-}
+/**
+ * @typedef {Object} EnergyField
+ * @property {string} id
+ * @property {number} intensity - Current energy level
+ * @property {Vector3D} velocity - Direction and speed of information flow
+ * @property {number} gravity - How strongly it attracts attention
+ * @property {number} wavelength - Type of energy (focus, communication, etc)
+ * @property {number} charge - Positive or negative impact on flow
+ */
 
-export interface FlowField {
-  particles: InformationParticle[];
-  energyFields: EnergyField[];
-  gradients: Map<string, number>;  // Energy gradients in space
-  barriers: Barrier[];             // Flow protection boundaries
-  attractors: Attractor[];         // Points of interest
-}
+/**
+ * @typedef {Object} InformationParticle
+ * @property {string} id
+ * @property {*} content
+ * @property {number} energy
+ * @property {Vector3D} momentum
+ * @property {number} spin - How actively it's being discussed
+ * @property {number} lifetime - How long it remains relevant
+ * @property {Bond[]} bonds - Connections to other particles
+ */
 
-export interface Attractor {
-  id: string;
-  position: Vector3D;
-  strength: number;
-  type: AttractorType;
-  resonance: number[];  // What types of information it attracts
-}
+/**
+ * @typedef {Object} FlowField
+ * @property {InformationParticle[]} particles
+ * @property {EnergyField[]} energyFields
+ * @property {Map<string, number>} gradients - Energy gradients in space
+ * @property {Barrier[]} barriers - Flow protection boundaries
+ * @property {Attractor[]} attractors - Points of interest
+ */
 
-export interface Barrier {
-  id: string;
-  strength: number;
-  permeability: number;  // What can pass through
-  lifetime: number;      // How long it lasts
-  shape: BoundingVolume;
-}
+/**
+ * @typedef {Object} Attractor
+ * @property {string} id
+ * @property {Vector3D} position
+ * @property {number} strength
+ * @property {AttractorType} type
+ * @property {number[]} resonance - What types of information it attracts
+ */
 
-export interface Bond {
-  source: string;
-  target: string;
-  strength: number;
-  type: BondType;
-  energy: number;
-}
+/**
+ * @typedef {Object} Barrier
+ * @property {string} id
+ * @property {number} strength
+ * @property {number} permeability - What can pass through
+ * @property {number} lifetime - How long it lasts
+ * @property {BoundingVolume} shape
+ */
 
-export type AttractorType = 
-  | 'focus'      // Deep work zones
-  | 'discussion' // Active conversations
-  | 'reference'  // Important information
-  | 'temporal'   // Time-sensitive items
-  | 'social';    // Casual interactions
+/**
+ * @typedef {Object} Bond
+ * @property {string} source
+ * @property {string} target
+ * @property {number} strength
+ * @property {BondType} type
+ * @property {number} lifetime
+ */
 
-export type BondType =
-  | 'context'    // Related by context
-  | 'temporal'   // Related in time
-  | 'semantic'   // Related by meaning
-  | 'social'     // Related by people
-  | 'causal';    // Cause and effect
+/**
+ * @typedef {Object} BoundingVolume
+ * @property {Vector3D} center
+ * @property {Vector3D} dimensions
+ * @property {number} radius
+ */
 
-export interface Vector3D {
-  x: number;
-  y: number;
-  z: number;
-}
+/**
+ * @typedef {'focus'|'flow'|'rest'|'connect'} AttractorType
+ */
 
-export interface BoundingVolume {
-  center: Vector3D;
-  radius: number;
-  shape: 'sphere' | 'cube' | 'cylinder';
-} 
+/**
+ * @typedef {'strong'|'weak'|'temporal'|'spatial'} BondType
+ */
+
+/**
+ * @typedef {Object} EnergyGradient
+ * @property {string} id
+ * @property {Vector3D} direction
+ * @property {number} magnitude
+ * @property {string} source
+ * @property {string} target
+ */
+
+/**
+ * @typedef {Object} FlowMetrics
+ * @property {number} energy
+ * @property {number} momentum
+ * @property {number} coherence
+ * @property {number} resistance
+ */
+
+/**
+ * @typedef {Object} FieldState
+ * @property {string} id
+ * @property {FlowMetrics} metrics
+ * @property {Map<string, number>} gradients
+ * @property {number} timestamp
+ */ 

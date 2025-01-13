@@ -1,19 +1,3 @@
-import { SystemState } from '../../types/base';
-
-interface AttentionMetrics {
-  focusDepth: number;      // 0-1: How deep in flow state
-  contextClarity: number;  // 0-1: How clear is current context
-  momentum: number;        // 0-1: Development speed/progress
-  energyReserves: number; // 0-1: Available energy for continued work
-}
-
-interface SpeedMetrics {
-  iterationRate: number;   // Changes per minute
-  completionRate: number;  // Tasks completed per hour
-  blockingTime: number;    // Time spent blocked/context switching
-  flowEfficiency: number;  // % time in flow state
-}
-
 // Constants
 const HOUR_IN_MS = 3600000;
 const BLOCKING_THRESHOLD_MS = 300000; // 5 minutes
@@ -21,7 +5,7 @@ const BLOCKING_THRESHOLD_MS = 300000; // 5 minutes
 /**
  * Calculates attention metrics from system state
  */
-export const calculateAttentionMetrics = (state: SystemState): AttentionMetrics => {
+export const calculateAttentionMetrics = (state) => {
   return {
     focusDepth: state.focus,
     contextClarity: state.context.clarity || 1,
@@ -33,10 +17,7 @@ export const calculateAttentionMetrics = (state: SystemState): AttentionMetrics 
 /**
  * Calculates development speed metrics
  */
-export const calculateSpeedMetrics = (
-  transitions: { timestamp: number }[],
-  timeWindow: number = HOUR_IN_MS
-): SpeedMetrics => {
+export const calculateSpeedMetrics = (transitions, timeWindow = HOUR_IN_MS) => {
   const now = Date.now();
   const recentTransitions = transitions.filter(t => now - t.timestamp < timeWindow);
   
@@ -51,11 +32,8 @@ export const calculateSpeedMetrics = (
 /**
  * Analyzes attention patterns for optimization opportunities
  */
-export const analyzeAttentionPatterns = (
-  metrics: AttentionMetrics,
-  speedMetrics: SpeedMetrics
-) => {
-  const insights: string[] = [];
+export const analyzeAttentionPatterns = (metrics, speedMetrics) => {
+  const insights = [];
   
   // Check for optimal flow state
   if (metrics.focusDepth > 0.8 && metrics.momentum > 0.8) {
@@ -83,11 +61,8 @@ export const analyzeAttentionPatterns = (
 /**
  * Generates optimization recommendations based on metrics
  */
-export const generateOptimizations = (
-  metrics: AttentionMetrics,
-  speedMetrics: SpeedMetrics
-): string[] => {
-  const optimizations: string[] = [];
+export const generateOptimizations = (metrics, speedMetrics) => {
+  const optimizations = [];
 
   // Focus depth optimizations
   if (metrics.focusDepth < 0.7) {
@@ -118,19 +93,19 @@ export const generateOptimizations = (
 
 // Private helper functions
 
-const calculateMomentum = (state: SystemState): number => {
+const calculateMomentum = (state) => {
   const recentProgress = state.context.recentProgress || 0;
   const blockers = state.context.blockers || 0;
   return Math.max(0, Math.min(1, recentProgress - blockers));
 };
 
-const estimateCompletionRate = (transitions: { timestamp: number }[]): number => {
+const estimateCompletionRate = (transitions) => {
   if (transitions.length < 2) return 0;
   const timeSpan = transitions[transitions.length - 1].timestamp - transitions[0].timestamp;
   return transitions.length / (timeSpan / HOUR_IN_MS); // Per hour
 };
 
-const calculateBlockingTime = (transitions: { timestamp: number }[]): number => {
+const calculateBlockingTime = (transitions) => {
   if (transitions.length < 2) return 0;
   let blockingTime = 0;
   for (let i = 1; i < transitions.length; i++) {
@@ -142,7 +117,7 @@ const calculateBlockingTime = (transitions: { timestamp: number }[]): number => 
   return blockingTime;
 };
 
-const calculateFlowEfficiency = (transitions: { timestamp: number }[]): number => {
+const calculateFlowEfficiency = (transitions) => {
   if (transitions.length < 2) return 0;
   const totalTime = transitions[transitions.length - 1].timestamp - transitions[0].timestamp;
   const blockingTime = calculateBlockingTime(transitions);

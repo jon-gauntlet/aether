@@ -4,51 +4,100 @@
  * This file establishes the foundational type hierarchy.
  */
 
-// Core measures
-export type Presence = number;  // [0,1]
-export type Harmony = number;   // [0,1]
-export type Energy = number;    // [0,1]
-export type Depth = number;     // [0,1]
+/**
+ * @typedef {number} Presence A number between 0 and 1
+ */
 
-// Flow types
-export type FlowType =
-  | 'meditation'
-  | 'focus'
-  | 'flow';
+/**
+ * @typedef {number} Harmony A number between 0 and 1
+ */
 
-export type ConnectionType =
-  | 'flow'
-  | 'presence'
-  | 'resonance';
+/**
+ * @typedef {number} Energy A number between 0 and 1
+ */
 
-export type ConsciousnessType =
-  | 'individual'
-  | 'collective';
+/**
+ * @typedef {number} Depth A number between 0 and 1
+ */
 
-export type SpaceType =
-  | 'thought'
-  | 'feeling'
-  | 'intuition';
+/**
+ * @typedef {'meditation'|'focus'|'flow'} FlowType
+ */
 
-export type PatternType = 'energy' | 'flow' | 'autonomic' | 'consciousness';
+/**
+ * @typedef {'flow'|'presence'|'resonance'} ConnectionType
+ */
 
-export type EnergyFlowType = 'vital' | 'purifying' | 'peaceful' | 'still' | 'protective' | 'transformative';
+/**
+ * @typedef {'individual'|'collective'} ConsciousnessType
+ */
 
-// Validation functions
-export const isValidMeasure = (value: unknown): value is number => {
+/**
+ * @typedef {'thought'|'feeling'|'intuition'} SpaceType
+ */
+
+/**
+ * @typedef {'energy'|'flow'|'autonomic'|'consciousness'} PatternType
+ */
+
+/**
+ * @typedef {'vital'|'purifying'|'peaceful'|'still'|'protective'|'transformative'} EnergyFlowType
+ */
+
+/**
+ * Validates if a value is a valid measure (number between 0 and 1)
+ * @param {*} value The value to validate
+ * @returns {boolean} Whether the value is a valid measure
+ */
+export const isValidMeasure = (value) => {
   if (typeof value !== 'number' || isNaN(value)) return false;
   return value >= 0 && value <= 1;
 };
 
-// Type guards
-export const isFlowType = (type: unknown): type is FlowType =>
+/**
+ * Checks if a value is a valid FlowType
+ * @param {*} type The value to check
+ * @returns {boolean} Whether the value is a valid FlowType
+ */
+export const isFlowType = (type) =>
   typeof type === 'string' && ['meditation', 'focus', 'flow'].includes(type);
 
-export const isConnectionType = (type: unknown): type is ConnectionType =>
+/**
+ * Checks if a value is a valid ConnectionType
+ * @param {*} type The value to check
+ * @returns {boolean} Whether the value is a valid ConnectionType
+ */
+export const isConnectionType = (type) =>
   typeof type === 'string' && ['flow', 'presence', 'resonance'].includes(type);
 
-export const isConsciousnessType = (type: unknown): type is ConsciousnessType =>
+/**
+ * Checks if a value is a valid ConsciousnessType
+ * @param {*} type The value to check
+ * @returns {boolean} Whether the value is a valid ConsciousnessType
+ */
+export const isConsciousnessType = (type) =>
   typeof type === 'string' && ['individual', 'collective'].includes(type);
 
-export const isSpaceType = (type: unknown): type is SpaceType =>
+/**
+ * Checks if a value is a valid SpaceType
+ * @param {*} type The value to check
+ * @returns {boolean} Whether the value is a valid SpaceType
+ */
+export const isSpaceType = (type) =>
   typeof type === 'string' && ['thought', 'feeling', 'intuition'].includes(type);
+
+/**
+ * Checks if a value is a valid PatternType
+ * @param {*} type The value to check
+ * @returns {boolean} Whether the value is a valid PatternType
+ */
+export const isPatternType = (type) =>
+  typeof type === 'string' && ['energy', 'flow', 'autonomic', 'consciousness'].includes(type);
+
+/**
+ * Checks if a value is a valid EnergyFlowType
+ * @param {*} type The value to check
+ * @returns {boolean} Whether the value is a valid EnergyFlowType
+ */
+export const isEnergyFlowType = (type) =>
+  typeof type === 'string' && ['vital', 'purifying', 'peaceful', 'still', 'protective', 'transformative'].includes(type);

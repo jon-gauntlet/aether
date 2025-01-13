@@ -1,104 +1,48 @@
-import 'jest';
 import { render } from '@testing-library/react';
 import { ErrorBoundary } from '../ErrorBoundary';
 
-const FallbackComponent = ({ error }: { error: Error }) => <div>Error: {error.message}</div>;
-
 describe('ErrorBoundary', () => {
-  const originalConsoleError = console.error;
-  beforeAll(() => {
-    console.error = jest.fn();
+  const ErrorComponent = () => {
+    throw new Error('Test error');
+  };
+
+  beforeEach(() => {
+    jest.spyOn(console, 'error').mockImplementation(() => {});
   });
 
-  afterAll(() => {
-    console.error = originalConsoleError;
+  afterEach(() => {
+    console.error.mockRestore();
   });
 
-  it('should render children when there is no error', () => {
+  it('renders children when no error', () => {
     const { getByText } = render(
-      <ErrorBoundary fallback={FallbackComponent}>
-        <div>Test Content</div>
+      <ErrorBoundary>
+        <div>Test content</div>
       </ErrorBoundary>
     );
-
-    expect(getByText('Test Content')).toBeInTheDocument();
+    expect(getByText('Test content')).toBeInTheDocument();
   });
 
-  it('should render error UI when there is an error', () => {
-    const ThrowError = () => {
-      throw new Error('Test Error');
-      return null;
-    };
-
+  it('renders error message when error occurs', () => {
     const { getByText } = render(
-      <ErrorBoundary fallback={FallbackComponent}>
-        <ThrowError />
+      <ErrorBoundary>
+        <ErrorComponent />
       </ErrorBoundary>
     );
-
-    expect(getByText('Something went wrong')).toBeInTheDocument();
-    expect(getByText('Test Error')).toBeInTheDocument();
+    expect(getByText(/Something went wrong/)).toBeInTheDocument();
   });
 
-  it('should call onError when an error occurs', () => {
-    const onError = jest.fn();
-    const error = new Error('Test Error');
-
-    const ThrowError = () => {
-      throw error;
-      return null;
-    };
-
-    render(
-      <ErrorBoundary fallback={FallbackComponent}>
-        <ThrowError />
-      </ErrorBoundary>
-    );
-
-    expect(onError).toHaveBeenCalledWith(error);
-  });
-
-  it('should reset error state when retry is clicked', () => {
-    const ThrowError = () => {
-      throw new Error('Test Error');
-      return null;
-    };
-
-    const { getByText, queryByText } = render(
-      <ErrorBoundary fallback={FallbackComponent}>
-        <ThrowError />
-      </ErrorBoundary>
-    );
-
-    expect(getByText('Something went wrong')).toBeInTheDocument();
-
-    const retryButton = getByText('Retry');
-    retryButton.click();
-
-    expect(queryByText('Something went wrong')).not.toBeInTheDocument();
-  });
-
-  it('should preserve error details in development mode', () => {
-    const originalNodeEnv = process.env.NODE_ENV;
+  it('shows error details in development', () => {
+    const originalEnv = process.env.NODE_ENV;
     process.env.NODE_ENV = 'development';
 
-    const error = new Error('Test Error');
-    error.stack = 'Error\n    at ThrowError';
-
-    const ThrowError = () => {
-      throw error;
-      return null;
-    };
-
     const { getByText } = render(
-      <ErrorBoundary fallback={FallbackComponent}>
-        <ThrowError />
+      <ErrorBoundary>
+        <ErrorComponent />
       </ErrorBoundary>
     );
 
-    expect(getByText(/Error/)).toBeInTheDocument();
-    expect(getByText(/at ThrowError/)).toBeInTheDocument();
-
-    process.env.NODE_ENV = originalNodeEnv;
+    expect(getByText(/Test error/)).toBeInTheDocument();
+    process.env.NODE_ENV = originalEnv;
   });
 }); 

@@ -1,31 +1,30 @@
-import { TestHarness } from './TestHarness';
+/**
+ * @typedef {Object} Test
+ * @property {string} name
+ * @property {function(): Promise<void>|void} test
+ */
 
-export async function runTests(tests: Array<{name: string, test: () => Promise<void> | void}>) {
-  const harness = new TestHarness();
-  
-  console.log('Starting test run...\n');
+/**
+ * Run a suite of tests
+ * @param {Test[]} tests - Array of test objects
+ * @returns {Promise<void>}
+ */
+export async function runTests(tests) {
+  console.log('\nRunning tests...\n');
   
   for (const { name, test } of tests) {
-    const result = await harness.measure(name, test);
-    const status = result.valid ? '✓' : '✗';
-    const duration = result.metrics?.duration.toFixed(2) || '?';
-    
-    console.log(`${status} ${name} (${duration}ms)`);
-    
-    if (!result.valid && result.errors?.length) {
-      console.log('  Errors:');
-      result.errors.forEach(error => console.log(`    - ${error}`));
+    try {
+      console.log(`Running test: ${name}`);
+      await test();
+      console.log(`✓ ${name}\n`);
+    } catch (error) {
+      console.error(`✗ ${name}`);
+      console.error(error);
+      console.log('\n');
     }
   }
   
-  const metrics = harness.getMetrics();
-  console.log('\nTest Run Summary:');
-  console.log(`  Total Tests: ${harness.getResults().length}`);
-  console.log(`  Accuracy: ${(metrics.accuracy * 100).toFixed(1)}%`);
-  console.log(`  Coverage: ${(metrics.coverage * 100).toFixed(1)}%`);
-  console.log(`  Performance: ${(metrics.performance * 100).toFixed(1)}%`);
-  console.log(`  Flow Velocity: ${(metrics.velocity * 100).toFixed(1)}%`);
-  console.log(`  Conductivity: ${(metrics.conductivity * 100).toFixed(1)}%`);
+  console.log('Tests complete.\n');
 }
 
 // Example usage:

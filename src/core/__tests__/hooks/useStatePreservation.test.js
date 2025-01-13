@@ -2,14 +2,9 @@ import { renderHook, act } from '@testing-library/react-hooks';
 import { useStatePreservation } from '../../hooks/useStatePreservation';
 import { useProtection } from '../../hooks/useProtection';
 import { DEFAULT_METRICS } from '../../hooks/useProtection';
-import { 
-  FlowState, 
-  FlowMetrics,
-  FlowStateType
-} from '../../types/flow/types';
-import { SpaceState } from '../../types/space/types';
+import { FlowStateType } from '../../types/flow/types';
 
-const mockFlowState: FlowState = {
+const mockFlowState = {
   active: true,
   type: FlowStateType.HYPERFOCUS,
   intensity: 'high',
@@ -29,7 +24,7 @@ const mockFlowState: FlowState = {
   quality: 0.93
 };
 
-const mockSpaceState: SpaceState = {
+const mockSpaceState = {
   type: 'sanctuary',
   active: true,
   flowState: mockFlowState,

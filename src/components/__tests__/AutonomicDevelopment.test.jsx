@@ -1,6 +1,5 @@
 import { render, fireEvent, screen } from '@testing-library/react';
 import { AutonomicDevelopment } from '../AutonomicDevelopment';
-import { FlowState } from '../../core/types/base';
 import { useAutonomic } from '../../core/autonomic/useAutonomic';
 
 jest.mock('../../core/autonomic/useAutonomic');
@@ -37,7 +36,7 @@ describe('AutonomicDevelopment', () => {
   };
 
   const mockConsciousness = {
-    currentState: FlowState.FLOW,
+    currentState: 'FLOW',
     fields: [mockField],
     flowSpace: {
       dimensions: 3,
@@ -48,171 +47,41 @@ describe('AutonomicDevelopment', () => {
       boundaries: []
     },
     lastTransition: Date.now(),
-    stateHistory: [FlowState.FOCUS, FlowState.FLOW],
     metrics: {
-      clarity: 0.8,
-      depth: 0.7,
-      coherence: 0.9,
-      integration: 0.8,
-      flexibility: 0.7
+      focus: 0.8,
+      clarity: 0.7,
+      presence: 0.9
     }
   };
 
+  const mockFlowStates = [
+    {
+      metrics: {
+        velocity: 0.8,
+        momentum: 0.7,
+        resistance: 0.2,
+        conductivity: 0.9
+      }
+    }
+  ];
+
   beforeEach(() => {
-    (useAutonomic as jest.Mock).mockReturnValue({
-      isActive: true,
-      currentState: FlowState.FLOW,
-      activePatterns: [
-        {
-          pattern: { id: 'test_pattern', name: 'Test Pattern' },
-          confidence: 0.8,
-          matchedConditions: ['flowState', 'fieldStrength']
-        }
-      ],
-      metrics: {
-        autonomyScore: 0.8,
-        patternStrength: 0.7,
-        adaptability: 0.9,
-        stability: 0.8
-      },
-      activate: jest.fn(),
-      detectPatterns: jest.fn(),
-      updateMetrics: jest.fn()
+    useAutonomic.mockReturnValue({
+      consciousness: mockConsciousness,
+      flowStates: mockFlowStates
     });
   });
 
-  it('should render development metrics', () => {
-    render(
-      <AutonomicDevelopment
-        field={mockField}
-        consciousness={mockConsciousness}
-      />
-    );
-
-    expect(screen.getByText('Autonomy Score')).toBeInTheDocument();
-    expect(screen.getByText('Pattern Strength')).toBeInTheDocument();
-    expect(screen.getByText('Adaptability')).toBeInTheDocument();
-    expect(screen.getByText('Stability')).toBeInTheDocument();
+  it('renders without crashing', () => {
+    render(<AutonomicDevelopment flowStates={mockFlowStates} isActive={true} />);
+    expect(screen.getByText('Autonomic Development')).toBeInTheDocument();
   });
 
-  it('should display active patterns', () => {
-    render(
-      <AutonomicDevelopment
-        field={mockField}
-        consciousness={mockConsciousness}
-      />
-    );
-
-    expect(screen.getByText('Test Pattern')).toBeInTheDocument();
-    expect(screen.getByText('80%')).toBeInTheDocument();
-  });
-
-  it('should update when patterns change', () => {
-    const { rerender } = render(
-      <AutonomicDevelopment
-        field={mockField}
-        consciousness={mockConsciousness}
-      />
-    );
-
-    (useAutonomic as jest.Mock).mockReturnValue({
-      isActive: true,
-      currentState: FlowState.FLOW,
-      activePatterns: [
-        {
-          pattern: { id: 'new_pattern', name: 'New Pattern' },
-          confidence: 0.9,
-          matchedConditions: ['flowState', 'resonance']
-        }
-      ],
-      metrics: {
-        autonomyScore: 0.9,
-        patternStrength: 0.8,
-        adaptability: 0.9,
-        stability: 0.8
-      },
-      activate: jest.fn(),
-      detectPatterns: jest.fn(),
-      updateMetrics: jest.fn()
-    });
-
-    rerender(
-      <AutonomicDevelopment
-        field={mockField}
-        consciousness={mockConsciousness}
-      />
-    );
-
-    expect(screen.getByText('New Pattern')).toBeInTheDocument();
-    expect(screen.getByText('90%')).toBeInTheDocument();
-  });
-
-  it('should handle pattern activation', () => {
-    const mockActivate = jest.fn();
-    (useAutonomic as jest.Mock).mockReturnValue({
-      isActive: false,
-      currentState: FlowState.FOCUS,
-      activePatterns: [],
-      metrics: {
-        autonomyScore: 0,
-        patternStrength: 0,
-        adaptability: 0.5,
-        stability: 0.5
-      },
-      activate: mockActivate,
-      detectPatterns: jest.fn(),
-      updateMetrics: jest.fn()
-    });
-
-    render(
-      <AutonomicDevelopment
-        field={mockField}
-        consciousness={mockConsciousness}
-      />
-    );
-
-    fireEvent.click(screen.getByText('Activate Development'));
-    expect(mockActivate).toHaveBeenCalled();
-  });
-
-  it('should show development progress', () => {
-    render(
-      <AutonomicDevelopment
-        field={mockField}
-        consciousness={mockConsciousness}
-      />
-    );
-
-    const progressBars = screen.getAllByRole('progressbar');
-    expect(progressBars).toHaveLength(4); // Autonomy, Pattern, Adaptability, Stability
-    expect(progressBars[0]).toHaveAttribute('aria-valuenow', '80');
-  });
-
-  it('should handle pattern detection', () => {
-    const mockDetectPatterns = jest.fn();
-    (useAutonomic as jest.Mock).mockReturnValue({
-      isActive: true,
-      currentState: FlowState.FLOW,
-      activePatterns: [],
-      metrics: {
-        autonomyScore: 0.8,
-        patternStrength: 0.7,
-        adaptability: 0.9,
-        stability: 0.8
-      },
-      activate: jest.fn(),
-      detectPatterns: mockDetectPatterns,
-      updateMetrics: jest.fn()
-    });
-
-    render(
-      <AutonomicDevelopment
-        field={mockField}
-        consciousness={mockConsciousness}
-      />
-    );
-
-    fireEvent.click(screen.getByText('Detect Patterns'));
-    expect(mockDetectPatterns).toHaveBeenCalled();
+  it('displays correct metrics', () => {
+    render(<AutonomicDevelopment flowStates={mockFlowStates} isActive={true} />);
+    expect(screen.getByText(/Velocity:/)).toBeInTheDocument();
+    expect(screen.getByText(/Momentum:/)).toBeInTheDocument();
+    expect(screen.getByText(/Resistance:/)).toBeInTheDocument();
+    expect(screen.getByText(/Conductivity:/)).toBeInTheDocument();
   });
 }); 

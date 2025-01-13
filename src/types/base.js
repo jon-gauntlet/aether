@@ -1,21 +1,22 @@
-export enum FlowState {
-  FOCUS = 'FOCUS',
-  FLOW = 'FLOW',
-  HYPERFOCUS = 'HYPERFOCUS',
-  RECOVERING = 'RECOVERING',
-  EXHAUSTED = 'EXHAUSTED',
-  DISTRACTED = 'DISTRACTED'
-}
+/**
+ * @typedef {Object} FlowMetrics
+ * @property {number} velocity
+ * @property {number} momentum
+ * @property {number} resistance
+ * @property {number} conductivity
+ */
 
-export enum EnergyType {
-  MENTAL = 'MENTAL',
-  PHYSICAL = 'PHYSICAL',
-  EMOTIONAL = 'EMOTIONAL'
-}
+export const FlowState = {
+  FOCUS: 'FOCUS',
+  FLOW: 'FLOW',
+  HYPERFOCUS: 'HYPERFOCUS',
+  RECOVERING: 'RECOVERING',
+  EXHAUSTED: 'EXHAUSTED',
+  DISTRACTED: 'DISTRACTED'
+};
 
-export interface FlowMetrics {
-  velocity: number;
-  momentum: number;
-  resistance: number;
-  conductivity: number;
-} 
+export const EnergyType = {
+  MENTAL: 'MENTAL',
+  PHYSICAL: 'PHYSICAL',
+  EMOTIONAL: 'EMOTIONAL'
+}; 

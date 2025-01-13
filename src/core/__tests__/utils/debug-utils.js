@@ -1,39 +1,12 @@
-import { SystemState, FlowState } from '../../types/base';
-
 /**
  * Debug utilities focused on preventing delivery frustration
  * through early detection and clear diagnostics
  */
 
-interface StateTransition<T> {
-  before: T;
-  after: T;
-  operation: string;
-  timestamp: number;
-}
-
-interface DebugContext {
-  transitions: StateTransition<any>[];
-  errors: Error[];
-  warnings: string[];
-  healthChecks: {
-    timestamp: number;
-    metrics: SystemState;
-  }[];
-}
-
-interface DebugAnalysis {
-  errorCount: number;
-  warningCount: number;
-  warnings: string[];
-  healthTrend: string;
-  recommendations: string[];
-}
-
 /**
  * Creates a debug context tracker for monitoring system behavior
  */
-export const createDebugContext = (): DebugContext => ({
+export const createDebugContext = () => ({
   transitions: [],
   errors: [],
   warnings: [],
@@ -43,12 +16,7 @@ export const createDebugContext = (): DebugContext => ({
 /**
  * Records state transitions with detailed context
  */
-export const trackStateTransition = <T>(
-  context: DebugContext,
-  before: T,
-  after: T,
-  operation: string
-) => {
+export const trackStateTransition = (context, before, after, operation) => {
   context.transitions.push({
     before,
     after,
@@ -60,12 +28,7 @@ export const trackStateTransition = <T>(
 /**
  * Validates state transition integrity
  */
-export const validateStateTransition = <T>(
-  context: DebugContext,
-  before: T,
-  after: T,
-  validators: ((before: T, after: T) => boolean)[]
-) => {
+export const validateStateTransition = (context, before, after, validators) => {
   validators.forEach(validator => {
     if (!validator(before, after)) {
       const error = new Error('Invalid state transition');
@@ -78,10 +41,7 @@ export const validateStateTransition = <T>(
 /**
  * Records system health check with metrics
  */
-export const recordHealthCheck = (
-  context: DebugContext,
-  metrics: SystemState
-) => {
+export const recordHealthCheck = (context, metrics) => {
   context.healthChecks.push({
     timestamp: Date.now(),
     metrics
@@ -91,7 +51,7 @@ export const recordHealthCheck = (
 /**
  * Analyzes debug context for potential issues
  */
-export const analyzeDebugContext = (context: DebugContext): DebugAnalysis => {
+export const analyzeDebugContext = (context) => {
   // Check for error patterns
   const errorPatterns = context.errors.map(e => e.message);
   if (errorPatterns.length > 0) {
@@ -129,7 +89,7 @@ export const analyzeDebugContext = (context: DebugContext): DebugAnalysis => {
 /**
  * Calculates health trend from health checks
  */
-const getHealthTrend = (healthChecks: DebugContext['healthChecks']) => {
+const getHealthTrend = (healthChecks) => {
   if (healthChecks.length < 2) return 'insufficient_data';
   
   const latest = healthChecks[healthChecks.length - 1].metrics.health;
@@ -143,8 +103,8 @@ const getHealthTrend = (healthChecks: DebugContext['healthChecks']) => {
 /**
  * Generates recommendations based on debug context
  */
-const generateRecommendations = (context: DebugContext): string[] => {
-  const recommendations: string[] = [];
+const generateRecommendations = (context) => {
+  const recommendations = [];
 
   if (context.errors.length > 0) {
     recommendations.push('Review error patterns and add preventive validation');
@@ -164,15 +124,12 @@ const generateRecommendations = (context: DebugContext): string[] => {
 /**
  * Creates a protected execution context that preserves debug information
  */
-export const withDebugProtection = <T>(
-  operation: () => T,
-  context: DebugContext
-): T => {
+export const withDebugProtection = (operation, context) => {
   try {
     const result = operation();
     return result;
   } catch (error) {
-    context.errors.push(error as Error);
+    context.errors.push(error);
     throw error;
   }
 }; 

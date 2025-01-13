@@ -1,8 +1,8 @@
 import { DevOptimizer } from '../aaa/DevOptimizer';
 
 describe('DevOptimizer', () => {
-  let optimizer: DevOptimizer;
-  let now: number;
+  let optimizer;
+  let now;
 
   beforeEach(() => {
     optimizer = new DevOptimizer();

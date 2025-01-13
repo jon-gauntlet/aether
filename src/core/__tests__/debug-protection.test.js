@@ -10,8 +10,8 @@ import {
 import { wait } from './utils/test-utils';
 
 describe('Debug Protection', () => {
-  let engine: FlowEngine;
-  let debugContext: any;
+  let engine;
+  let debugContext;
 
   beforeEach(() => {
     engine = new FlowEngine();

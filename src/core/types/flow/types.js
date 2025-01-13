@@ -1,68 +1,74 @@
-import { ProtectionState } from '../protection/protection';
-import { Pattern } from '../patterns/pattern';
-import { Observable } from 'rxjs';
-import { FlowMetrics } from './metrics';
+/**
+ * @typedef {'natural' | 'guided' | 'autonomous'} FlowType
+ * @typedef {'deep' | 'light' | 'surface'} PresenceType
+ * @typedef {'low' | 'medium' | 'high' | 'peak'} FlowIntensity
+ */
 
-export type FlowType = 'natural' | 'guided' | 'autonomous';
-export type PresenceType = 'deep' | 'light' | 'surface';
-export type FlowIntensity = 'low' | 'medium' | 'high' | 'peak';
+/**
+ * @enum {string}
+ */
+export const FlowStateType = {
+  FOCUS: 'FOCUS',
+  FLOW: 'FLOW',
+  HYPERFOCUS: 'HYPERFOCUS',
+  RECOVERING: 'RECOVERING',
+  EXHAUSTED: 'EXHAUSTED',
+  DISTRACTED: 'DISTRACTED'
+};
 
-export enum FlowStateType {
-  FOCUS = 'FOCUS',
-  FLOW = 'FLOW',
-  HYPERFOCUS = 'HYPERFOCUS',
-  RECOVERING = 'RECOVERING',
-  EXHAUSTED = 'EXHAUSTED',
-  DISTRACTED = 'DISTRACTED'
-}
+/**
+ * @typedef {Object} FlowState
+ * @property {boolean} active
+ * @property {FlowStateType} type
+ * @property {FlowIntensity} intensity
+ * @property {number} duration
+ * @property {FlowMetrics} metrics
+ * @property {number} lastTransition
+ * @property {boolean} protected
+ * @property {number} quality
+ */
 
-export interface FlowState {
-  active: boolean;
-  type: FlowStateType;
-  intensity: FlowIntensity;
-  duration: number;
-  metrics: FlowMetrics;
-  lastTransition: number;
-  protected: boolean;
-  quality: number;
-}
+/**
+ * @enum {string}
+ */
+export const DevelopmentPhase = {
+  Initial: 'initial',
+  Learning: 'learning',
+  Practicing: 'practicing',
+  Mastering: 'mastering',
+  Teaching: 'teaching',
+  Evolving: 'evolving'
+};
 
-// Development phase type
-export enum DevelopmentPhase {
-  Initial = 'initial',
-  Learning = 'learning',
-  Practicing = 'practicing',
-  Mastering = 'mastering',
-  Teaching = 'teaching',
-  Evolving = 'evolving'
-}
+/**
+ * @typedef {Object} Flow
+ * @property {string} id
+ * @property {FlowType} type
+ * @property {FlowMetrics} metrics
+ * @property {ProtectionState} protection
+ * @property {Pattern[]} patterns
+ * @property {number} timestamp
+ */
 
-export interface Flow {
-  id: string;
-  type: FlowType;
-  metrics: FlowMetrics;
-  protection: ProtectionState;
-  patterns: Pattern[];
-  timestamp: number;
-}
+/**
+ * @typedef {Object} FlowTransition
+ * @property {FlowState} from
+ * @property {FlowState} to
+ * @property {number} duration
+ * @property {number} quality
+ * @property {number} efficiency
+ */
 
-export interface FlowTransition {
-  from: FlowState;
-  to: FlowState;
-  duration: number;
-  quality: number;
-  efficiency: number;
-}
+/**
+ * @typedef {Object} FlowContext
+ * @property {string} id
+ * @property {FlowState} state
+ * @property {ProtectionState} protection
+ * @property {FlowTransition[]} transitions
+ * @property {FlowMetrics} metrics
+ * @property {Pattern[]} patterns
+ */
 
-export interface FlowContext {
-  id: string;
-  state: FlowState;
-  protection: ProtectionState;
-  transitions: FlowTransition[];
-  metrics: FlowMetrics;
-  patterns: Pattern[];
-}
-
-// Re-export for convenience
-export type { FlowMetrics, ProtectionState };
+export { FlowMetrics } from './metrics';
+export { ProtectionState } from '../protection/protection';
 

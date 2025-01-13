@@ -1,17 +1,22 @@
 import { useEffect, useState } from 'react';
 import { TypeGuardian } from '../guardian/TypeGuardian';
 
-interface TypeGuardianHook {
-  isValidating: boolean;
-  hasErrors: boolean;
-  errorCount: number;
-  lastValidation: number;
-  validateFile: (file: string) => Promise<void>;
-}
+/**
+ * @typedef {Object} TypeGuardianHook
+ * @property {boolean} isValidating
+ * @property {boolean} hasErrors
+ * @property {number} errorCount
+ * @property {number} lastValidation
+ */
 
-let globalGuardian: TypeGuardian | null = null;
+/** @type {TypeGuardian|null} */
+let globalGuardian = null;
 
-export function useTypeGuardian(): TypeGuardianHook {
+/**
+ * Hook for managing type validation
+ * @returns {TypeGuardianHook & { validateFile: (file: string) => Promise<void> }}
+ */
+export function useTypeGuardian() {
   const [state, setState] = useState({
     isValidating: false,
     hasErrors: false,
@@ -50,19 +55,16 @@ export function useTypeGuardian(): TypeGuardianHook {
     return () => subscription.unsubscribe();
   }, []);
 
-  const validateFile = async (file: string) => {
+  /**
+   * Validate a specific file
+   * @param {string} file - File path to validate
+   * @returns {Promise<void>}
+   */
+  const validateFile = async (file) => {
     if (!globalGuardian) return;
 
     setState(prev => ({ ...prev, isValidating: true }));
-    const result = await globalGuardian.validateFile(file);
-    
-    setState(prev => ({
-      ...prev,
-      isValidating: false,
-      hasErrors: !result.isValid,
-      errorCount: result.errors.length,
-      lastValidation: Date.now()
-    }));
+    await globalGuardian.validateFile(file);
   };
 
   return {

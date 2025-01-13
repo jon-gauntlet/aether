@@ -1,8 +1,8 @@
-import { Workspace, WorkspaceState } from '../Workspace';
+import { Workspace } from '../Workspace';
 import { take, toArray } from 'rxjs/operators';
 
 describe('Workspace', () => {
-  let workspace: Workspace;
+  let workspace;
   const initialId = 'test-id';
   const initialName = 'Test Workspace';
   const initialPath = '/test/path';
@@ -67,7 +67,7 @@ describe('Workspace', () => {
     });
 
     it('handles undefined settings gracefully', () => {
-      workspace.updateSettings(undefined as any);
+      workspace.updateSettings(undefined);
       expect(workspace.getCurrentState().settings).toEqual({});
     });
 
@@ -102,7 +102,7 @@ describe('Workspace', () => {
 
     it('handles undefined name gracefully', () => {
       const defaultName = '';
-      workspace.updateName(undefined as any);
+      workspace.updateName(undefined);
       expect(workspace.getCurrentState().name).toBe(defaultName);
     });
 
@@ -126,7 +126,7 @@ describe('Workspace', () => {
 
     it('handles undefined path gracefully', () => {
       const defaultPath = '';
-      workspace.updatePath(undefined as any);
+      workspace.updatePath(undefined);
       expect(workspace.getCurrentState().path).toBe(defaultPath);
     });
 
@@ -146,7 +146,7 @@ describe('Workspace', () => {
       await new Promise(resolve => setTimeout(resolve, 1));
       workspace.updateName('New Name');
       
-      const states = (await promise)!;
+      const states = await promise;
       expect(states[0].name).toBe(initialName);
       expect(states[1].name).toBe('New Name');
     });
@@ -160,7 +160,7 @@ describe('Workspace', () => {
       await new Promise(resolve => setTimeout(resolve, 1));
       workspace.updateSettings({ theme: 'dark' });
       
-      const states = (await promise)!;
+      const states = await promise;
       expect(states[0].settings).toEqual({});
       expect(states[1].settings).toEqual({ theme: 'dark' });
     });
@@ -176,7 +176,7 @@ describe('Workspace', () => {
       await new Promise(resolve => setTimeout(resolve, 1));
       workspace.updateSettings({ b: 2 });
       
-      const states = (await promise)!;
+      const states = await promise;
       expect(states[0].settings).toEqual({});
       expect(states[1].settings).toEqual({ a: 1 });
       expect(states[2].settings).toEqual({ a: 1, b: 2 });
@@ -216,14 +216,14 @@ describe('Workspace', () => {
       await new Promise(resolve => setTimeout(resolve, 1));
       workspace.touch();
       
-      const states = (await promise)!;
+      const states = await promise;
       expect(states[1].lastAccessed).toBeGreaterThan(beforeTime);
     });
   });
 
   describe('error handling', () => {
     it('handles invalid settings gracefully', () => {
-      expect(() => workspace.updateSettings(null as any)).not.toThrow();
+      expect(() => workspace.updateSettings(null)).not.toThrow();
       expect(workspace.getCurrentState().settings).toEqual({});
     });
 
@@ -238,12 +238,12 @@ describe('Workspace', () => {
     });
 
     it('handles non-object settings gracefully', () => {
-      workspace.updateSettings('invalid' as any);
+      workspace.updateSettings('invalid');
       expect(workspace.getCurrentState().settings).toEqual({});
     });
 
     it('handles array settings gracefully', () => {
-      expect(() => workspace.updateSettings([] as any)).not.toThrow();
+      expect(() => workspace.updateSettings([])).not.toThrow();
       expect(workspace.getCurrentState().settings).toEqual({});
     });
   });

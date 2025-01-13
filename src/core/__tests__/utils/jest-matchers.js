@@ -1,10 +1,7 @@
-import { FlowState } from '../../types/flow/types';
-import { ProtectionState, isProtectionState } from '../../types/protection/protection';
+import { isProtectionState } from '../../types/protection/protection';
 
-type CustomMatcher = (this: jest.MatcherContext, actual: unknown, ...args: any[]) => jest.CustomMatcherResult;
-
-const matchers: Record<string, CustomMatcher> = {
-  toBeInRange(this: jest.MatcherContext, actual: unknown, min: number, max: number) {
+const matchers = {
+  toBeInRange(actual, min, max) {
     const pass = typeof actual === 'number' && actual >= min && actual <= max;
     return {
       message: () => pass
@@ -14,8 +11,8 @@ const matchers: Record<string, CustomMatcher> = {
     };
   },
 
-  toBeValidFlowState(this: jest.MatcherContext, actual: unknown) {
-    const state = actual as FlowState;
+  toBeValidFlowState(actual) {
+    const state = actual;
     const pass = Boolean(
       state &&
       typeof state.active === 'boolean' &&
@@ -36,7 +33,7 @@ const matchers: Record<string, CustomMatcher> = {
     };
   },
 
-  toBeValidProtectionState(this: jest.MatcherContext, actual: unknown) {
+  toBeValidProtectionState(actual) {
     const pass = isProtectionState(actual);
     return {
       message: () => pass
@@ -46,8 +43,8 @@ const matchers: Record<string, CustomMatcher> = {
     };
   },
 
-  toHaveValidMetrics(this: jest.MatcherContext, actual: unknown) {
-    const metrics = actual as Record<string, number>;
+  toHaveValidMetrics(actual) {
+    const metrics = actual;
     const pass = Boolean(
       metrics &&
       typeof metrics === 'object' &&

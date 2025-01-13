@@ -1,24 +1,23 @@
 import 'jest';
-import { FlowState, FlowStateType, FlowIntensity } from '../../types/flow/types';
-import { FlowMetrics, DEFAULT_FLOW_METRICS } from '../../types/flow/metrics';
-import { ProtectionState, ProtectionMetrics } from '../../types/protection/protection';
+import { FlowStateType, FlowIntensity } from '../../types/flow/types';
+import { DEFAULT_FLOW_METRICS } from '../../types/flow/metrics';
 
 /**
  * Test utility functions that support quality-first development
  * by making tests more readable and maintainable.
  */
 
-const DEFAULT_PROTECTION_METRICS: ProtectionMetrics = {
+const DEFAULT_PROTECTION_METRICS = {
   stability: 0.9,
   resilience: 0.85,
   integrity: 0.9,
   immunity: 0.85
 };
 
-export const createMockFlowState = (overrides?: Partial<FlowState>): FlowState => ({
+export const createMockFlowState = (overrides = {}) => ({
   active: false,
   type: FlowStateType.FOCUS,
-  intensity: 'medium' as FlowIntensity,
+  intensity: 'medium',
   duration: 0,
   metrics: DEFAULT_FLOW_METRICS,
   lastTransition: Date.now(),
@@ -27,7 +26,7 @@ export const createMockFlowState = (overrides?: Partial<FlowState>): FlowState =
   ...overrides
 });
 
-export const createMockProtectionState = (overrides?: Partial<ProtectionState>): ProtectionState => ({
+export const createMockProtectionState = (overrides = {}) => ({
   active: true,
   metrics: DEFAULT_PROTECTION_METRICS,
   lastCheck: Date.now(),
@@ -40,14 +39,14 @@ export const createMockProtectionState = (overrides?: Partial<ProtectionState>):
  * Async utility to simulate time passage in tests
  * @param ms Milliseconds to wait
  */
-export const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+export const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
  * Test helper to verify object shape matches expected type
  * @param obj Object to test
  * @param shape Expected shape with type names
  */
-export const verifyShape = (obj: any, shape: Record<string, string>) => {
+export const verifyShape = (obj, shape) => {
   Object.entries(shape).forEach(([key, type]) => {
     expect(typeof obj[key]).toBe(type.toLowerCase());
   });
@@ -56,7 +55,7 @@ export const verifyShape = (obj: any, shape: Record<string, string>) => {
 /**
  * Creates a test wrapper that ensures tests run within flow protection
  */
-export const withFlowProtection = (testFn: () => Promise<void>) => async () => {
+export const withFlowProtection = (testFn) => async () => {
   const originalConsoleError = console.error;
   console.error = jest.fn();
 
@@ -70,7 +69,7 @@ export const withFlowProtection = (testFn: () => Promise<void>) => async () => {
 /**
  * Validates flow metrics are within healthy ranges
  */
-export const validateFlowMetrics = (metrics: FlowMetrics) => {
+export const validateFlowMetrics = (metrics) => {
   expect(metrics.velocity).toBeGreaterThanOrEqual(0);
   expect(metrics.velocity).toBeLessThanOrEqual(1);
   expect(metrics.momentum).toBeGreaterThanOrEqual(0);
@@ -92,7 +91,7 @@ export const validateFlowMetrics = (metrics: FlowMetrics) => {
 /**
  * Validates protection metrics are within healthy ranges
  */
-export const validateProtectionMetrics = (metrics: ProtectionMetrics) => {
+export const validateProtectionMetrics = (metrics) => {
   expect(metrics.stability).toBeGreaterThanOrEqual(0);
   expect(metrics.stability).toBeLessThanOrEqual(1);
   expect(metrics.resilience).toBeGreaterThanOrEqual(0);
@@ -106,18 +105,14 @@ export const validateProtectionMetrics = (metrics: ProtectionMetrics) => {
 /**
  * Verifies a flow state transition occurred as expected
  */
-export const verifyFlowTransition = (
-  before: FlowState,
-  after: FlowState,
-  expectedChanges: Partial<FlowState>
-) => {
+export const verifyFlowTransition = (before, after, expectedChanges) => {
   // Verify unchanged properties
   expect(after.metrics).toEqual(before.metrics);
   expect(after.protected).toBe(before.protected);
 
   // Verify changed properties
   Object.entries(expectedChanges).forEach(([key, value]) => {
-    expect(after[key as keyof FlowState]).toEqual(value);
+    expect(after[key]).toEqual(value);
   });
 
   // Verify transition timestamp updated
@@ -128,7 +123,7 @@ export const verifyFlowTransition = (
  * Custom matchers for enhanced testing
  */
 expect.extend({
-  toBeInRange(received: unknown, min: number, max: number) {
+  toBeInRange(received, min, max) {
     const pass = typeof received === 'number' && received >= min && received <= max;
     return {
       message: () => pass
@@ -139,7 +134,7 @@ expect.extend({
   }
 });
 
-export const validateSystemHealth = (systemState: any) => {
+export const validateSystemHealth = (systemState) => {
   if (!systemState || typeof systemState !== 'object') {
     throw new Error('Invalid system state');
   }

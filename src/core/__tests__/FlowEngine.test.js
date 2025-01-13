@@ -8,7 +8,7 @@ import {
 } from './utils/test-utils';
 
 describe('FlowEngine', () => {
-  let engine: FlowEngine;
+  let engine;
 
   beforeEach(() => {
     engine = new FlowEngine();
@@ -128,7 +128,7 @@ describe('FlowEngine', () => {
     }));
 
     it('preserves context across state transitions', async () => {
-      const states: any[] = [];
+      const states = [];
       
       engine.startFlow();
       states.push(engine['systemState'].context);

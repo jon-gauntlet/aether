@@ -3,37 +3,41 @@ import { EnergyState, Protection, Resonance } from './energy';
 import { MindSpace } from './space';
 import { FlowSpace, NaturalFlow } from './flow';
 
-// Consciousness state
-export interface ConsciousnessState {
-  id: string;
-  type: 'individual' | 'collective';
-  space: MindSpace;
-  spaces: FlowSpace[];
-  connections: Connection[];
-  resonance: Resonance;
-  depth: number;
-  protection: Protection;
-  energy: EnergyState;
-  flow: NaturalFlow;
-}
+/**
+ * @typedef {Object} ConsciousnessState
+ * @property {string} id
+ * @property {'individual'|'collective'} type
+ * @property {MindSpace} space
+ * @property {FlowSpace[]} spaces
+ * @property {Connection[]} connections
+ * @property {Resonance} resonance
+ * @property {number} depth
+ * @property {Protection} protection
+ * @property {EnergyState} energy
+ * @property {NaturalFlow} flow
+ */
 
-// Thought stream
-export interface ThoughtStream {
-  id: string;
-  type: 'focus' | 'explore' | 'rest' | 'connect';
-  state: ConsciousnessState;
-}
+/**
+ * @typedef {Object} ThoughtStream
+ * @property {string} id
+ * @property {'focus'|'explore'|'rest'|'connect'} type
+ * @property {ConsciousnessState} state
+ */
 
-// Thought evolution
-export interface ThoughtEvolution {
-  id: string;
-  from: ConsciousnessState;
-  to: ConsciousnessState;
-  depth: number;
-}
+/**
+ * @typedef {Object} ThoughtEvolution
+ * @property {string} id
+ * @property {ConsciousnessState} from
+ * @property {ConsciousnessState} to
+ * @property {number} depth
+ */
 
-// Type guards
-export const isConsciousnessState = (state: any): state is ConsciousnessState => {
+/**
+ * Check if an object is a valid ConsciousnessState
+ * @param {*} state - Object to check
+ * @returns {boolean} Whether the object is a ConsciousnessState
+ */
+export const isConsciousnessState = (state) => {
   return (
     typeof state === 'object' &&
     typeof state.id === 'string' &&
@@ -44,21 +48,16 @@ export const isConsciousnessState = (state: any): state is ConsciousnessState =>
   );
 };
 
-export const isThoughtStream = (stream: any): stream is ThoughtStream => {
+/**
+ * Check if an object is a valid ThoughtStream
+ * @param {*} stream - Object to check
+ * @returns {boolean} Whether the object is a ThoughtStream
+ */
+export const isThoughtStream = (stream) => {
   return (
     typeof stream === 'object' &&
     typeof stream.id === 'string' &&
     ['focus', 'explore', 'rest', 'connect'].includes(stream.type) &&
     isConsciousnessState(stream.state)
-  );
-};
-
-export const isThoughtEvolution = (evolution: any): evolution is ThoughtEvolution => {
-  return (
-    typeof evolution === 'object' &&
-    typeof evolution.id === 'string' &&
-    isConsciousnessState(evolution.from) &&
-    isConsciousnessState(evolution.to) &&
-    typeof evolution.depth === 'number'
   );
 }; 
