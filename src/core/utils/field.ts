@@ -1,1 +1,0 @@
- interface Field { [key: string]: any };export function calculateFieldStrength(...args: any, b?.[harmonics].length: any};export function calculateFieldInteraction(...args: any};

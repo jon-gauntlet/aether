@@ -1,1 +1,0 @@
-import type { };from 'styled-components'; declare module 'styled-components' { [key: string]: any } };

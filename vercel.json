@@ -2,9 +2,7 @@
   "version": 2,
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "cleanUrls": true,
-  "public": false,
-  "github": {
-    "silent": true
-  }
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/" }
+  ]
 } 

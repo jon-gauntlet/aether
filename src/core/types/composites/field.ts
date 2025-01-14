@@ -1,1 +1,0 @@
-import type { Point3D, Frequency, Amplitude, Phase, Percentage, BaseState, ID };from '../primitives/base'; import type { BaseMetrics, FlowMetrics, ProtectionMetrics };from '../primitives/metrics'; // Wave properties export interface Wav{ [key: string]: any };

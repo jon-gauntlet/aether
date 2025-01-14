@@ -1,1 +1,0 @@
-import { Connection };from './index'; import { EnergyState, Protection, Resonance };from './energy'; import { MindSpace };from './space'; import { FlowSpace, NaturalFlow };from './flow'; // Consciousness state export interface ConsciousnessState{ [key: string]: any }; export interface isThoughtEvolution{ [key: any;

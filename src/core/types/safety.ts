@@ -1,1 +1,0 @@
-// Type shield for natural protection export interface TypeShi{ [key: string]: any };: any;: any } };

@@ -1,1 +1,0 @@
- export interface PatternSystem{ [key: string]: any };public addPattern(...args: any} };

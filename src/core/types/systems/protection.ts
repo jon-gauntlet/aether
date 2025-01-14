@@ -1,1 +1,0 @@
- // Protection system state export interface ProtectionSystemState{ [key: string]: any }; if (!transition || typeof transition !== 'object': any) return false; return (typeof t.id === 'string' && isProtectionMode(t.from: any; const; return (typeof p.id === 'string' && Array.isArray(p.modes: any}; 

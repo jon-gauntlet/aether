@@ -1,21 +1,17 @@
-# Development Standards
+# Development Standards & Best Practices 🎯
 
-## Core Pattern
-```typescript
-interface Standards {
-  // Prevention
-  readonly prevention: {
-    typescript: TypeGuards;      // Type safety
-    flow: FlowGuards;           // State protection
-    energy: EnergyGuards;       // Focus preservation
-  };
+## Core Principles
 
-  // Quality
-  readonly quality: {
-    types: TypeValidation;      // Type integrity
-    tests: TestCoverage;        // Test coverage
-    docs: Documentation;        // Self-documenting
-  };
+### Prevention First
+- Configure IDE for real-time feedback
+- Set up pre-commit hooks early
+- Automate code formatting
+- Run tests on file changes
+- Block commits that break standards
+- Create environment verification
+- Maintain dependency lockfiles
+- Automate state backups
+- Monitor system health
 
   // Evolution
   readonly evolution: {
@@ -32,74 +28,214 @@ interface ValidationResult {
   readonly warnings?: readonly string[];
 }
 
-// Type guards
-const isValidState = (x: unknown): x is FlowState => {
-  return typeof x === 'object' && x !== null &&
-    'energy' in x && 'depth' in x;
-};
-```
+## Code Quality
 
-## Active Standards
-1. **Prevention**
-   - Full type safety
-   - Flow protection
-   - Energy preservation
+### Core Standards
+- [ ] Zero linting errors
+- [ ] Consistent code style
+- [ ] All exports documented
+- [ ] Tests passing
+- [ ] Errors blocked at commit
 
-2. **Quality**
-   - Type validation
-   - Test coverage
-   - Documentation
+### Prevention
+- Configure strict linting from start
+- Set up IDE code checking
+- Block errors at commit
+- Verify exports are documented
+- Monitor code coverage
+- Catch errors early
 
-3. **Evolution**
-   - Pattern learning
-   - Space growth
-   - System wisdom
+### Code Design
+- Clear function contracts
+- Consistent data structures
+- Predictable patterns
+- Keep constraints natural
+- Prefer simplicity
+- Document complex logic
 
-## Implementation
-1. **Type Safety**
-   ```typescript
-   // Always use type guards
-   if (!isValidState(state)) {
-     return Result.error('Invalid state');
-   }
+### Code Safety
+- Runtime validation
+- Input/output checks
+- Error hierarchies
+- Exception handling
+- Safe assertions
+- Test constraints
 
-   // Immutable by default
-   const newState: Readonly<State> = {
-     ...state,
-     energy: energy + 1
-   };
-   ```
+## React Development
 
-2. **Flow Protection**
-   ```typescript
-   // Use flow wrapper
-   const result = await withFlow(async () => {
-     return await operation();
-   });
+### Component Standards
+- Pure functions
+- Hooks pattern
+- Prop validation
+- Error boundaries
+- Performance optimized
+- PropTypes validation
 
-   // Check energy
-   if (energy.isLow()) {
-     await flow.recover();
-   }
-   ```
+### Best Practices
+- Set up component templates
+- Configure prop-types checking
+- Add error boundaries early
+- Enable React strict mode
+- Prevent common pitfalls
+- Use functional components
+- Leverage hooks for state/effects
+- Memoize expensive computations
+- Keep components focused
 
-3. **Natural Growth**
-   ```typescript
-   // Learn patterns
-   system.learn(pattern);
+## Testing
 
-   // Grow spaces
-   await space.evolve();
+### Core Standards
+- [ ] Unit tests passing
+- [ ] Integration tests passing
+- [ ] Coverage > 80%
+- [ ] Snapshot tests current
+- [ ] E2E tests passing
 
-   // Preserve wisdom
-   knowledge.save(learning);
-   ```
+### Best Practices
+- Write tests alongside code
+- Set up continuous testing
+- Block untested changes
+- Maintain coverage gates
+- Prevent test pollution
+- Automate test runs
+- Write tests before fixing bugs
+- Keep test files close to source
+- Use meaningful test descriptions
+- Test edge cases explicitly
 
-## Best Practices
-1. Trust type system protection
-2. Enable automatic validation
-3. Follow natural growth paths
-4. Let system learn patterns
-5. Focus on core development
-``` 
-</rewritten_file>
+## State Management
+
+### Standards
+- Single source of truth
+- Immutable updates
+- Action tracking
+- State persistence
+- Error recovery
+
+### Best Practices
+- Keep state as local as possible
+- Use context for shared state
+- Normalize complex state shapes
+- Handle loading/error states
+- Persist critical state
+- Clear state on logout
+
+## Performance
+
+### Core Metrics
+- [ ] Build < 60s
+- [ ] First load < 3s
+- [ ] TTI < 5s
+- [ ] Bundle < 250kb
+- [ ] Memory < 100MB
+
+### Optimization
+- Lazy load routes/components
+- Use production builds
+- Optimize images and assets
+- Minimize bundle size
+- Cache expensive operations
+- Monitor memory usage
+- Profile before optimizing
+- Measure improvements
+- Document tradeoffs
+
+## Security
+
+### Standards
+- Input validation
+- Output sanitization
+- Auth protection
+- XSS prevention
+- CSRF guards
+
+### Best Practices
+- Validate all inputs
+- Sanitize user data
+- Use HTTPS
+- Keep tokens secure
+- Handle auth properly
+- Audit dependencies
+- Use environment variables
+- Keep secrets secure
+
+## Development Flow
+
+### Standards
+- Continuous feedback
+- Fast iterations
+- Auto protection
+- State preservation
+- Clear communication
+
+### Git Workflow
+- Use meaningful commit messages
+- Create feature branches
+- Rebase before merging
+- Squash related commits
+- Tag significant versions
+- Keep main branch stable
+
+### Code Organization
+- Follow consistent patterns
+- Group related functionality
+- Use barrel exports
+- Keep files focused
+- Document architecture
+- Maintain clean imports
+
+## Documentation
+
+### Standards
+- Keep docs close to code
+- Document key decisions
+- Explain complex logic
+- Update when changing
+- Include examples
+- Link related docs
+
+### API Design
+- RESTful principles
+- Version your APIs
+- Document endpoints
+- Handle errors consistently
+- Rate limit requests
+- Validate payloads
+
+## Monitoring & Recovery
+
+### Continuous Monitoring
+- Error tracking
+- Performance metrics
+- User feedback
+- System health
+- Team velocity
+- Code coverage
+- Test coverage
+
+### Recovery Procedures
+- Create restore points
+- Backup critical data
+- Document procedures
+- Test recovery
+- Monitor success
+- Learn from failures
+
+## Team Standards
+
+### Collaboration
+- [ ] Knowledge shared
+- [ ] Standards followed
+- [ ] Reviews thorough
+- [ ] Learning continuous
+- [ ] Flow maintained
+
+### Best Practices
+- Review code changes
+- Share knowledge
+- Document decisions
+- Maintain standards
+- Support learning
+- Build momentum
+
+Remember: Standards and best practices should enhance, not impede, natural flow. Prevention through automation and early feedback keeps quality high with minimal effort. 

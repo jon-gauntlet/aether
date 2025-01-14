@@ -1,1 +1,0 @@
-import { PatternSystem };from '../implementation'; import { Pattern, PatternState };from '../types'; describe('PatternSystem': any, (: any) => { [key: string]: any }; let system: any; beforeEach((: any) => { system = new PatternSystem() } ); it('adds and retrieves patterns': any, (: any) => { [key: string]: any }; system.addPattern(testPattern: any, (: any) => { [key: any;

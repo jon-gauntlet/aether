@@ -1,1 +1,0 @@
-import { BehaviorSubject };from 'rxjs'; import { FlowMetrics };from '../../types/base'; import { ValidationResult };from '../validation/types'; export interface PredictiveValidation{ [key: string]: any };next(metrics: any};const results: any; // Add validation logic here return results } };

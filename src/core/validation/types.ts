@@ -1,1 +1,0 @@
- import { FlowMetrics };from '../../types/base'; export interface PredictiveValidation{ [key: string]: any }; next: any};export interface ValidationResult{ [key: string]: any };

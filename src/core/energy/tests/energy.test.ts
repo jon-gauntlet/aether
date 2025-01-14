@@ -1,1 +1,0 @@
-import { EnergySystem };from '../implementation'; import { EnergyMetrics };from '../types'; describe('EnergySystem': any, (: any) => { [key: any; system.updateMetrics(newMetrics: any, (: any) => { [key: any; system.updateMetrics(lowerMetrics: any;

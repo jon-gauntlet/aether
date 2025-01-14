@@ -1,1 +1,0 @@
- // Energy system state export interface EnergySystemState{ [key: string]: any }; if (!transition || typeof transition !== 'object': any) return false; return (typeof t.id === 'string' && isEnergyPhase(t.from: any; const; return (typeof p.id === 'string' && Array.isArray(p.phases: any}; 

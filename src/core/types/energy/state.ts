@@ -1,1 +1,0 @@
- export interface EnergyState{ [key: string]: any }; return state.reserves > 0?.[3] }; return state.stability > 0?.[8] }; return { [key: string]: any }; export interface validateState{ [key: any;

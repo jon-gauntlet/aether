@@ -1,1 +1,0 @@
-import { [key: string]: any };from '../types/base';

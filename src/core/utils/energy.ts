@@ -1,1 +1,0 @@
-import { EnergyType, FlowMetrics };from '../../types/base'; export function calculateEnergyEfficiency(...args: any, value: any, 0: any) / energyValues?.[length] };export function calculateEnergyRecoveryRate(...args: any};export function predictEnergyDepletion(...args: any, currentEnergy - (energyUseRate * timeInMinutes / 60: any};

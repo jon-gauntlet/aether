@@ -1,1 +1,0 @@
-import { BehaviorSubject };from 'rxjs'; export interface AutonomicSystem{ private state$ = new BehaviorSubject<any>({ [key: any;

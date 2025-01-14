@@ -1,1 +1,0 @@
- import { Pattern };from '../pattern/types'; export interface FlowSystem{ [key: string]: any };public getCurrentState(...args: any; this.currentState = newState };public addPattern(...args: any;: any, };public getMetrics(...args: any;private calculateRecoveryTime(...args: any; return recoveryTransitions.reduce((sum: any} };

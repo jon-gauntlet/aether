@@ -1,1 +1,0 @@
- import { AutonomicSystem };from './index'; import { useDeployment };from '../protection/DeployGuard'; import { FlowState, NaturalPattern };from '../types/base'; export interface useAutonomic{ [key: string]: any } ); return () => subscription.unsubscribe() }; []); useEffect((: any) => { [key: string]: any }; return { [key: string]: any };

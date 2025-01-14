@@ -1,7 +1,7 @@
 # Natural Flow System
 
 ## Core Understanding
-The Flow System is a natural extension of consciousness that manages transitions between different states of focus and energy, optimizing for ADHD hyperfocus conditions while maintaining sustainable performance.
+The Flow System is a natural extension of consciousness that manages transitions between different states of focus and energy, optimizing for ADHD hyperfocus conditions while enabling authentic presence and seamless interactions in digital spaces.
 
 ## Natural States
 
@@ -43,6 +43,43 @@ const naturalCost = {
 };
 ```
 
+## Context & Presence
+
+### 1. Context Awareness
+```typescript
+interface PresenceState {
+  environment: CommunicationEnvironment;
+  patterns: InteractionPatterns[];
+  context: ModalContext;
+  flowState: FlowState;
+}
+
+class ContextBuilder {
+  async buildPresenceContext(): Promise<PresenceState>;
+}
+```
+
+### 2. Presence Enhancement
+```typescript
+interface EnhancedPresence extends PresenceState {
+  modalPatterns: Pattern[];
+  enhancedExpression: Expression;
+  contextHarmony: PresenceHarmony;
+  energyFlow: NaturalEnergy;
+}
+
+class PresenceEnrichment {
+  async enrichPresence(base: PresenceState): Promise<EnhancedPresence>;
+}
+```
+
+### 3. Natural Expression
+```typescript
+class ExpressionFlow {
+  async enableNaturalFlow(presence: EnhancedPresence): Promise<void>;
+}
+```
+
 ## Living Implementation
 
 ### 1. Natural Flow Hook
@@ -50,6 +87,7 @@ const naturalCost = {
 function useNaturalFlow() {
   const { currentState, energy } = useFlow();
   const { pattern } = usePattern();
+  const { presence } = usePresence();
 
   // Flow with natural patterns
   const flowNaturally = (desiredState: FlowState) => {
@@ -68,7 +106,8 @@ function useNaturalFlow() {
 
   return {
     flowNaturally,
-    protectFlow
+    protectFlow,
+    presence
   };
 }
 ```
@@ -78,34 +117,42 @@ function useNaturalFlow() {
 - Energy preservation
 - Flow state guarding
 - Pattern protection
+- Context preservation
+- Expression authenticity
 
 ### 3. Organic Growth
 - Flow state evolution
 - Energy efficiency learning
 - Recovery optimization
 - Pattern recognition
+- Communication style adaptation
+- Presence enhancement
 
-## Natural Usage
+## Best Practices
 
-### 1. Flow Movement
-```typescript
-const { flowNaturally } = useNaturalFlow();
+### 1. Flow Protection
+- Guard authentic expression
+- Maintain natural conditions
+- Enable fluid communication
+- Preserve interaction context
+- Honor energy cycles
+- Respect recovery needs
 
-// Move with natural rhythm
-if (energy.mental > 0.7) {
-  flowNaturally(FlowState.FLOW);
-}
-```
+### 2. Pattern Recognition
+- Learn communication styles
+- Enable natural adaptation
+- Maintain authenticity
+- Protect expression patterns
+- Evolve flow states
+- Optimize transitions
 
-### 2. Natural Protection
-```typescript
-const { protectFlow } = useNaturalFlow();
-
-// Let system protect itself
-useEffect(() => {
-  protectFlow();
-}, [energy]);
-```
+### 3. Energy Management
+- Track engagement quality
+- Maintain natural momentum
+- Enable sustained presence
+- Manage interruptions naturally
+- Balance energy expenditure
+- Support recovery cycles
 
 ## Evolution Path
 
@@ -114,9 +161,13 @@ useEffect(() => {
 - Flow state optimization
 - Recovery pattern learning
 - Energy efficiency evolution
+- Presence enhancement
+- Context awareness
 
 ### 2. Future Evolution
 - Intuitive state prediction
 - Dynamic flow adaptation
 - Enhanced natural protection
-- Deeper pattern understanding 
+- Deeper pattern understanding
+- Seamless presence integration
+- Organic communication flow 
