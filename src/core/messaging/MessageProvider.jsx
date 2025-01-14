@@ -1,121 +1,149 @@
-import React, { createContext, useContext, useEffect, useState, useRef } from 'react'
-import { db } from '@/core/firebase'
+import React, { createContext, useContext, useEffect, useState } from 'react'
+import { db } from '../firebase'
 import { collection, addDoc, onSnapshot, query, orderBy, Timestamp } from 'firebase/firestore'
-import { useAuth } from '@/core/auth/AuthProvider'
-import { BehaviorSubject } from 'rxjs'
+import { useAuth } from '../auth/AuthProvider'
 
-const GOLDEN_RATIO = 1.618033988749895
-const NATURAL_CYCLE = 8000
+const MessagesContext = createContext(undefined)
+const IMGBB_API_KEY = import.meta.env.VITE_IMGBB_API_KEY
 
-/**
- * @typedef {Object} MessageResonance
- * @property {number} natural - Natural resonance level
- * @property {number} harmonic - Harmonic resonance level
- * @property {number} flow - Flow resonance level
- */
-
-/**
- * @typedef {Object} Message
- * @property {string} id - Message ID
- * @property {string} text - Message content
- * @property {string} userId - User ID who sent the message
- * @property {string} userName - Name of the user who sent the message
- * @property {import('firebase/firestore').Timestamp} timestamp - When the message was sent
- * @property {number} energyLevel - Energy level of the message
- * @property {number} coherenceLevel - Coherence level of the message
- * @property {MessageResonance} resonance - Resonance metrics
- */
-
-/**
- * @typedef {Object} MessageContextType
- * @property {Message[]} messages - Array of messages
- * @property {(text: string) => Promise<void>} sendMessage - Function to send a message
- * @property {boolean} loading - Whether messages are loading
- * @property {number} systemResonance - Current system resonance level
- */
-
-const MessageContext = createContext(/** @type {MessageContextType|undefined} */ (undefined))
-
-const resonanceSubject = new BehaviorSubject(0)
-
-/**
- * @param {Object} props
- * @param {React.ReactNode} props.children
- */
 export const MessageProvider = ({ children }) => {
   const [messages, setMessages] = useState([])
+  const [threads, setThreads] = useState({})
   const [loading, setLoading] = useState(true)
-  const [systemResonance, setSystemResonance] = useState(0)
   const { user } = useAuth()
-  const messagesRef = useRef(collection(db, 'messages'))
-  
-  useEffect(() => {
-    if (!user) return
 
-    const q = query(messagesRef.current, orderBy('timestamp', 'asc'))
+  useEffect(() => {
+    if (!user) {
+      console.log('No user, skipping message subscription')
+      setMessages([])
+      setLoading(false)
+      return
+    }
+
+    console.log('Setting up messages subscription')
+    const messagesRef = collection(db, 'messages')
+    const q = query(messagesRef, orderBy('timestamp', 'asc'))
+
     const unsubscribe = onSnapshot(q, (snapshot) => {
+      console.log('Messages snapshot received:', snapshot.size)
       const newMessages = snapshot.docs.map(doc => ({
         id: doc.id,
-        ...doc.data()
+        ...doc.data(),
+        isOwn: doc.data().userId === user.uid
       }))
       setMessages(newMessages)
       setLoading(false)
-      
-      // Calculate system resonance
-      const totalResonance = newMessages.reduce((sum, msg) => 
-        sum + (msg.resonance?.natural || 0) * GOLDEN_RATIO +
-        (msg.resonance?.harmonic || 0) +
-        (msg.resonance?.flow || 0), 0)
-      
-      const avgResonance = totalResonance / (newMessages.length || 1)
-      setSystemResonance(avgResonance)
-      resonanceSubject.next(avgResonance)
+    }, (error) => {
+      console.error('Error in messages subscription:', error)
+      setLoading(false)
     })
 
-    return () => unsubscribe()
+    return () => {
+      console.log('Cleaning up messages subscription')
+      unsubscribe()
+    }
   }, [user])
 
-  const sendMessage = async (text) => {
-    if (!user) return
+  const uploadToImgBB = async (file) => {
+    console.log('Uploading file to ImgBB:', file.name)
+    const formData = new FormData()
+    formData.append('image', file)
+    formData.append('key', IMGBB_API_KEY)
 
     try {
-      const resonance = {
-        natural: Math.random(),
-        harmonic: Math.random(),
-        flow: Math.random()
+      const response = await fetch('https://api.imgbb.com/1/upload', {
+        method: 'POST',
+        body: formData
+      })
+
+      if (!response.ok) {
+        throw new Error(`ImgBB upload failed: ${response.statusText}`)
       }
 
-      await addDoc(messagesRef.current, {
-        text,
-        userId: user.uid,
-        userName: user.displayName || 'Anonymous',
-        timestamp: Timestamp.now(),
-        energyLevel: Math.random() * 100,
-        coherenceLevel: Math.random(),
-        resonance
-      })
+      const data = await response.json()
+      console.log('ImgBB upload successful:', data)
+
+      if (data.success) {
+        return {
+          fileUrl: data.data.url,
+          fileName: file.name,
+          fileType: file.type,
+          thumbnailUrl: data.data.thumb?.url
+        }
+      } else {
+        throw new Error('ImgBB upload failed')
+      }
     } catch (error) {
-      console.error('Error sending message:', error)
+      console.error('Error uploading to ImgBB:', error)
+      throw new Error('Failed to upload file: ' + error.message)
     }
   }
 
+  const sendMessage = async (text, spaceType = 'Commons', file = null) => {
+    if (!user) {
+      console.error('No user found')
+      throw new Error('You must be signed in to send messages')
+    }
+
+    setLoading(true)
+    try {
+      let fileData = null
+
+      if (file) {
+        if (file.size > 10 * 1024 * 1024) { // 10MB limit
+          throw new Error('File size must be less than 10MB')
+        }
+        fileData = await uploadToImgBB(file)
+      }
+
+      const messageData = {
+        text: text || '',
+        userId: user.uid,
+        userName: user.displayName || 'Anonymous',
+        timestamp: Timestamp.now(),
+        spaceType,
+        ...(fileData && {
+          fileUrl: fileData.fileUrl,
+          fileName: fileData.fileName,
+          fileType: fileData.fileType,
+          thumbnailUrl: fileData.thumbnailUrl
+        })
+      }
+
+      console.log('Saving message:', messageData)
+      const docRef = await addDoc(collection(db, 'messages'), messageData)
+      console.log('Message saved with ID:', docRef.id)
+      return docRef
+    } catch (error) {
+      console.error('Error in sendMessage:', error)
+      throw error
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const loadThread = async (messageId) => {
+    setThreads(prev => ({
+      ...prev,
+      [messageId]: []
+    }))
+  }
+
   return (
-    <MessageContext.Provider value={{
+    <MessagesContext.Provider value={{
       messages,
+      threads,
       sendMessage,
-      loading,
-      systemResonance
+      loadThread,
+      loading
     }}>
       {children}
-    </MessageContext.Provider>
+    </MessagesContext.Provider>
   )
 }
 
-/**
- * @returns {MessageContextType}
- */
 export const useMessages = () => {
-  const context = useContext(MessageContext)
+  const context = useContext(MessagesContext)
   if (context === undefined) {
     throw new Error('useMessages must be used within a MessageProvider')
   }

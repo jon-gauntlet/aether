@@ -1,81 +1,103 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
-import { auth } from '@/core/firebase'
+import { auth } from '../firebase'
 import { 
   signInWithPopup, 
-  GoogleAuthProvider, 
+  GoogleAuthProvider,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword, 
   onAuthStateChanged,
+  signOut as firebaseSignOut
 } from 'firebase/auth'
 
-/**
- * @typedef {Object} ConsciousnessState
- * @property {number} energyLevel - The current energy level
- * @property {boolean} isCoherent - Whether the consciousness is coherent
- */
+const AuthContext = createContext(undefined)
 
-/**
- * @typedef {Object} AuthContextType
- * @property {import('firebase/auth').User|null} user - The current user
- * @property {ConsciousnessState} consciousnessState - The consciousness state
- * @property {() => Promise<void>} signIn - Function to sign in
- * @property {() => Promise<void>} signOut - Function to sign out
- * @property {boolean} loading - Whether auth is loading
- */
-
-const AuthContext = createContext(/** @type {AuthContextType|undefined} */ (undefined))
-
-/**
- * @param {Object} props
- * @param {React.ReactNode} props.children
- */
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [consciousnessState, setConsciousnessState] = useState({
-    energyLevel: 0,
-    isCoherent: false
-  })
+  const [error, setError] = useState(null)
 
   useEffect(() => {
+    console.log('Setting up auth state listener')
     const unsubscribe = onAuthStateChanged(auth, (user) => {
+      console.log('Auth state changed:', user ? 'User authenticated' : 'No user')
       setUser(user)
       setLoading(false)
     })
     return () => unsubscribe()
   }, [])
 
-  const signIn = async () => {
+  const signInWithGoogle = async () => {
+    console.log('Attempting Google sign in')
     const provider = new GoogleAuthProvider()
     try {
-      await signInWithPopup(auth, provider)
+      setError(null)
+      const result = await signInWithPopup(auth, provider)
+      console.log('Sign in successful:', result.user.email)
+      return result.user
     } catch (error) {
-      console.error('Error signing in:', error)
+      console.error('Error signing in with Google:', error)
+      setError(error.message)
+      throw error
+    }
+  }
+
+  const signInWithEmail = async (email, password) => {
+    console.log('Attempting email sign in:', email)
+    try {
+      setError(null)
+      const result = await signInWithEmailAndPassword(auth, email, password)
+      console.log('Sign in successful:', result.user.email)
+      return result.user
+    } catch (error) {
+      console.error('Error signing in with email:', error)
+      setError(error.message)
+      throw error
+    }
+  }
+
+  const signUpWithEmail = async (email, password) => {
+    console.log('Attempting email sign up:', email)
+    try {
+      setError(null)
+      const result = await createUserWithEmailAndPassword(auth, email, password)
+      console.log('Sign up successful:', result.user.email)
+      return result.user
+    } catch (error) {
+      console.error('Error signing up with email:', error)
+      setError(error.message)
+      throw error
     }
   }
 
   const signOut = async () => {
+    console.log('Attempting sign out')
     try {
-      await auth.signOut()
+      await firebaseSignOut(auth)
+      console.log('Sign out successful')
     } catch (error) {
       console.error('Error signing out:', error)
+      setError(error.message)
+      throw error
     }
   }
+
+  console.log('AuthProvider state:', { user, loading, error })
 
   return (
     <AuthContext.Provider value={{
       user,
-      consciousnessState,
-      signIn,
+      signInWithGoogle,
+      signInWithEmail,
+      signUpWithEmail,
       signOut,
-      loading
+      loading,
+      error
     }}>
       {children}
     </AuthContext.Provider>
   )
 }
 
-/**
- * @returns {AuthContextType}
- */
 export const useAuth = () => {
   const context = useContext(AuthContext)
   if (context === undefined) {
