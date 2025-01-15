@@ -1,5 +1,5 @@
 """RAG system implementation."""
-from typing import List, Optional, Dict, Any, Tuple
+from typing import List, Optional, Dict, Any, Tuple, Union, AsyncIterator, Callable
 import os
 import json
 import asyncio
@@ -24,8 +24,25 @@ from rag_aether.core.logging import get_logger, setup_logging
 from rag_aether.core.performance import (
     with_performance_monitoring, performance_section, monitor
 )
+from rag_aether.ai.hybrid_search import HybridRetriever
+from rag_aether.ai.query_expansion import QueryProcessor
+from rag_aether.ai.document_processor import DocumentProcessor, DocumentChunk
 import torch
 from sentence_transformers import CrossEncoder
+from rag_aether.core.cache import QueryCache, EmbeddingCache
+from rag_aether.core.index import ShardedIndex
+from rag_aether.core.streaming import ResultStreamer
+from rag_aether.core.bulk import BulkIngester, BulkRetriever, BulkProgress
+from rag_aether.core.rate_limit import RateLimitManager, RateLimitConfig
+from rag_aether.core.quality import (
+    QualityScorer, SourceAttributor, ResultDiversifier,
+    QualityMetrics, SourceAttribution
+)
+from rag_aether.core.webhooks import (
+    WebhookManager, WebhookEvent,
+    EVENT_QUERY, EVENT_INGESTION, EVENT_ERROR,
+    EVENT_RATE_LIMIT, EVENT_QUALITY
+)
 
 # Set up logging and performance monitoring
 setup_logging()
@@ -37,13 +54,100 @@ env_path = Path(__file__).parents[3] / '.env'
 logger.info("Loading environment", extra={"env_path": str(env_path)})
 load_dotenv(env_path)
 
+class CrossEncoderReranker:
+    """Cross-encoder for reranking retrieval results."""
+    
+    def __init__(self, model_name: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"):
+        """Initialize cross-encoder model."""
+        self.model_name = model_name
+        self.model = CrossEncoder(model_name)
+        logger.info(f"Initialized cross-encoder reranker with model: {model_name}")
+    
+    @with_performance_monitoring(operation="rerank", component="cross_encoder")
+    def rerank(
+        self,
+        query: str,
+        texts: List[str],
+        scores: Optional[List[float]] = None,
+        top_k: Optional[int] = None
+    ) -> List[Tuple[str, float]]:
+        """Rerank texts using cross-encoder scores."""
+        try:
+            # Prepare text pairs for cross-encoder
+            pairs = [[query, text] for text in texts]
+            
+            # Get cross-encoder scores
+            with performance_section("score_calculation", "cross_encoder"):
+                cross_scores = self.model.predict(pairs)
+            
+            # Combine with initial scores if provided
+            if scores is not None:
+                # Normalize both score distributions
+                cross_scores = (cross_scores - cross_scores.min()) / (cross_scores.max() - cross_scores.min())
+                norm_scores = (np.array(scores) - min(scores)) / (max(scores) - min(scores))
+                
+                # Weighted combination (0.7 for cross-encoder, 0.3 for initial scores)
+                final_scores = 0.7 * cross_scores + 0.3 * norm_scores
+            else:
+                final_scores = cross_scores
+            
+            # Sort by scores
+            ranked_results = sorted(
+                zip(texts, final_scores),
+                key=lambda x: x[1],
+                reverse=True
+            )
+            
+            # Return top k if specified
+            if top_k is not None:
+                ranked_results = ranked_results[:top_k]
+            
+            return ranked_results
+            
+        except Exception as e:
+            logger.error(f"Reranking failed: {str(e)}")
+            raise RetrievalError(
+                f"Failed to rerank results: {str(e)}",
+                operation="rerank",
+                component="cross_encoder"
+            )
+
 class BaseRAG:
     """Base RAG system implementation."""
     
-    def __init__(self, model_name: str = "BAAI/bge-large-en-v1.5"):
+    def __init__(
+        self,
+        model_name: str = "BAAI/bge-large-en-v1.5",
+        reranker_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2",
+        dense_weight: float = 0.7,
+        use_query_expansion: bool = True,
+        use_query_reformulation: bool = True,
+        max_query_variations: int = 3,
+        chunk_size: int = 1000,
+        chunk_overlap: int = 200,
+        merge_chunks: bool = True,
+        query_cache_size: int = 1000,
+        embedding_cache_size: int = 10000,
+        num_shards: int = 2,
+        index_type: str = "IVFFlat",
+        use_gpu: bool = False,
+        stream_chunk_size: int = 5,
+        stream_buffer_size: int = 100,
+        bulk_batch_size: int = 100,
+        max_concurrent_batches: int = 5,
+        rate_limit_config: Optional[Dict[str, RateLimitConfig]] = None,
+        min_confidence_threshold: float = 0.7,
+        min_relevance_threshold: float = 0.6,
+        diversity_threshold: float = 0.3,
+        max_similarity: float = 0.8,
+        webhook_urls: Optional[Dict[str, str]] = None,
+        webhook_secret: Optional[str] = None
+    ):
+        """Initialize RAG system."""
         self.model_name = model_name
         self.logger = logger.with_context(model=model_name)
         
+        # Initialize embedding model
         with performance_section("init", "embedding_model"):
             try:
                 self.embedding_model = SentenceTransformer(model_name)
@@ -54,179 +158,606 @@ class BaseRAG:
                     component="embedding_model",
                     details={"model_name": model_name}
                 )
-            
+        
+        # Initialize cross-encoder reranker
+        with performance_section("init", "cross_encoder"):
+            try:
+                self.reranker = CrossEncoderReranker(reranker_model)
+            except Exception as e:
+                raise EmbeddingError(
+                    f"Failed to load reranker model: {str(e)}",
+                    operation="init",
+                    component="cross_encoder",
+                    details={"model_name": reranker_model}
+                )
+        
+        # Initialize hybrid retriever
+        with performance_section("init", "hybrid_retriever"):
+            try:
+                self.hybrid_retriever = HybridRetriever(dense_weight=dense_weight)
+            except Exception as e:
+                raise RetrievalError(
+                    f"Failed to initialize hybrid retriever: {str(e)}",
+                    operation="init",
+                    component="hybrid_retriever"
+                )
+        
+        # Initialize query processor
+        with performance_section("init", "query_processor"):
+            try:
+                self.query_processor = QueryProcessor(
+                    use_expansion=use_query_expansion,
+                    use_reformulation=use_query_reformulation,
+                    max_variations=max_query_variations
+                )
+            except Exception as e:
+                raise RAGError(
+                    f"Failed to initialize query processor: {str(e)}",
+                    operation="init",
+                    component="query_processor"
+                )
+        
+        # Initialize document processor
+        with performance_section("init", "document_processor"):
+            try:
+                self.document_processor = DocumentProcessor(
+                    chunk_size=chunk_size,
+                    chunk_overlap=chunk_overlap
+                )
+            except Exception as e:
+                raise RAGError(
+                    f"Failed to initialize document processor: {str(e)}",
+                    operation="init",
+                    component="document_processor"
+                )
+        
+        self.merge_chunks = merge_chunks
         self.index = None
-        self.metadata = []
-        self.batch_processor = BatchProcessor()
+        self.chunks: List[DocumentChunk] = []
         self.initialize_index()
         self.logger.info("BaseRAG initialized successfully")
-
-    @with_performance_monitoring(operation="initialize_index", component="faiss_index")
-    def initialize_index(self):
-        """Initialize FAISS index."""
-        try:
-            dimension = self.embedding_model.get_sentence_embedding_dimension()
-            self.index = faiss.IndexIDMap(faiss.IndexFlatIP(dimension))
-            self.logger.info(
-                "Index initialized",
-                extra={"dimension": dimension}
-            )
-        except Exception as e:
-            raise IndexError(
-                f"Failed to initialize index: {str(e)}",
-                operation="initialize_index",
-                component="faiss_index"
-            )
-
-    @with_performance_monitoring(operation="encode_texts", component="embedding")
-    @with_error_handling(operation="_encode_texts_batch", component="embedding")
-    async def _encode_texts_batch(self, texts: List[str]) -> np.ndarray:
-        """Encode a batch of texts to embeddings with caching."""
-        cache_key = str(hash(tuple(texts)))
-        cached = self.batch_processor.get_cached(cache_key)
         
-        if cached is not None:
-            self.logger.debug(
-                "Using cached embeddings",
-                extra={"num_texts": len(texts)}
-            )
-            return cached
-            
-        try:
-            with performance_section("model_encode", "embedding"):
-                embeddings = self.embedding_model.encode(texts)
-                embeddings = embeddings / np.linalg.norm(embeddings, axis=1, keepdims=True)
-                
-            self.batch_processor.cache_result(cache_key, embeddings)
-            
-            self.logger.info(
-                "Generated embeddings",
-                extra={
-                    "num_texts": len(texts),
-                    "embedding_dim": embeddings.shape[1]
-                }
-            )
-            return embeddings
-            
-        except Exception as e:
-            raise EmbeddingError(
-                f"Failed to generate embeddings: {str(e)}",
-                operation="_encode_texts_batch",
-                component="embedding_model",
-                details={"num_texts": len(texts)}
-            )
-
-    @with_performance_monitoring(operation="ingest", component="ingestion")
-    @with_error_handling(operation="ingest_text", component="ingestion")
-    async def ingest_text(self, text: str, metadata: Dict[str, Any] = None) -> None:
-        """Ingest a single text with metadata."""
-        if metadata is None:
-            metadata = {}
-            
-        try:
-            # Get embedding
-            with performance_section("get_embedding", "embedding"):
-                embedding = (await self._encode_texts_batch([text]))[0]
-            
-            # Add to index
-            with performance_section("add_to_index", "faiss_index"):
-                doc_id = len(self.metadata)
-                self.metadata.append(metadata)
-                self.index.add_with_ids(
-                    embedding.reshape(1, -1),
-                    np.array([doc_id], dtype=np.int64)
+        # Initialize caches
+        with performance_section("init", "cache"):
+            try:
+                self.query_cache = QueryCache(max_size=query_cache_size)
+                self.embedding_cache = EmbeddingCache(max_size=embedding_cache_size)
+                logger.info(
+                    "Initialized caches",
+                    extra={
+                        "query_cache_size": query_cache_size,
+                        "embedding_cache_size": embedding_cache_size
+                    }
                 )
+            except Exception as e:
+                raise RAGError(
+                    f"Failed to initialize caches: {str(e)}",
+                    operation="init",
+                    component="cache"
+                )
+        
+        # Initialize sharded index
+        with performance_section("init", "sharded_index"):
+            try:
+                self.index = ShardedIndex(
+                    dimension=384,  # BGE model dimension
+                    num_shards=num_shards,
+                    index_type=index_type,
+                    use_gpu=use_gpu
+                )
+                logger.info(
+                    "Initialized sharded index",
+                    extra={
+                        "num_shards": num_shards,
+                        "index_type": index_type,
+                        "use_gpu": use_gpu
+                    }
+                )
+            except Exception as e:
+                raise IndexError(
+                    f"Failed to initialize sharded index: {str(e)}",
+                    operation="init",
+                    component="sharded_index"
+                )
+        
+        # Initialize result streamer
+        with performance_section("init", "streamer"):
+            try:
+                self.streamer = ResultStreamer(
+                    chunk_size=stream_chunk_size,
+                    buffer_size=stream_buffer_size
+                )
+                logger.info(
+                    "Initialized result streamer",
+                    extra={
+                        "chunk_size": stream_chunk_size,
+                        "buffer_size": stream_buffer_size
+                    }
+                )
+            except Exception as e:
+                raise RAGError(
+                    f"Failed to initialize result streamer: {str(e)}",
+                    operation="init",
+                    component="streamer"
+                )
+        
+        # Initialize bulk processors
+        with performance_section("init", "bulk"):
+            try:
+                self.bulk_ingester = BulkIngester(
+                    rag_system=self,
+                    batch_size=bulk_batch_size,
+                    max_concurrent_batches=max_concurrent_batches
+                )
+                self.bulk_retriever = BulkRetriever(
+                    rag_system=self,
+                    batch_size=bulk_batch_size,
+                    max_concurrent_batches=max_concurrent_batches
+                )
+                logger.info(
+                    "Initialized bulk processors",
+                    extra={
+                        "batch_size": bulk_batch_size,
+                        "max_concurrent_batches": max_concurrent_batches
+                    }
+                )
+            except Exception as e:
+                raise RAGError(
+                    f"Failed to initialize bulk processors: {str(e)}",
+                    operation="init",
+                    component="bulk"
+                )
+        
+        # Initialize rate limit manager
+        with performance_section("init", "rate_limit"):
+            try:
+                self.rate_limit_manager = RateLimitManager()
+                if rate_limit_config:
+                    for component, config in rate_limit_config.items():
+                        self.rate_limit_manager.get_limiter(component, config)
+                logger.info("Initialized rate limit manager")
+            except Exception as e:
+                raise RAGError(
+                    f"Failed to initialize rate limit manager: {str(e)}",
+                    operation="init",
+                    component="rate_limit"
+                )
+        
+        # Initialize quality components
+        with performance_section("init", "quality"):
+            try:
+                self.quality_scorer = QualityScorer(
+                    min_confidence_threshold=min_confidence_threshold,
+                    min_relevance_threshold=min_relevance_threshold
+                )
+                self.source_attributor = SourceAttributor()
+                self.result_diversifier = ResultDiversifier(
+                    diversity_threshold=diversity_threshold,
+                    max_similarity=max_similarity
+                )
+                logger.info("Initialized quality components")
+            except Exception as e:
+                raise RAGError(
+                    f"Failed to initialize quality components: {str(e)}",
+                    operation="init",
+                    component="quality"
+                )
+        
+        # Initialize webhook manager
+        with performance_section("init", "webhooks"):
+            try:
+                self.webhook_manager = WebhookManager()
+                
+                if webhook_urls:
+                    for event_type, url in webhook_urls.items():
+                        client = WebhookClient(
+                            url=url,
+                            secret=webhook_secret
+                        )
+                        self.webhook_manager.subscribe(event_type, client)
+                
+                logger.info(
+                    "Initialized webhook manager",
+                    extra={"webhook_urls": webhook_urls or {}}
+                )
+            except Exception as e:
+                raise RAGError(
+                    f"Failed to initialize webhook manager: {str(e)}",
+                    operation="init",
+                    component="webhooks"
+                )
+    
+    @with_performance_monitoring(operation="ingest", component="ingestion")
+    async def ingest_text(
+        self,
+        text: Union[str, DocumentChunk],
+        metadata: Optional[Dict[str, Any]] = None,
+        doc_id: Optional[str] = None
+    ) -> None:
+        """Ingest text into the system with rate limiting."""
+        try:
+            # Apply rate limit
+            await self.rate_limit_manager.get_limiter("ingestion").check_rate_limit()
+            
+            # Process document if raw text
+            if isinstance(text, str):
+                chunks = self.document_processor.process_document(
+                    text,
+                    metadata=metadata,
+                    doc_id=doc_id
+                )
+                
+                # Optionally merge chunks
+                if self.merge_chunks:
+                    chunks = self.document_processor.merge_chunks(chunks)
+            else:
+                chunks = [text]
+            
+            # Get embeddings for all chunks
+            with performance_section("chunk_embedding", "embedding"):
+                chunk_texts = [chunk.text for chunk in chunks]
+                embeddings = await self._encode_texts_batch(chunk_texts)
+            
+            # Add chunks and embeddings to index
+            with performance_section("index_update", "sharded_index"):
+                chunk_ids = np.array([len(self.chunks) + i for i in range(len(chunks))])
+                self.index.add(embeddings, chunk_ids)
+                self.chunks.extend(chunks)
+            
+            # Update hybrid retriever
+            with performance_section("hybrid_index", "hybrid"):
+                self.hybrid_retriever.index([c.text for c in self.chunks])
             
             self.logger.info(
                 "Text ingested successfully",
                 extra={
+                    "num_chunks": len(chunks),
+                    "avg_chunk_size": np.mean([len(c.text) for c in chunks])
+                }
+            )
+            
+            # Publish ingestion event
+            await self._publish_event(
+                event_type=EVENT_INGESTION,
+                data={
                     "doc_id": doc_id,
+                    "num_chunks": len(chunks),
                     "metadata": metadata
                 }
             )
             
         except Exception as e:
-            if isinstance(e, RAGError):
-                raise
-            raise MetadataError(
-                f"Failed to ingest text: {str(e)}",
-                operation="ingest_text",
-                component="ingestion",
-                details={"metadata": metadata}
+            # Publish error event
+            await self._publish_event(
+                event_type=EVENT_ERROR,
+                data={
+                    "operation": "ingest",
+                    "error": str(e),
+                    "doc_id": doc_id
+                }
             )
-
-    @with_performance_monitoring(operation="retrieve", component="retrieval")
-    @with_error_handling(operation="retrieve_with_fusion", component="retrieval")
+            raise
+    
+    @track_operation("retrieve", "retrieval")
     async def retrieve_with_fusion(
         self,
         query: str,
         k: int = 5,
-        relevant_ids: Optional[List[int]] = None,
-        metadata_filters: Optional[Dict[str, Any]] = None
-    ) -> Tuple[List[str], List[Dict[str, Any]], Dict[str, float]]:
-        """Retrieve relevant texts with metadata filtering."""
+        rerank_k: Optional[int] = None,
+        metadata_filter: Optional[Dict[str, Any]] = None,
+        use_query_processing: bool = True,
+        return_contexts: bool = False,
+        min_confidence: Optional[float] = None,
+        diversify_results: bool = True
+    ) -> Dict[str, Any]:
+        """Retrieve relevant texts using query with hybrid search, reranking, and quality metrics."""
         try:
-            # Get query embedding
-            with performance_section("query_embedding", "embedding"):
-                query_embedding = (await self._encode_texts_batch([query]))[0]
+            # Apply rate limit
+            await self.rate_limit_manager.get_limiter("retrieval").check_rate_limit()
             
-            # Search index
-            with performance_section("faiss_search", "faiss_index"):
-                scores, doc_ids = self.index.search(
-                    query_embedding.reshape(1, -1),
-                    k
+            # Check query cache
+            cache_key = self.query_cache.get_key(
+                query=query,
+                k=k,
+                metadata_filter=metadata_filter
+            )
+            cached_results = self.query_cache.get(cache_key)
+            if cached_results is not None:
+                logger.info("Using cached query results")
+                return cached_results
+            
+            # Process query variations
+            if use_query_processing:
+                with performance_section("query_processing", "query_processor"):
+                    query_variations = self.query_processor.process_query(query)
+                    logger.info(
+                        "Generated query variations",
+                        extra={"num_variations": len(query_variations)}
+                    )
+            else:
+                query_variations = [query]
+            
+            # Get embeddings for all variations
+            with performance_section("query_embedding", "embedding"):
+                query_embeddings = await self._encode_texts_batch(query_variations)
+            
+            # Initialize results container
+            all_results = []
+            seen_chunks = set()
+            
+            # Process each query variation
+            for q, q_embedding in zip(query_variations, query_embeddings):
+                # FAISS search
+                initial_k = max(rerank_k or k * 3, k * 2)
+                with performance_section("faiss_search", "sharded_index"):
+                    D, I = self.index.search(q_embedding.reshape(1, -1), initial_k)
+                
+                # Prepare dense results for hybrid search
+                dense_results = [
+                    (int(idx), float(1 / (1 + dist)))
+                    for dist, idx in zip(D[0], I[0])
+                    if idx != -1
+                ]
+                
+                # Hybrid search
+                with performance_section("hybrid_search", "hybrid"):
+                    hybrid_results = self.hybrid_retriever.hybrid_search(
+                        q,
+                        dense_results,
+                        k=initial_k
+                    )
+                
+                # Filter and format results
+                with performance_section("filter_results", "retrieval"):
+                    for idx, score in hybrid_results:
+                        if idx < len(self.chunks):
+                            chunk = self.chunks[idx]
+                            
+                            # Skip if we've seen this chunk
+                            if chunk.chunk_id in seen_chunks:
+                                continue
+                            
+                            # Apply metadata filter
+                            if metadata_filter:
+                                if not all(
+                                    chunk.metadata.get(k) == v
+                                    for k, v in metadata_filter.items()
+                                ):
+                                    continue
+                            
+                            seen_chunks.add(chunk.chunk_id)
+                            
+                            result = {
+                                "text": chunk.text,
+                                "metadata": chunk.metadata,
+                                "score": score,
+                                "matched_query": q
+                            }
+                            
+                            if return_contexts:
+                                # Add surrounding context
+                                context = self._get_chunk_context(chunk)
+                                result["context"] = context
+                            
+                            all_results.append(result)
+            
+            # Rerank combined results
+            with performance_section("rerank", "cross_encoder"):
+                if all_results:
+                    texts_to_rerank = [r["text"] for r in all_results]
+                    initial_scores = [r["score"] for r in all_results]
+                    
+                    reranked = self.reranker.rerank(
+                        query,  # Use original query for reranking
+                        texts_to_rerank,
+                        scores=initial_scores,
+                        top_k=k
+                    )
+                    
+                    # Update results with reranked scores
+                    reranked_results = []
+                    for text, score in reranked:
+                        for result in all_results:
+                            if result["text"] == text:
+                                result["score"] = float(score)
+                                reranked_results.append(result)
+                                break
+                    
+                    all_results = reranked_results[:k]
+            
+            # Get embeddings for quality metrics
+            result_embeddings = None
+            if len(all_results) > 0:
+                with performance_section("quality_embeddings", "embedding"):
+                    texts_to_encode = [r["text"] for r in all_results]
+                    result_embeddings = await self._encode_texts_batch(texts_to_encode)
+            
+            # Calculate quality metrics
+            with performance_section("quality_metrics", "quality"):
+                quality_metrics = self.quality_scorer.calculate_metrics(
+                    query=query,
+                    results=all_results,
+                    embeddings=result_embeddings
                 )
             
-            # Apply metadata filters
-            with performance_section("filter_results", "retrieval"):
-                filtered_results = []
-                for score, doc_id in zip(scores[0], doc_ids[0]):
-                    if doc_id == -1:  # FAISS padding
-                        continue
-                        
-                    metadata = self.metadata[doc_id]
-                    if self._matches_filters(metadata, metadata_filters):
-                        filtered_results.append((score, doc_id))
-                
-                # Sort by score
-                filtered_results.sort(reverse=True)
+            # Filter by confidence if needed
+            if min_confidence is not None and quality_metrics.confidence_score < min_confidence:
+                logger.warning(
+                    "Results filtered due to low confidence",
+                    extra={
+                        "confidence_score": quality_metrics.confidence_score,
+                        "min_confidence": min_confidence
+                    }
+                )
+                all_results = []
             
-            # Prepare response
-            texts = []
-            metadata_list = []
-            metrics = {
-                "similarity_scores": [],
-                "num_results": len(filtered_results)
+            # Diversify results if requested
+            if diversify_results and len(all_results) > 0:
+                with performance_section("diversify", "quality"):
+                    all_results = self.result_diversifier.diversify_results(
+                        results=all_results,
+                        embeddings=result_embeddings,
+                        min_results=k
+                    )
+            
+            # Add source attribution
+            with performance_section("attribution", "quality"):
+                attributions = self.source_attributor.add_attribution(
+                    results=all_results,
+                    quality_metrics=quality_metrics
+                )
+            
+            # Update results with quality information
+            response = {
+                "results": all_results,
+                "quality_metrics": quality_metrics,
+                "attributions": attributions,
+                "metadata": {
+                    "query_length": len(query),
+                    "num_variations": len(query_variations),
+                    "num_results": len(all_results),
+                    "k": k,
+                    "rerank_k": rerank_k,
+                    "has_filter": metadata_filter is not None,
+                    "confidence_score": quality_metrics.confidence_score,
+                    "diversity_score": quality_metrics.diversity_score
+                }
             }
             
-            for score, doc_id in filtered_results:
-                texts.append(self.texts[doc_id])
-                metadata_list.append(self.metadata[doc_id])
-                metrics["similarity_scores"].append(float(score))
+            # Cache results
+            self.query_cache.set(cache_key, response)
             
-            self.logger.info(
-                "Retrieval successful",
+            # Log metrics
+            logger.info(
+                "Retrieved and processed results",
                 extra={
-                    "num_results": len(filtered_results),
-                    "max_score": max(metrics["similarity_scores"]) if metrics["similarity_scores"] else 0
+                    "query_length": len(query),
+                    "num_results": len(all_results),
+                    "confidence_score": quality_metrics.confidence_score,
+                    "diversity_score": quality_metrics.diversity_score
                 }
             )
             
-            return texts, metadata_list, metrics
+            # Publish query event
+            await self._publish_event(
+                event_type=EVENT_QUERY,
+                data={
+                    "query": query,
+                    "num_results": len(all_results),
+                    "quality_metrics": asdict(quality_metrics),
+                    "metadata": response["metadata"]
+                }
+            )
+            
+            return response
             
         except Exception as e:
-            if isinstance(e, RAGError):
-                raise
-            raise RetrievalError(
-                f"Failed to retrieve results: {str(e)}",
-                operation="retrieve_with_fusion",
-                component="retrieval",
-                details={
-                    "query": query,
-                    "k": k,
-                    "metadata_filters": metadata_filters
+            # Publish error event
+            await self._publish_event(
+                event_type=EVENT_ERROR,
+                data={
+                    "operation": "retrieve",
+                    "error": str(e),
+                    "query": query
                 }
             )
+            raise
+    
+    def _get_chunk_context(self, chunk: DocumentChunk) -> Dict[str, Any]:
+        """Get surrounding context for a chunk."""
+        context = {
+            "section_title": chunk.section_title,
+            "hierarchy_level": chunk.hierarchy_level,
+            "chunk_number": chunk.metadata["chunk_number"],
+            "total_chunks": chunk.metadata["total_chunks"]
+        }
+        
+        # Get previous chunk if available
+        if chunk.prev_chunk_id is not None:
+            for c in self.chunks:
+                if c.chunk_id == chunk.prev_chunk_id:
+                    context["prev_chunk"] = {
+                        "text": c.text,
+                        "section_title": c.section_title
+                    }
+                    break
+        
+        # Get next chunk if available
+        if chunk.next_chunk_id is not None:
+            for c in self.chunks:
+                if c.chunk_id == chunk.next_chunk_id:
+                    context["next_chunk"] = {
+                        "text": c.text,
+                        "section_title": c.section_title
+                    }
+                    break
+        
+        return context
+
+    @with_performance_monitoring(operation="encode_texts", component="embedding")
+    @with_error_handling(operation="_encode_texts_batch", component="embedding")
+    async def _encode_texts_batch(self, texts: List[str]) -> np.ndarray:
+        """Encode a batch of texts to embeddings with caching and rate limiting."""
+        try:
+            # Apply rate limit
+            await self.rate_limit_manager.get_limiter("embedding").check_rate_limit()
+            
+            # Check cache for each text
+            embeddings = []
+            texts_to_encode = []
+            text_indices = []
+            
+            for i, text in enumerate(texts):
+                cache_key = self.embedding_cache.get_key(text)
+                cached_embedding = self.embedding_cache.get(cache_key)
+                
+                if cached_embedding is not None:
+                    embeddings.append(cached_embedding)
+                else:
+                    texts_to_encode.append(text)
+                    text_indices.append(i)
+            
+            # Encode missing texts
+            if texts_to_encode:
+                with performance_section("model_encode", "embedding"):
+                    new_embeddings = self.embedding_model.encode(texts_to_encode)
+                    new_embeddings = new_embeddings / np.linalg.norm(new_embeddings, axis=1, keepdims=True)
+                    
+                    # Cache new embeddings
+                    for text, embedding in zip(texts_to_encode, new_embeddings):
+                        cache_key = self.embedding_cache.get_key(text)
+                        self.embedding_cache.set(cache_key, embedding)
+                    
+                    # Insert new embeddings in correct positions
+                    for idx, embedding in zip(text_indices, new_embeddings):
+                        embeddings.insert(idx, embedding)
+            
+            # Publish rate limit event if delayed
+            if self.rate_limit_manager:
+                limiter = self.rate_limit_manager.get_limiter("embedding")
+                metrics = limiter.get_metrics()
+                
+                if metrics["delayed_requests"] > 0:
+                    await self._publish_event(
+                        event_type=EVENT_RATE_LIMIT,
+                        data={
+                            "component": "embedding",
+                            "metrics": metrics
+                        }
+                    )
+            
+            return np.array(embeddings)
+            
+        except Exception as e:
+            # Publish error event
+            await self._publish_event(
+                event_type=EVENT_ERROR,
+                data={
+                    "operation": "encode_texts",
+                    "error": str(e)
+                }
+            )
+            raise
 
     def _matches_filters(self, metadata: Dict[str, Any], filters: Optional[Dict[str, Any]] = None) -> bool:
         """Check if metadata matches the given filters."""
@@ -684,6 +1215,173 @@ Alternative phrasings:"""
         # Update response format
         result["chat_messages"] = messages
         return result
+
+    def optimize_index(self) -> None:
+        """Optimize the sharded index."""
+        try:
+            with performance_section("optimize", "sharded_index"):
+                self.index.optimize()
+                logger.info("Optimized sharded index")
+        except Exception as e:
+            logger.error(f"Failed to optimize index: {str(e)}")
+            raise IndexError(
+                f"Index optimization failed: {str(e)}",
+                operation="optimize",
+                component="sharded_index"
+            )
+    
+    def save_index(self, directory: str) -> None:
+        """Save the sharded index to disk."""
+        try:
+            with performance_section("save", "sharded_index"):
+                self.index.save(directory)
+                logger.info(f"Saved sharded index to {directory}")
+        except Exception as e:
+            logger.error(f"Failed to save index: {str(e)}")
+            raise IndexError(
+                f"Index save failed: {str(e)}",
+                operation="save",
+                component="sharded_index"
+            )
+    
+    @classmethod
+    def load_index(cls, directory: str) -> None:
+        """Load the sharded index from disk."""
+        try:
+            with performance_section("load", "sharded_index"):
+                index = ShardedIndex.load(directory)
+                logger.info(f"Loaded sharded index from {directory}")
+                return index
+        except Exception as e:
+            logger.error(f"Failed to load index: {str(e)}")
+            raise IndexError(
+                f"Index load failed: {str(e)}",
+                operation="load",
+                component="sharded_index"
+            )
+
+    async def retrieve_with_fusion_stream(
+        self,
+        query: str,
+        k: int = 5,
+        rerank_k: Optional[int] = None,
+        metadata_filter: Optional[Dict[str, Any]] = None,
+        use_query_processing: bool = True,
+        return_contexts: bool = False
+    ) -> AsyncIterator[Dict[str, Any]]:
+        """Stream retrieval results using query with hybrid search and reranking."""
+        try:
+            # Get all results first
+            results = await self.retrieve_with_fusion(
+                query=query,
+                k=k,
+                rerank_k=rerank_k,
+                metadata_filter=metadata_filter,
+                use_query_processing=use_query_processing,
+                return_contexts=return_contexts
+            )
+            
+            # Stream results
+            async for result in self.streamer.stream_results(results):
+                yield result
+                
+        except Exception as e:
+            logger.error(f"Failed to stream results: {str(e)}")
+            raise RAGError(
+                f"Failed to stream results: {str(e)}",
+                operation="retrieve_stream",
+                component="retrieval"
+            )
+    
+    async def query_stream(
+        self,
+        query: str,
+        max_results: int = 5,
+        relevant_ids: Optional[List[int]] = None,
+        metadata_filters: Optional[Dict[str, Any]] = None
+    ) -> AsyncIterator[Dict[str, Any]]:
+        """Stream query results with metadata filtering."""
+        try:
+            # Get relevant texts with streaming
+            async for result in self.retrieve_with_fusion_stream(
+                query=query,
+                k=max_results,
+                metadata_filter=metadata_filters
+            ):
+                # Add query info to result
+                result["query"] = query
+                
+                # Log metrics for each chunk
+                self.metrics.log_query(
+                    query=query,
+                    results=[result],
+                    time_ms=result["streaming_metadata"].get("processed_at", 0)
+                )
+                
+                yield result
+                
+        except Exception as e:
+            self.metrics.log_error(e)
+            raise
+
+    async def bulk_ingest(
+        self,
+        documents: List[Dict[str, Any]],
+        progress_callback: Optional[Callable[[BulkProgress], None]] = None
+    ) -> BulkProgress:
+        """Ingest multiple documents in bulk."""
+        try:
+            return await self.bulk_ingester.ingest_documents(
+                documents,
+                progress_callback
+            )
+        except Exception as e:
+            logger.error(f"Bulk ingestion failed: {str(e)}")
+            raise RAGError("Bulk ingestion failed") from e
+    
+    async def bulk_retrieve(
+        self,
+        queries: List[str],
+        k: int = 5,
+        metadata_filter: Optional[Dict[str, Any]] = None,
+        progress_callback: Optional[Callable[[BulkProgress], None]] = None
+    ) -> AsyncIterator[Dict[str, Any]]:
+        """Retrieve documents for multiple queries in bulk."""
+        try:
+            async for result in self.bulk_retriever.retrieve_documents(
+                queries,
+                k=k,
+                metadata_filter=metadata_filter,
+                progress_callback=progress_callback
+            ):
+                yield result
+        except Exception as e:
+            logger.error(f"Bulk retrieval failed: {str(e)}")
+            raise RAGError("Bulk retrieval failed") from e
+
+    async def _publish_event(
+        self,
+        event_type: str,
+        data: Dict[str, Any],
+        metadata: Optional[Dict[str, Any]] = None,
+        wait_for_delivery: bool = False
+    ) -> None:
+        """Publish webhook event."""
+        try:
+            event = WebhookEvent(
+                event_type=event_type,
+                timestamp=time.time(),
+                data=data,
+                metadata=metadata
+            )
+            
+            await self.webhook_manager.publish_event(
+                event,
+                wait_for_delivery=wait_for_delivery
+            )
+            
+        except Exception as e:
+            logger.error(f"Failed to publish event: {str(e)}")
 
 class MetricsTracker:
     def __init__(self):

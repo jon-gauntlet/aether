@@ -1,6 +1,6 @@
 """Health check system for monitoring system components."""
 import asyncio
-from typing import Dict, Any, List, Optional, Callable, Awaitable
+from typing import Dict, Any, List, Optional, Callable, Awaitable, TypeVar, cast
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 import json
@@ -9,8 +9,39 @@ import numpy as np
 from rag_aether.core.logging import get_logger
 from rag_aether.core.telemetry import collector
 from rag_aether.core.errors import HealthCheckError
+from functools import wraps
+import time
 
 logger = get_logger("health")
+
+T = TypeVar('T')
+
+@dataclass
+class SystemHealth:
+    """Tracks system health metrics and status."""
+    
+    is_healthy: bool = True
+    error_count: int = 0
+    last_check: float = 0.0
+    status_message: str = "Healthy"
+    
+    def check(self) -> bool:
+        """Perform a health check."""
+        self.last_check = time.time()
+        return self.is_healthy
+    
+    def record_error(self, message: str) -> None:
+        """Record an error occurrence."""
+        self.error_count += 1
+        self.status_message = message
+        if self.error_count > 3:
+            self.is_healthy = False
+    
+    def reset(self) -> None:
+        """Reset health status."""
+        self.is_healthy = True
+        self.error_count = 0
+        self.status_message = "Healthy"
 
 @dataclass
 class HealthCheck:
@@ -278,3 +309,35 @@ async def check_system_resources() -> HealthCheck:
 
 # Global health monitor instance
 monitor = HealthMonitor() 
+
+def with_retries(max_attempts: int = 3, delay: float = 1.0) -> Callable[[Callable[..., T]], Callable[..., T]]:
+    """Decorator to retry operations with exponential backoff."""
+    def decorator(func: Callable[..., T]) -> Callable[..., T]:
+        @wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> T:
+            last_error = None
+            for attempt in range(max_attempts):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    last_error = e
+                    if attempt < max_attempts - 1:
+                        time.sleep(delay * (2 ** attempt))
+            raise last_error  # type: ignore
+        return wrapper
+    return decorator
+
+def with_health_check(health: SystemHealth) -> Callable[[Callable[..., T]], Callable[..., T]]:
+    """Decorator to track operation health."""
+    def decorator(func: Callable[..., T]) -> Callable[..., T]:
+        @wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> T:
+            try:
+                result = func(*args, **kwargs)
+                health.check()
+                return result
+            except Exception as e:
+                health.record_error(str(e))
+                raise
+        return wrapper
+    return decorator 

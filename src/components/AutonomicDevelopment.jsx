@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import styled from 'styled-components';
 
 const Container = styled.div`
@@ -75,6 +75,13 @@ const ActiveStatus = styled(Status)`
 
 const InactiveStatus = styled(Status)`
   color: ${({ theme }) => theme.colors.textAlt};
+`;
+
+const Title = styled.h2`
+  font-size: ${({ theme }) => theme.fontSizes.xl};
+  font-weight: 600;
+  margin-bottom: ${({ theme }) => theme.space.md};
+  color: ${({ theme }) => theme.colors.text};
 `;
 
 export const AutonomicDevelopment = ({ flowStates, isActive }) => {

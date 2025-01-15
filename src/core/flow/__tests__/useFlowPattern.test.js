@@ -48,21 +48,14 @@ describe('useFlowPattern', () => {
         metrics: { efficiency: 0.8, duration: 0, transitions: 0 },
         protection: { level: 1, type: 'natural', strength: 1 }
       },
-      stream: {
-        measure: vi.fn(),
-        transition: vi.fn()
-      },
-      transition: vi.fn(),
-      setMode: vi.fn(),
-      deepen: vi.fn(),
-      protect: vi.fn()
+      setFlow: vi.fn()
     });
 
     // Mock usePattern
     usePattern.mockReturnValue({
       pattern: mockPattern,
       updatePattern: vi.fn(),
-      evolvePattern: vi.fn()
+      createPattern: vi.fn()
     });
   });
 
@@ -72,44 +65,60 @@ describe('useFlowPattern', () => {
 
   describe('Pattern Learning', () => {
     it('learns from current state', () => {
-      const { result } = renderHook(() => useFlowPattern());
+      const { result } = renderHook(() => useFlowPattern({ state: 'flow' }));
 
       act(() => {
         result.current.learnCurrentState(mockPattern.energyLevels, mockPattern.metrics);
       });
 
       expect(result.current.isLearning).toBe(true);
+      expect(result.current.activePattern).toEqual({
+        energyLevels: mockPattern.energyLevels,
+        metrics: mockPattern.metrics,
+        state: 'evolving',
+        confidence: 0
+      });
     });
 
     it('evolves pattern based on metrics', () => {
-      const { result } = renderHook(() => useFlowPattern());
+      const { result } = renderHook(() => useFlowPattern({ state: 'flow' }));
 
       act(() => {
         result.current.learnCurrentState(mockPattern.energyLevels, mockPattern.metrics);
       });
 
-      expect(result.current.activePattern?.state).toBe('evolving');
+      const newMetrics = { efficiency: 0.9 };
+      act(() => {
+        result.current.evolvePattern(newMetrics);
+      });
+
+      expect(result.current.activePattern).toEqual({
+        energyLevels: mockPattern.energyLevels,
+        metrics: { ...mockPattern.metrics, ...newMetrics },
+        state: 'evolving',
+        confidence: 0.1
+      });
     });
   });
 
   describe('State Management', () => {
     it('resets learning state on flow state change', () => {
-      const { result, rerender } = renderHook(() => useFlowPattern());
+      const { result, rerender } = renderHook(
+        (props) => useFlowPattern(props),
+        { initialProps: { state: 'flow' } }
+      );
 
-      // Start learning
       act(() => {
         result.current.learnCurrentState(mockPattern.energyLevels, mockPattern.metrics);
       });
+
       expect(result.current.isLearning).toBe(true);
 
       // Change flow state
-      useFlow.mockReturnValue({
-        ...useFlow(),
-        flow: { ...useFlow().flow, state: 'focus' }
-      });
-      rerender();
+      rerender({ state: 'recovery' });
 
       expect(result.current.isLearning).toBe(false);
+      expect(result.current.activePattern).toBeNull();
     });
   });
 }); 

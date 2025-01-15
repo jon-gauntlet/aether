@@ -1,32 +1,54 @@
 """Test utilities for RAG system testing."""
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Callable
 import numpy as np
 import pytest
 from unittest.mock import MagicMock, patch
 from sentence_transformers import SentenceTransformer
 import faiss
-from hypothesis import strategies as st
+from hypothesis import strategies as st, given, settings
+from hypothesis.stateful import RuleBasedStateMachine, Bundle, rule
+import asyncio
+import json
+from dataclasses import dataclass
+from contextlib import contextmanager
+import time
 
+# Enhanced mock embedding model with more realistic behavior
 class MockEmbeddingModel:
     """Mock embedding model for testing."""
-    def __init__(self, dimension: int = 384):
+    def __init__(self, dimension: int = 384, latency: float = 0.0):
         self.dimension = dimension
+        self.latency = latency
+        self._cache = {}
         
     def encode(self, texts: List[str], **kwargs) -> np.ndarray:
-        """Return deterministic mock embeddings."""
+        """Return deterministic mock embeddings with optional latency."""
         if isinstance(texts, str):
             texts = [texts]
+            
+        # Simulate real-world latency
+        if self.latency > 0:
+            time.sleep(self.latency)
+            
+        # Use cache for efficiency
         embeddings = np.zeros((len(texts), self.dimension))
         for i, text in enumerate(texts):
-            # Create deterministic but unique embedding based on text
-            embedding = np.array([hash(f"{text}_{j}") % 100 / 100 for j in range(self.dimension)])
-            embeddings[i] = embedding / np.linalg.norm(embedding)
+            if text in self._cache:
+                embeddings[i] = self._cache[text]
+            else:
+                # Create deterministic but unique embedding based on text
+                embedding = np.array([hash(f"{text}_{j}") % 100 / 100 for j in range(self.dimension)])
+                embedding = embedding / np.linalg.norm(embedding)
+                self._cache[text] = embedding
+                embeddings[i] = embedding
+                
         return embeddings
         
     def get_sentence_embedding_dimension(self) -> int:
         """Return embedding dimension."""
         return self.dimension
 
+# Enhanced test fixtures
 @pytest.fixture
 def mock_embedding_model():
     """Fixture for mock embedding model."""
@@ -53,78 +75,169 @@ def sample_texts():
 def sample_metadata():
     """Fixture for sample metadata."""
     return [
-        {"type": "technical", "author": "alice", "timestamp": 1000},
-        {"type": "technical", "author": "bob", "timestamp": 1001},
-        {"type": "technical", "author": "alice", "timestamp": 1002},
-        {"type": "other", "author": "charlie", "timestamp": 1003}
+        {"source": "doc1", "timestamp": "2024-01-15T10:00:00", "author": "user1"},
+        {"source": "doc2", "timestamp": "2024-01-15T10:01:00", "author": "user2"},
+        {"source": "doc3", "timestamp": "2024-01-15T10:02:00", "author": "user1"},
+        {"source": "doc4", "timestamp": "2024-01-15T10:03:00", "author": "user3"}
     ]
 
 @pytest.fixture
 def sample_chat_messages():
-    """Fixture for sample chat messages."""
-    from rag_aether.ai.rag import ChatMessage
+    """Fixture for sample chat messages with thread structure."""
     return [
-        ChatMessage(
-            content="Testing the system with message one",
-            channel_id="test-channel",
-            user_id="alice",
-            timestamp=1000
-        ),
-        ChatMessage(
-            content="Responding to the first message",
-            channel_id="test-channel",
-            user_id="bob",
-            timestamp=1001
-        )
+        {
+            "id": "msg1",
+            "content": "How does machine learning work?",
+            "author": "user1",
+            "timestamp": "2024-01-15T10:00:00",
+            "thread_id": None
+        },
+        {
+            "id": "msg2",
+            "content": "It's a type of artificial intelligence.",
+            "author": "user2",
+            "timestamp": "2024-01-15T10:01:00",
+            "thread_id": "msg1"
+        },
+        {
+            "id": "msg3",
+            "content": "Can you give an example?",
+            "author": "user1",
+            "timestamp": "2024-01-15T10:02:00",
+            "thread_id": "msg1"
+        }
     ]
 
+# Enhanced assertion utilities
 def assert_embeddings_similar(emb1: np.ndarray, emb2: np.ndarray, tolerance: float = 1e-5):
-    """Assert that two embeddings are similar within tolerance."""
-    # Normalize embeddings
-    emb1 = emb1 / np.linalg.norm(emb1)
-    emb2 = emb2 / np.linalg.norm(emb2)
-    # Check cosine similarity
-    similarity = np.dot(emb1, emb2)
-    assert similarity > (1 - tolerance), f"Embeddings not similar: {similarity}"
+    """Assert two embeddings are similar within tolerance."""
+    assert emb1.shape == emb2.shape, f"Embedding shapes differ: {emb1.shape} vs {emb2.shape}"
+    assert np.allclose(emb1, emb2, atol=tolerance), f"Embeddings differ by more than {tolerance}"
 
 def assert_results_ordered(scores: List[float], tolerance: float = 1e-5):
-    """Assert that results are ordered by decreasing score."""
+    """Assert results are in descending order."""
     for i in range(len(scores) - 1):
-        assert scores[i] >= scores[i + 1] - tolerance, \
-            f"Results not ordered at position {i}: {scores[i]} < {scores[i + 1]}"
+        assert scores[i] >= scores[i + 1] - tolerance, f"Results not ordered at index {i}"
 
+def assert_response_quality(response: str, context: str, min_length: int = 10):
+    """Assert response meets quality criteria."""
+    assert len(response) >= min_length, f"Response too short: {len(response)} chars"
+    assert response.strip(), "Response is empty or whitespace"
+    # Add more quality checks as needed
+
+# Enhanced async testing utilities
 class AsyncMock(MagicMock):
     """Mock for async functions."""
     async def __call__(self, *args, **kwargs):
         return super(AsyncMock, self).__call__(*args, **kwargs)
 
 def mock_async_return(result):
-    """Create async mock that returns a value."""
+    """Create a mock coroutine function."""
     async def mock_coro(*args, **kwargs):
         return result
-    return mock_coro 
+    return mock_coro
 
-# Hypothesis strategies for RAG testing
+@contextmanager
+def mock_async_context():
+    """Context manager for async testing."""
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        yield loop
+    finally:
+        loop.close()
+        asyncio.set_event_loop(None)
+
+# Enhanced property-based testing strategies
 def text_content_strategy():
-    """Strategy for generating valid text content."""
+    """Generate realistic text content."""
     return st.text(
         alphabet=st.characters(blacklist_categories=('Cs',)),
         min_size=1,
         max_size=1000
-    )
+    ).filter(lambda x: x.strip())  # Ensure non-empty content
 
 def metadata_strategy():
-    """Strategy for generating valid metadata."""
+    """Generate realistic metadata."""
     return st.fixed_dictionaries({
-        'type': st.sampled_from(['technical', 'general', 'other']),
-        'author': st.text(min_size=1, max_size=50),
-        'timestamp': st.integers(min_value=0)
+        'source': st.text(min_size=1, max_size=50),
+        'timestamp': st.datetimes().map(lambda x: x.isoformat()),
+        'author': st.text(min_size=1, max_size=50)
     })
 
 def embedding_strategy(dimension: int = 384):
-    """Strategy for generating valid embeddings."""
+    """Generate valid embeddings."""
     return st.lists(
         st.floats(min_value=-1, max_value=1),
         min_size=dimension,
         max_size=dimension
-    ).map(lambda x: np.array(x) / np.linalg.norm(x)) 
+    ).map(lambda x: np.array(x))
+
+# State machine for testing stateful behavior
+class RAGStateMachine(RuleBasedStateMachine):
+    """State machine for testing RAG system behavior."""
+    
+    def __init__(self):
+        super().__init__()
+        self.documents = []
+        self.queries = []
+        
+    documents = Bundle('documents')
+    queries = Bundle('queries')
+    
+    @rule(target=documents, content=text_content_strategy())
+    def add_document(self, content):
+        """Add a document to the system."""
+        self.documents.append(content)
+        return content
+        
+    @rule(target=queries, content=text_content_strategy())
+    def add_query(self, content):
+        """Add a query to test."""
+        self.queries.append(content)
+        return content
+        
+    @rule(query=queries, document=documents)
+    def test_retrieval(self, query, document):
+        """Test retrieval behavior."""
+        # Add retrieval testing logic here
+        pass
+
+# Performance testing utilities
+@dataclass
+class PerformanceMetrics:
+    """Container for performance metrics."""
+    latency: float
+    memory_usage: float
+    throughput: float
+
+def measure_performance(func: Callable, *args, **kwargs) -> PerformanceMetrics:
+    """Measure performance metrics of a function."""
+    start_time = time.time()
+    result = func(*args, **kwargs)
+    end_time = time.time()
+    
+    return PerformanceMetrics(
+        latency=end_time - start_time,
+        memory_usage=0.0,  # Add memory measurement
+        throughput=1.0 / (end_time - start_time)
+    )
+
+# Load test data utilities
+def load_test_data(file_path: str) -> Dict[str, Any]:
+    """Load test data from JSON file."""
+    with open(file_path, 'r') as f:
+        return json.load(f)
+
+def generate_test_data(num_samples: int) -> List[Dict[str, Any]]:
+    """Generate synthetic test data."""
+    return [
+        {
+            'content': f"Test content {i}",
+            'metadata': {
+                'id': f"doc_{i}",
+                'timestamp': f"2024-01-15T{i:02d}:00:00"
+            }
+        }
+        for i in range(num_samples)
+    ] 
