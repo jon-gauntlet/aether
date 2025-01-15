@@ -1,5 +1,8 @@
 # Sled System Documentation 🛡️
 
+<!-- LLM:context For quick infrastructure discovery, see SLED_INDEX.md -->
+<!-- LLM:relationship This file provides high-level documentation, while SLED_INDEX.md maps all components -->
+
 ## Overview 🌟
 
 Sled is a development acceleration system designed for:

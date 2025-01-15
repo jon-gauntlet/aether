@@ -1,0 +1,21 @@
+[project]
+name = "rag-aether"
+version = "0.1.0"
+description = "RAG system for Aether"
+dependencies = [
+    "openai",
+    "python-dotenv",
+    "fastapi",
+    "uvicorn",
+    "pydantic"
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+addopts = "-ra -q"
+testpaths = [
+    "tests",
+] 

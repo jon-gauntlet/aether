@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# <!-- LLM:component FLOW_SLED_COMPONENT flow_management core_operations -->
+# Core Flow Sled management script
+
 # Flow Sled - Natural Development Acceleration
 # ------------------------------------------
 

@@ -1,53 +1,80 @@
-# Aether
+# RAG Aether
 
-Natural Communication system supporting high-velocity development with zero cognitive overhead.
+A Retrieval-Augmented Generation (RAG) system powered by Anthropic's Claude, with flow state protection for enhanced developer productivity.
 
-## Core Features
-- **Flow Protection**: Automatic state preservation
-- **Type Safety**: Full immutable type system
-- **Natural Growth**: Pattern-based evolution
+## Features
 
-## Quick Start
+- Flow state tracking and optimization
+- Adaptive search based on energy levels and focus depth
+- Context-aware document retrieval
+- Anthropic Claude integration for high-quality responses
+
+## Setup
+
+1. Prerequisites:
+   - Python 3.13+
+   - Poetry (package manager)
+
+2. Clone the repository:
+   ```bash
+   git clone https://github.com/your-username/rag-aether.git
+   cd rag-aether
+   ```
+
+3. Install dependencies using Poetry:
+   ```bash
+   poetry install
+   ```
+
+4. Create a `.env` file with your Anthropic API key:
+   ```
+   ANTHROPIC_API_KEY=your-anthropic-api-key-here
+   ```
+
+## Development Environment
+
+This project uses Poetry for dependency management. Here are some common commands:
+
+- Activate the virtual environment:
+  ```bash
+  poetry shell
+  ```
+
+- Run tests:
+  ```bash
+  poetry run python test_rag_clean.py
+  ```
+
+- Add new dependencies:
+  ```bash
+  poetry add package-name
+  ```
+
+- Update dependencies:
+  ```bash
+  poetry update
+  ```
+
+## Project Structure
+
+- `src/rag_aether/`: Core RAG implementation
+  - `ai/rag.py`: Main RAG system with Claude integration
+  - `data/mock/`: Mock data for testing
+- `test_rag_clean.py`: Test suite for RAG functionality
+
+## Testing
+
+Run the test suite to verify the RAG system:
 ```bash
-# Start protected development
-flow start
-
-# Enter flow state
-flow deep
-
-# Natural routing
-flow to garden
+poetry run python test_rag_clean.py
 ```
 
-## Documentation
-- [Context](CONTEXT.md) - Current project state and requirements
-- [Essence](ESSENCE.md) - Core patterns and principles
-- [Flow SLED](docs/FLOW_SLED.md) - Flow state protection
-- [Standards](docs/STANDARDS.md) - Development standards
-- [TypeScript](docs/TYPESCRIPT.md) - Type system architecture
-- [Vision](docs/VISION.md) - Core project vision and principles
-- [Sled Vision](docs/SLED_VISION.md) - Sled system design and integration guidelines
-
-## Best Practices
-1. Trust the system's natural protection
-2. Follow energy paths for development
-3. Let patterns emerge naturally
-4. Focus on core development
-5. Enable automatic learning
-
-## Development
-```typescript
-// Protected operation
-const result = await withFlow(async () => {
-  return await operation();
-});
-
-// Natural routing
-await flow.to(SpaceType.GARDEN);
-
-// Pattern learning
-system.learn(pattern);
-```
+This will test:
+1. Document ingestion
+2. Vector embeddings
+3. Retrieval capabilities
+4. Response generation with Claude
 
 ## License
+
 MIT 

@@ -1,6 +1,38 @@
+<<<<<<< HEAD
 # Environment Variables
+=======
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Environment
+>>>>>>> rag/feature/rag-integration
 .env
+.venv
+env/
+venv/
+ENV/
+.python-version
 .env.local
+<<<<<<< HEAD
 .env.*
 .env.development.local
 .env.test.local
@@ -34,11 +66,27 @@ yarn-error.log*
 /out
 
 # IDE and Editor files
+=======
+.env.*.local
+
+# IDE
+>>>>>>> rag/feature/rag-integration
 .idea/
 .vscode/
 *.swp
 *.swo
 
+<<<<<<< HEAD
 # Log files
 .gauntlet/logs/
 .gauntlet/logs/monitor.log 
+=======
+# Project specific
+poetry.lock
+lab/
+notebook/
+notebooks/
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+*.ipynb 
+>>>>>>> rag/feature/rag-integration
