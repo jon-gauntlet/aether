@@ -39,4 +39,5 @@ ENV/
 
 # Project specific
 lab/
-notebook/ 
+notebook/
+poetry.lock 
