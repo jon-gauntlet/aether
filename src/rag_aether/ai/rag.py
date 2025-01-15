@@ -132,147 +132,314 @@ class HierarchicalStore:
 
 class ContextEnhancer:
     def __init__(self):
-        self.relationship_graph = {}
-        self.metadata_index = {}
-        
-    def add_relationship(self, source_id: str, target_id: str, relationship_type: str):
-        """Add a directional relationship between documents."""
-        if source_id not in self.relationship_graph:
-            self.relationship_graph[source_id] = {}
-        self.relationship_graph[source_id][target_id] = relationship_type
+        self.metadata_store = {}
         
     def add_metadata(self, doc_id: str, metadata: Dict[str, Any]):
-        """Index document metadata for quick lookup."""
-        self.metadata_index[doc_id] = {
-            "timestamp": metadata.get("timestamp"),
-            "author": metadata.get("author"),
-            "type": metadata.get("type"),
-            "tags": metadata.get("tags", []),
-            "references": metadata.get("references", [])
-        }
-        
-        # Add relationships from references
-        for ref in metadata.get("references", []):
-            self.add_relationship(doc_id, ref, "references")
-            
-    def get_related_docs(self, doc_id: str, max_depth: int = 2) -> List[str]:
-        """Get related document IDs up to max_depth."""
-        related = set()
-        current_level = {doc_id}
-        
-        for depth in range(max_depth):
-            next_level = set()
-            for current_id in current_level:
-                if current_id in self.relationship_graph:
-                    next_level.update(self.relationship_graph[current_id].keys())
-            related.update(next_level)
-            current_level = next_level
-            
-        return list(related - {doc_id})
+        self.metadata_store[doc_id] = metadata
         
     def filter_by_metadata(
         self,
-        docs: List[str],
-        filters: Dict[str, Any]
-    ) -> List[str]:
-        """Filter documents by metadata criteria."""
-        filtered = []
-        for doc_id in docs:
-            metadata = self.metadata_index.get(doc_id, {})
-            matches = True
+        doc_ids: List[int],
+        metadata_filters: Optional[Dict[str, Any]] = None
+    ) -> List[int]:
+        if not metadata_filters:
+            return doc_ids
             
-            for key, value in filters.items():
-                if key == "tags" and value:
-                    if not any(tag in metadata.get("tags", []) for tag in value):
-                        matches = False
-                        break
-                elif key == "type" and value:
-                    if metadata.get("type") != value:
-                        matches = False
-                        break
-                elif key == "after" and value:
-                    if not metadata.get("timestamp") or metadata["timestamp"] < value:
-                        matches = False
-                        break
-                        
-            if matches:
-                filtered.append(doc_id)
-                
-        return filtered
+        filtered_ids = []
+        for doc_id in doc_ids:
+            metadata = self.metadata_store.get(str(doc_id), {})
+            if all(metadata.get(k) == v for k, v in metadata_filters.items()):
+                filtered_ids.append(doc_id)
+        return filtered_ids
+        
+    def get_related_docs(self, doc_id: str) -> List[str]:
+        """Get related document IDs based on metadata."""
+        metadata = self.metadata_store.get(str(doc_id), {})
+        related = []
+        
+        # Find docs with same channel
+        channel_id = metadata.get("channel_id")
+        if channel_id:
+            for other_id, other_meta in self.metadata_store.items():
+                if other_id != str(doc_id) and other_meta.get("channel_id") == channel_id:
+                    related.append(other_id)
+                    
+        return related
 
 class BatchProcessor:
-    def __init__(self, batch_size: int = 32):
-        self.batch_size = batch_size
+    def __init__(self):
         self.cache = {}
-        self.last_access = {}
-        self.max_cache_size = 1000
         
-    async def process_in_batches(
-        self,
-        items: List[Any],
-        process_fn: callable,
-        *args,
-        **kwargs
-    ) -> List[Any]:
-        """Process items in batches for better performance."""
-        results = []
-        for i in range(0, len(items), self.batch_size):
-            batch = items[i:i + self.batch_size]
-            batch_results = await process_fn(batch, *args, **kwargs)
-            results.extend(batch_results)
-        return results
+    def get_cached(self, key: str) -> Optional[np.ndarray]:
+        return self.cache.get(key)
         
-    def cache_result(self, key: str, value: Any):
-        """Cache result with LRU eviction."""
-        if len(self.cache) >= self.max_cache_size:
-            # Evict least recently used
-            lru_key = min(self.last_access.items(), key=lambda x: x[1])[0]
-            del self.cache[lru_key]
-            del self.last_access[lru_key]
-        
+    def cache_result(self, key: str, value: np.ndarray):
         self.cache[key] = value
-        self.last_access[key] = time.time()
-        
-    def get_cached(self, key: str) -> Optional[Any]:
-        """Get cached result if available."""
-        if key in self.cache:
-            self.last_access[key] = time.time()
-            return self.cache[key]
-        return None
 
-class RAGSystem:
-    def __init__(self, model_name: str = "claude-3-opus-20240229", use_mock: bool = True):
-        # Use a stronger bi-encoder model
-        self.embeddings = SentenceTransformer("BAAI/bge-large-en-v1.5")
-        self.embeddings.to('cpu')
+class ChatMessage:
+    def __init__(self, content: str, channel_id: str, user_id: str, timestamp: float):
+        self.content = content
+        self.channel_id = channel_id
+        self.user_id = user_id
+        self.timestamp = timestamp
+        self.thread_id = None
+        self.reactions = []
         
-        api_key = os.getenv("ANTHROPIC_API_KEY")
-        logger.info(f"Using API key in init: {api_key[:10]}...")
-        if not api_key:
-            raise ValueError("ANTHROPIC_API_KEY environment variable not set")
-        if api_key == "your_anthropic_api_key_here":
-            raise ValueError("Please set your actual Anthropic API key in .env")
-            
-        self.api_key = api_key
+    def to_metadata(self) -> Dict[str, Any]:
+        """Convert chat message to metadata for RAG."""
+        return {
+            "type": "chat_message",
+            "channel_id": self.channel_id,
+            "user_id": self.user_id,
+            "timestamp": self.timestamp,
+            "thread_id": self.thread_id,
+            "reactions": self.reactions,
+            "text": self.content  # Add content to metadata for easier access
+        }
+        
+    @classmethod
+    def from_metadata(cls, content: str, metadata: Dict[str, Any]) -> 'ChatMessage':
+        """Create ChatMessage from content and metadata."""
+        msg = cls(
+            content=content,
+            channel_id=metadata["channel_id"],
+            user_id=metadata["user_id"],
+            timestamp=metadata["timestamp"]
+        )
+        msg.thread_id = metadata.get("thread_id")
+        msg.reactions = metadata.get("reactions", [])
+        return msg
+
+class PersonaConfig:
+    def __init__(
+        self,
+        name: str,
+        style: str,
+        expertise: List[str],
+        communication_preferences: Dict[str, Any]
+    ):
+        self.name = name
+        self.style = style
+        self.expertise = expertise
+        self.communication_preferences = communication_preferences
+        
+    def to_system_prompt(self) -> str:
+        """Generate system prompt for this persona."""
+        return f"""You are {self.name}, an AI assistant with expertise in {', '.join(self.expertise)}.
+Communication style: {self.style}
+Preferences: {json.dumps(self.communication_preferences, indent=2)}
+
+Use the following context from chat messages to answer questions while maintaining your persona.
+If you cannot answer based on the context, say so while staying in character."""
+
+class BaseRAG:
+    def __init__(self, model_name: str = "BAAI/bge-large-en-v1.5"):
         self.model_name = model_name
-        
-        # Initialize FAISS indices
-        self.dimension = 1024  # bge-large dimension
-        self.index = faiss.IndexFlatIP(self.dimension)  # Inner product for cosine similarity
-        
-        # Add L2 normalization to make it cosine similarity
-        self.index = faiss.IndexIDMap(self.index)
-        
-        self.texts = []
-        self.metadatas = []
-        
-        self.firebase = FirebaseAdapter(use_mock=use_mock)
-        self.health = SystemHealth()
-        self.conversation_listener = None
-        self.metrics = MetricsTracker()
-        self.hierarchical_store = HierarchicalStore(self.embeddings)
-        self.context_enhancer = ContextEnhancer()
+        self.embedding_model = SentenceTransformer(model_name)
+        self.index = None
+        self.metadata = []
         self.batch_processor = BatchProcessor()
+        self.initialize_index()
+
+    def initialize_index(self):
+        dimension = self.embedding_model.get_sentence_embedding_dimension()
+        self.index = faiss.IndexIDMap(faiss.IndexFlatIP(dimension))
+
+    async def _encode_texts_batch(self, texts: List[str]) -> np.ndarray:
+        """Encode a batch of texts to embeddings with caching"""
+        cache_key = str(hash(tuple(texts)))
+        cached = self.batch_processor.get_cached(cache_key)
+        if cached is not None:
+            return cached
+            
+        embeddings = self.embedding_model.encode(texts)
+        embeddings = embeddings / np.linalg.norm(embeddings, axis=1, keepdims=True)
+        self.batch_processor.cache_result(cache_key, embeddings)
+        return embeddings
+
+    async def ingest_text(self, text: str, metadata: Dict[str, Any] = None) -> None:
+        """Ingest a single text with metadata"""
+        if metadata is None:
+            metadata = {}
+            
+        # Get embedding
+        embedding = (await self._encode_texts_batch([text]))[0]
+        
+        # Add to index
+        doc_id = len(self.metadata)
+        self.metadata.append(metadata)
+        self.index.add_with_ids(
+            embedding.reshape(1, -1),
+            np.array([doc_id], dtype=np.int64)
+        )
+        
+        # Log ingestion
+        logger.info(f"Ingested document {doc_id} with metadata: {metadata}")
+
+    async def retrieve_with_fusion(
+        self, 
+        query: str, 
+        k: int = 5,
+        relevant_ids: Optional[List[int]] = None,
+        metadata_filters: Optional[Dict[str, Any]] = None
+    ) -> Tuple[List[str], List[Dict[str, Any]], Dict[str, float]]:
+        """
+        Retrieve documents using reciprocal rank fusion.
+        
+        Args:
+            query: The search query
+            k: Number of results to return
+            relevant_ids: Optional list of document IDs to restrict search to
+            metadata_filters: Optional filters to apply on metadata
+            
+        Returns:
+            Tuple of (texts, metadata, metrics)
+        """
+        start_time = time.time()
+        
+        # Get query embedding
+        query_embedding = self.embedding_model.encode(query)
+        query_embedding = query_embedding / np.linalg.norm(query_embedding)
+        
+        # Search index
+        D, I = self.index.search(query_embedding.reshape(1, -1), k * 2)  # Get more results for filtering
+        
+        # Filter by metadata if needed
+        if metadata_filters:
+            filtered_indices = []
+            filtered_distances = []
+            for idx, (doc_id, distance) in enumerate(zip(I[0], D[0])):
+                if doc_id >= len(self.metadata):
+                    continue
+                    
+                doc_metadata = self.metadata[doc_id]
+                matches_filters = True
+                
+                for key, value in metadata_filters.items():
+                    if isinstance(value, dict) and "min" in value and "max" in value:
+                        # Handle range filters
+                        field_value = doc_metadata.get(key)
+                        if field_value is None or not (value["min"] <= field_value <= value["max"]):
+                            matches_filters = False
+                            break
+                    else:
+                        # Handle exact match filters
+                        if doc_metadata.get(key) != value:
+                            matches_filters = False
+                            break
+                
+                if matches_filters:
+                    filtered_indices.append(doc_id)
+                    filtered_distances.append(distance)
+                    
+                    if len(filtered_indices) >= k:
+                        break
+                        
+            if filtered_indices:
+                I = np.array([filtered_indices])
+                D = np.array([filtered_distances])
+            else:
+                I = np.array([[]])
+                D = np.array([[]])
+        
+        # Get texts and metadata
+        texts = []
+        metadata_list = []
+        for doc_id in I[0]:
+            if doc_id < len(self.metadata):
+                metadata_list.append(self.metadata[doc_id])
+                texts.append(metadata_list[-1].get("text", ""))
+        
+        # Calculate metrics
+        end_time = time.time()
+        metrics = {
+            "retrieval_time_ms": (end_time - start_time) * 1000,
+            "num_results": len(texts),
+            "similarity_scores": D[0].tolist() if len(D) > 0 else []
+        }
+        
+        return texts, metadata_list, metrics
+
+class ChatRAG(BaseRAG):
+    def __init__(self, model_name: str = "BAAI/bge-large-en-v1.5"):
+        super().__init__(model_name)
+        self.chat_messages: List[ChatMessage] = []
+        self.personas: Dict[str, PersonaConfig] = {}
+
+    async def retrieve_with_fusion(
+        self,
+        query: str,
+        k: int = 5,
+        relevant_ids: Optional[List[int]] = None,
+        metadata_filters: Optional[Dict[str, Any]] = None
+    ) -> Tuple[List[str], List[Dict[str, Any]], Dict[str, float]]:
+        """Enhanced retrieval with chat-specific fusion logic"""
+        # Get base retrieval results
+        texts, metadata, metrics = await super().retrieve_with_fusion(
+            query, k, relevant_ids, metadata_filters
+        )
+        
+        # Apply chat-specific enhancements
+        # TODO: Add chat-specific ranking adjustments
+        
+        return texts, metadata, metrics
+
+    async def ingest_chat_message(self, message: ChatMessage) -> None:
+        """Ingest a chat message with metadata."""
+        await self.ingest_text(message.content, message.to_metadata())
+
+    async def query_chat_history(
+        self,
+        query: str,
+        channel_ids: Optional[List[str]] = None,
+        time_range: Optional[Tuple[float, float]] = None,
+        max_results: int = 5
+    ) -> Dict[str, Any]:
+        """Query chat history with optional channel and time filters."""
+        metadata_filters = {}
+        if channel_ids:
+            metadata_filters["channel_id"] = channel_ids[0]  # For now, just use the first channel
+        if time_range:
+            metadata_filters["timestamp"] = {
+                "min": time_range[0],
+                "max": time_range[1]
+            }
+            
+        result = await self.query(
+            query=query,
+            max_results=max_results,
+            metadata_filters=metadata_filters
+        )
+        
+        # Convert results back to ChatMessages
+        messages = []
+        for text, meta in zip(result["results"], result["metadata"]):
+            if meta.get("type") == "chat_message":
+                messages.append(ChatMessage.from_metadata(
+                    content=text,
+                    metadata=meta
+                ))
+                
+        # Update response format
+        result["chat_messages"] = messages
+        return result
+
+class RAGSystem(ChatRAG):
+    def __init__(
+        self,
+        model_name: str = "BAAI/bge-large-en-v1.5",
+        persona: Optional[PersonaConfig] = None,
+        firebase_adapter: Optional[FirebaseAdapter] = None,
+    ):
+        super().__init__(model_name)
+        self.persona = persona or PersonaConfig(
+            name="Assistant",
+            role="AI assistant",
+            description="A helpful AI assistant that provides accurate and relevant information."
+        )
+        self.firebase_adapter = firebase_adapter or MockFirebaseAdapter()
+        self.context_enhancer = ContextEnhancer()
+        self.metrics = MetricsTracker()
         
     async def _cleanup(self):
         """Cleanup resources on shutdown."""
@@ -305,61 +472,6 @@ class RAGSystem:
         self.conversation_listener = await self.firebase.watch_conversations(on_conversation_update)
         logger.info("Firebase initialization and real-time updates configured")
 
-    async def _encode_texts_batch(
-        self,
-        texts: List[str],
-        use_cache: bool = True
-    ) -> np.ndarray:
-        """Encode texts in batches with caching."""
-        results = []
-        cache_hits = 0
-        
-        for text in texts:
-            if use_cache:
-                cache_key = f"emb_{hash(text)}"
-                cached = self.batch_processor.get_cached(cache_key)
-                if cached is not None:
-                    results.append(cached)
-                    cache_hits += 1
-                    continue
-                    
-        texts_to_encode = [
-            text for text in texts 
-            if not use_cache or self.batch_processor.get_cached(f"emb_{hash(text)}") is None
-        ]
-        
-        if texts_to_encode:
-            # Process in batches
-            embeddings = await self.batch_processor.process_in_batches(
-                texts_to_encode,
-                lambda batch: self.embeddings.encode(batch)
-            )
-            
-            # Cache new results
-            if use_cache:
-                for text, emb in zip(texts_to_encode, embeddings):
-                    cache_key = f"emb_{hash(text)}"
-                    self.batch_processor.cache_result(cache_key, emb)
-                    
-            results.extend(embeddings)
-            
-        logger.info(f"Embedding cache hits: {cache_hits}/{len(texts)}")
-        return np.array(results)
-        
-    async def ingest_text(self, text: str, metadata: Dict[str, Any]):
-        """Add text to the vector store with batched processing."""
-        # Get embedding with caching
-        embedding = (await self._encode_texts_batch([text]))[0]
-        embedding_normalized = embedding / np.linalg.norm(embedding)
-        
-        # Add to indices
-        self.index.add(np.array([embedding_normalized]))
-        
-        self.texts.append(text)
-        self.metadatas.append(metadata)
-        doc_id = str(len(self.texts) - 1)
-        self.context_enhancer.add_metadata(doc_id, metadata)
-        
     def _preprocess_query(self, query: str) -> str:
         """Preprocess query for better matching."""
         # Add query instruction prefix for bge model
@@ -368,8 +480,8 @@ class RAGSystem:
     def _semantic_similarity(self, query: str, texts: List[str]) -> np.ndarray:
         """Calculate semantic similarity between query and texts."""
         # Encode query and texts
-        query_embedding = self.embeddings.encode([self._preprocess_query(query)])[0]
-        text_embeddings = self.embeddings.encode(texts)
+        query_embedding = self.embedding_model.encode([self._preprocess_query(query)])[0]
+        text_embeddings = self.embedding_model.encode(texts)
         
         # Normalize embeddings
         query_embedding = query_embedding / np.linalg.norm(query_embedding)
@@ -383,8 +495,8 @@ class RAGSystem:
     def _bi_encoder_rerank(self, query: str, texts: List[str], top_k: int) -> Tuple[List[int], np.ndarray]:
         """Rerank texts using bi-encoder model."""
         # Get query and text embeddings
-        query_embedding = self.embeddings.encode([query], convert_to_tensor=True, normalize_embeddings=True)
-        text_embeddings = self.embeddings.encode(texts, convert_to_tensor=True, normalize_embeddings=True)
+        query_embedding = self.embedding_model.encode([query], convert_to_tensor=True, normalize_embeddings=True)
+        text_embeddings = self.embedding_model.encode(texts, convert_to_tensor=True, normalize_embeddings=True)
         
         # Calculate similarity scores
         scores = util.pytorch_cos_sim(query_embedding, text_embeddings)[0]
@@ -498,7 +610,7 @@ Alternative phrasings:"""
         k: int = 3,
         relevant_ids: Optional[List[str]] = None,
         metadata_filters: Optional[Dict[str, Any]] = None
-    ) -> Tuple[List[str], List[Dict[str, Any]], RetrievalMetrics]:
+    ) -> Tuple[List[str], List[Dict[str, Any]], Dict[str, float]]:
         """Enhanced retrieval with batched processing and caching."""
         start_time = time.time()
         
@@ -545,13 +657,11 @@ Alternative phrasings:"""
         
         # Update metrics
         retrieval_time = (time.time() - start_time) * 1000
-        metrics = RetrievalMetrics(
-            mrr=metrics.mrr,
-            ndcg=metrics.ndcg,
-            recall_at_k=metrics.recall_at_k,
-            latency_ms=retrieval_time,
-            num_results=len(texts)
-        )
+        metrics = {
+            "retrieval_time_ms": retrieval_time,
+            "num_results": len(texts),
+            "similarity_scores": metrics.get("similarity_scores", [])
+        }
         
         # Cache results
         result = (texts, metadata, metrics)
@@ -561,7 +671,7 @@ Alternative phrasings:"""
 
     @with_retries(max_attempts=3, delay=1)
     async def _call_claude_api(self, context: str, query: str) -> Tuple[str, int]:
-        """Call Claude API with retry logic."""
+        """Call Claude API with persona-aware prompting."""
         logger.info(f"Using API key: {self.api_key[:10]}...")
         async with aiohttp.ClientSession() as session:
             headers = {
@@ -577,11 +687,11 @@ Alternative phrasings:"""
                     "model": self.model_name,
                     "max_tokens": 1000,
                     "temperature": 0,
-                    "system": "You are a helpful assistant. Use the following context to answer the user's question. If you cannot answer based on the context, say so.",
+                    "system": self.persona.to_system_prompt(),
                     "messages": [
                         {
                             "role": "user",
-                            "content": f"Context:\n{context}\n\nQuestion: {query}"
+                            "content": f"Context from chat messages:\n{context}\n\nQuestion: {query}"
                         }
                     ]
                 }
@@ -596,133 +706,110 @@ Alternative phrasings:"""
                 return answer, num_tokens
 
     async def query(
-        self, 
-        query: str, 
-        max_results: int = 3,
-        relevant_ids: Optional[List[str]] = None
+        self,
+        query: str,
+        max_results: int = 5,
+        relevant_ids: Optional[List[int]] = None,
+        metadata_filters: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
-        """Query the RAG system using fusion retrieval."""
+        """Query the RAG system with metadata filtering."""
         try:
-            start_time = time.time()
-            
-            # Get context using fusion retrieval
+            # Get relevant texts
             texts, metadata, retrieval_metrics = await self.retrieve_with_fusion(
-                query, max_results, relevant_ids
+                query, max_results, relevant_ids, metadata_filters
             )
             
-            # Generate response with Claude
-            start_generation = time.time()
-            answer, num_tokens = await self._call_claude_api("\n\n".join(texts), query)
-            generation_time = (time.time() - start_generation) * 1000
-            
-            # Track query metrics
-            total_time = (time.time() - start_time) * 1000
-            query_metrics = QueryMetrics(
-                retrieval=retrieval_metrics,
-                generation_time_ms=generation_time,
-                total_time_ms=total_time,
-                num_tokens=num_tokens
+            # Log query metrics
+            self.metrics.log_query(
+                query=query,
+                results=texts,
+                time_ms=retrieval_metrics["retrieval_time_ms"]
             )
-            self.metrics.add_query_metrics(query_metrics)
             
-            # Get current performance stats
-            stats = self.metrics.get_summary_stats()
-            
-            # Log performance metrics
-            logger.info(f"Query completed - Metrics: {json.dumps(stats, indent=2)}")
-            
-            # Check if we're meeting quality targets
-            if stats["quality_score"] < 0.7:  # Target from plan
-                logger.warning(
-                    f"Quality score {stats['quality_score']:.2f} below target (0.7). "
-                    f"MRR: {stats['mrr_avg']:.2f}, NDCG: {stats['ndcg_avg']:.2f}"
-                )
-            
-            if stats["avg_latency_ms"] > 200:  # Target from plan
-                logger.warning(
-                    f"Average latency {stats['avg_latency_ms']:.0f}ms above target (200ms)"
-                )
-            
-            # Format response with detailed metrics
+            # Return results
             return {
-                "answer": answer,
-                "context": [
-                    {
-                        "text": text,
-                        "metadata": meta,
-                        "score": None
-                    }
-                    for text, meta in zip(texts, metadata)
-                ],
-                "model": self.model_name,
+                "query": query,
+                "results": texts,
+                "metadata": metadata,
                 "metrics": {
-                    "retrieval": {
-                        "mrr": retrieval_metrics.mrr,
-                        "ndcg": retrieval_metrics.ndcg,
-                        "recall_at_k": retrieval_metrics.recall_at_k,
-                        "latency_ms": retrieval_metrics.latency_ms,
-                        "num_results": retrieval_metrics.num_results
-                    },
-                    "generation_time_ms": generation_time,
-                    "total_time_ms": total_time,
-                    "num_tokens": num_tokens,
-                    "system_stats": stats
+                    "retrieval_time_ms": retrieval_metrics["retrieval_time_ms"],
+                    "num_results": len(texts),
+                    "similarity_scores": retrieval_metrics.get("similarity_scores", [])
                 }
             }
+            
         except Exception as e:
             self.metrics.log_error(e)
             raise
 
-class MetricsTracker:
-    def __init__(self):
-        self.queries = []
-        self.total_queries = 0
-        self.total_tokens = 0
-        self.total_time = 0
-        self.error_count = 0
-        self.quality_scores = []
+    async def ingest_chat_message(self, message: ChatMessage):
+        """Ingest a chat message with its metadata."""
+        await self.ingest_text(message.content, message.to_metadata())
         
-    def add_query_metrics(self, metrics: QueryMetrics):
-        """Track detailed query metrics with quality scores."""
-        self.queries.append(metrics)
-        self.total_queries += 1
-        self.total_tokens += metrics.num_tokens
-        self.total_time += metrics.total_time_ms
-        
-        # Calculate quality score (0-1)
-        quality_score = (
-            0.4 * metrics.retrieval.mrr +  # Weight MRR more heavily
-            0.3 * metrics.retrieval.ndcg +
-            0.3 * (sum(metrics.retrieval.recall_at_k.values()) / len(metrics.retrieval.recall_at_k))
-        )
-        self.quality_scores.append(quality_score)
-        
-    def get_summary_stats(self) -> Dict[str, Any]:
-        """Get detailed summary statistics."""
-        if not self.queries:
-            return {
-                "total_queries": 0,
-                "avg_latency_ms": 0,
-                "avg_tokens": 0,
-                "error_rate": 0,
-                "quality_score": 0
+    async def query_chat_history(
+        self,
+        query: str,
+        channel_ids: Optional[List[str]] = None,
+        time_range: Optional[Tuple[float, float]] = None,
+        max_results: int = 5
+    ) -> Dict[str, Any]:
+        """Query chat history with optional channel and time filters."""
+        metadata_filters = {}
+        if channel_ids:
+            metadata_filters["channel_id"] = channel_ids[0]  # For now, just use the first channel
+        if time_range:
+            metadata_filters["timestamp"] = {
+                "min": time_range[0],
+                "max": time_range[1]
             }
             
-        return {
-            "total_queries": self.total_queries,
-            "avg_latency_ms": self.total_time / self.total_queries,
-            "avg_tokens": self.total_tokens / self.total_queries,
-            "error_rate": self.error_count / self.total_queries if self.total_queries > 0 else 0,
-            "quality_score": sum(self.quality_scores) / len(self.quality_scores),
-            "mrr_avg": sum(q.retrieval.mrr for q in self.queries) / len(self.queries),
-            "ndcg_avg": sum(q.retrieval.ndcg for q in self.queries) / len(self.queries),
-            "recall_at_k_avg": {
-                k: sum(q.retrieval.recall_at_k[k] for q in self.queries) / len(self.queries)
-                for k in self.queries[0].retrieval.recall_at_k.keys()
-            } if self.queries else {}
-        }
+        result = await self.query(
+            query=query,
+            max_results=max_results,
+            metadata_filters=metadata_filters
+        )
+        
+        # Convert results back to ChatMessages
+        messages = []
+        for text, meta in zip(result["results"], result["metadata"]):
+            if meta.get("type") == "chat_message":
+                messages.append(ChatMessage.from_metadata(
+                    content=text,
+                    metadata=meta
+                ))
+                
+        # Update response format
+        result["chat_messages"] = messages
+        return result
+
+class MetricsTracker:
+    def __init__(self):
+        self.errors = []
+        self.queries = []
+        self.retrieval_times = []
         
     def log_error(self, error: Exception):
-        """Track system errors."""
-        self.error_count += 1
-        logger.error(f"RAG system error: {str(error)}") 
+        self.errors.append(str(error))
+        
+    def log_query(self, query: str, results: List[str], time_ms: float):
+        self.queries.append({
+            "query": query,
+            "num_results": len(results),
+            "time_ms": time_ms
+        })
+        self.retrieval_times.append(time_ms)
+        
+    def get_average_retrieval_time(self) -> float:
+        if not self.retrieval_times:
+            return 0.0
+        return sum(self.retrieval_times) / len(self.retrieval_times)
+
+class FirebaseAdapter:
+    def __init__(self, use_mock: bool = True):
+        self.use_mock = use_mock
+        if use_mock:
+            print("Using mock Firebase adapter")
+
+class MockFirebaseAdapter(FirebaseAdapter):
+    def __init__(self):
+        super().__init__(use_mock=True) 
