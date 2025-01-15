@@ -3,16 +3,20 @@ name = "aether-rag"
 version = "0.1.0"
 description = "Professional-grade RAG system with Firebase integration"
 authors = ["Jon <jon@example.com>"]
+packages = [
+    { include = "rag_aether", from = "src" }
+]
 
 [tool.poetry.dependencies]
-python = "^3.13"
+python = "^3.11"
 fastapi = "^0.109.0"
 uvicorn = "^0.27.0"
-anthropic = "^0.7.1"
-python-dotenv = "^1.0.0"
+requests = "^2.31.0"
+aiohttp = "^3.9.3"
 firebase-admin = "^6.5.0"
 sentence-transformers = "^2.2.2"
 faiss-cpu = "^1.7.4"
+python-dotenv = "^1.0.0"
 pydantic = "^2.5.3"
 
 [tool.poetry.group.dev.dependencies]

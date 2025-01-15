@@ -1,58 +1,76 @@
+#!/usr/bin/env python3
 import asyncio
 import logging
 from rag_aether.ai.rag import RAGSystem
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger("rag_verify")
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-async def verify_rag_health():
-    """Verify RAG system health and features."""
+async def verify_rag():
+    """Verify essential RAG functionality with mock data."""
     try:
-        logger.info("Starting RAG system verification...")
-        
-        # Initialize RAG system
-        rag = RAGSystem()
-        
-        # Test Firebase initialization
-        logger.info("Testing Firebase initialization...")
+        # Initialize RAG with mock data
+        logger.info("\n=== Initializing RAG System ===")
+        rag = RAGSystem(use_mock=True)
         await rag.initialize_from_firebase()
         
-        # Verify health metrics
-        logger.info("Verifying health metrics...")
-        health_stats = rag.health.get_stats()
-        logger.info(f"Health stats: {health_stats}")
-        
-        # Test querying
-        test_questions = [
-            "What are the key findings from the user research?",
-            "How does the system handle flow state optimization?",
-            "What technical challenges were identified?"
+        # Test essential queries
+        test_cases = [
+            {
+                "query": "What are the main technical requirements?",
+                "required": ["memory usage", "pipeline"],
+                "description": "Technical requirements query"
+            },
+            {
+                "query": "What was decided about deadlines?",
+                "required": ["did not set any specific dates"],
+                "description": "Deadline decisions query"
+            },
+            {
+                "query": "What is the project budget?",
+                "required": ["does not mention", "budget"],
+                "description": "Missing information query"
+            }
         ]
         
-        for question in test_questions:
-            logger.info(f"Testing query: {question}")
-            result = await rag.query(question)
-            logger.info(f"Answer: {result['answer'][:100]}...")
-            logger.info(f"Sources: {len(result['sources'])} documents")
+        logger.info("\n=== Running Test Queries ===")
+        all_passed = True
         
-        # Verify final health state
-        final_stats = rag.health.get_stats()
-        logger.info(f"Final health stats: {final_stats}")
+        for test in test_cases:
+            logger.info(f"\nTesting: {test['description']}")
+            logger.info(f"Query: {test['query']}")
+            
+            # Get response
+            response = await rag.query(test['query'])
+            logger.info(f"Response: {response}")
+            
+            # Verify required elements
+            missing = [req for req in test['required'] 
+                      if req.lower() not in response.lower()]
+            
+            if not missing:
+                logger.info("✓ Response contains all required elements")
+            else:
+                all_passed = False
+                logger.error(f"✗ Missing required elements: {missing}")
         
-        # Test cleanup
-        logger.info("Testing cleanup...")
-        await rag._cleanup()
-        
-        logger.info("Verification complete - all tests passed")
-        return True
-        
+        # Final status
+        logger.info("\n=== Verification Complete ===")
+        if all_passed:
+            logger.info("✓ All essential tests passed")
+            return True
+        else:
+            logger.error("✗ Some tests failed")
+            return False
+            
     except Exception as e:
-        logger.error(f"Verification failed: {str(e)}")
+        logger.error(f"✗ Verification failed with error: {str(e)}")
         return False
+    finally:
+        # Clean up
+        if 'rag' in locals():
+            await rag._cleanup()
 
 if __name__ == "__main__":
-    asyncio.run(verify_rag_health()) 
+    success = asyncio.run(verify_rag())
+    exit(0 if success else 1) 

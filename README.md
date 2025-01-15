@@ -1,80 +1,57 @@
-# RAG Aether
+# Aether RAG System
 
-A Retrieval-Augmented Generation (RAG) system powered by Anthropic's Claude, with flow state protection for enhanced developer productivity.
+A professional-grade RAG (Retrieval-Augmented Generation) system with Firebase integration.
 
 ## Features
 
-- Flow state tracking and optimization
-- Adaptive search based on energy levels and focus depth
-- Context-aware document retrieval
-- Anthropic Claude integration for high-quality responses
+- Semantic search using FAISS and sentence-transformers
+- Real-time updates with Firebase
+- Async API with FastAPI
+- Professional-grade LLM integration with Claude
 
 ## Setup
 
-1. Prerequisites:
-   - Python 3.13+
-   - Poetry (package manager)
+1. Install dependencies:
+```bash
+poetry install
+```
 
-2. Clone the repository:
-   ```bash
-   git clone https://github.com/your-username/rag-aether.git
-   cd rag-aether
-   ```
+2. Set up environment variables:
+```bash
+cp .env.example .env
+```
 
-3. Install dependencies using Poetry:
-   ```bash
-   poetry install
-   ```
+Then edit `.env` with your:
+- Anthropic API key
+- Path to Firebase service account JSON file
 
-4. Create a `.env` file with your Anthropic API key:
-   ```
-   ANTHROPIC_API_KEY=your-anthropic-api-key-here
-   ```
-
-## Development Environment
-
-This project uses Poetry for dependency management. Here are some common commands:
-
-- Activate the virtual environment:
-  ```bash
-  poetry shell
-  ```
-
-- Run tests:
-  ```bash
-  poetry run python test_rag_clean.py
-  ```
-
-- Add new dependencies:
-  ```bash
-  poetry add package-name
-  ```
-
-- Update dependencies:
-  ```bash
-  poetry update
-  ```
-
-## Project Structure
-
-- `src/rag_aether/`: Core RAG implementation
-  - `ai/rag.py`: Main RAG system with Claude integration
-  - `data/mock/`: Mock data for testing
-- `test_rag_clean.py`: Test suite for RAG functionality
+3. Start the demo:
+```bash
+./scripts/start-demo.sh
+```
 
 ## Testing
 
-Run the test suite to verify the RAG system:
+Run the test suite:
 ```bash
-poetry run python test_rag_clean.py
+poetry run pytest
 ```
 
-This will test:
-1. Document ingestion
-2. Vector embeddings
-3. Retrieval capabilities
-4. Response generation with Claude
+Or test the RAG system directly:
+```bash
+poetry run python scripts/test_rag_query.py
+```
 
-## License
+## Architecture
 
-MIT 
+The system consists of three main components:
+
+1. **Vector Store**: Uses FAISS for efficient similarity search and sentence-transformers for embeddings
+2. **Firebase Integration**: Real-time data synchronization and persistence
+3. **LLM Integration**: Direct integration with Claude API for high-quality responses
+
+## Development
+
+- Code style: Black + isort
+- Type checking: mypy
+- Testing: pytest + pytest-asyncio 
