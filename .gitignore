@@ -1,6 +1,10 @@
-<<<<<<< HEAD
-# Environment Variables
-=======
+# Environment variables
+.env
+
+# Firebase
+firebase-service-account.json
+**/firebase-service-account.json
+
 # Python
 __pycache__/
 *.py[cod]
@@ -23,74 +27,23 @@ wheels/
 .installed.cfg
 *.egg
 
-# Environment
->>>>>>> rag/feature/rag-integration
+# Virtual Environment
 .env
 .venv
 env/
 venv/
 ENV/
-.python-version
-.env.local
-<<<<<<< HEAD
-.env.*
-.env.development.local
-.env.test.local
-.env.production.local
-VERCEL_ENV
-
-# Secrets and Keys
-*.pem
-*.key
-*.cert
-*.p12
-*.pfx
-*.keystore
-
-# Local Development
-.DS_Store
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Dependencies
-/node_modules
-/.pnp
-.pnp.js
-
-# Build outputs
-/build
-/dist
-/.next
-/out
-
-# IDE and Editor files
-=======
-.env.*.local
 
 # IDE
->>>>>>> rag/feature/rag-integration
 .idea/
 .vscode/
 *.swp
 *.swo
 
-<<<<<<< HEAD
-# Log files
-.gauntlet/logs/
-.gauntlet/logs/monitor.log 
-=======
-# Project specific
-poetry.lock
-lab/
-notebook/
-notebooks/
-.ipynb_checkpoints
-*/.ipynb_checkpoints/*
-*.ipynb 
->>>>>>> rag/feature/rag-integration
+# Logs
+*.log
 
-# Firebase
-firebase-service-account.json
-**/firebase-service-account.json
+# Local development
+.DS_Store
+node_modules/
+.next/

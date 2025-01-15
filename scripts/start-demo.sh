@@ -1,53 +1,56 @@
 #!/bin/bash
+set -e
 
-# Function to cleanup background processes on exit
-cleanup() {
-    echo "Cleaning up processes..."
-    kill $(jobs -p) 2>/dev/null
-    exit
-}
+# Load environment variables
+source .env
 
-# Set up cleanup trap
-trap cleanup EXIT INT TERM
-
-# Check if Poetry is installed
-if ! command -v poetry &> /dev/null; then
-    echo "Poetry is not installed. Please install it first."
+# Check required environment variables
+if [ -z "$ANTHROPIC_API_KEY" ]; then
+    echo "Error: ANTHROPIC_API_KEY not set"
     exit 1
 fi
 
-# Check if npm is installed
-if ! command -v npm &> /dev/null; then
-    echo "npm is not installed. Please install it first."
+if [ -z "$FIREBASE_SERVICE_ACCOUNT_PATH" ]; then
+    echo "Error: FIREBASE_SERVICE_ACCOUNT_PATH not set"
     exit 1
 fi
 
-echo "Starting Aether RAG Demo..."
+if [ ! -f "$FIREBASE_SERVICE_ACCOUNT_PATH" ]; then
+    echo "Error: Firebase service account file not found at $FIREBASE_SERVICE_ACCOUNT_PATH"
+    exit 1
+fi
+
+echo "🚀 Starting Aether RAG Demo..."
 
 # Start FastAPI backend
 echo "Starting FastAPI backend..."
-cd "$(dirname "$0")/.."
-poetry run uvicorn src.rag_aether.api.routes:app --reload --port 8000 &
-backend_pid=$!
-
-# Wait for backend to start
-echo "Waiting for backend to start..."
-sleep 5
+poetry run uvicorn src.rag_aether.api.main:app --reload --port 8000 &
+BACKEND_PID=$!
 
 # Start Next.js frontend
 echo "Starting Next.js frontend..."
-npm run dev &
-frontend_pid=$!
+cd frontend && npm run dev &
+FRONTEND_PID=$!
+
+# Function to handle cleanup
+cleanup() {
+    echo "Shutting down..."
+    kill $BACKEND_PID
+    kill $FRONTEND_PID
+    exit 0
+}
+
+# Register cleanup function
+trap cleanup SIGINT SIGTERM
 
 echo "
-🚀 Demo is running!
+🌐 Services running:
+   - Backend: http://localhost:8000
+   - Frontend: http://localhost:3000
+   - API docs: http://localhost:8000/docs
 
-Frontend: http://localhost:3000
-Backend:  http://localhost:8000
-API Docs: http://localhost:8000/docs
-
-Press Ctrl+C to stop all services
+Press Ctrl+C to stop all services.
 "
 
-# Wait for either process to exit
-wait $backend_pid $frontend_pid 
+# Wait for processes
+wait 

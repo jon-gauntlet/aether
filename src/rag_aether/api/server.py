@@ -71,16 +71,29 @@ async def shutdown_event():
         logger.info("RAG system cleaned up")
 
 @app.get("/health")
-async def health_check():
-    """Check system health."""
-    if not rag:
-        raise HTTPException(status_code=503, detail="RAG system not initialized")
-    return {
-        "status": "healthy",
-        "model": rag.model_name,
-        "index_size": len(rag.texts),
-        "embedding_dimension": rag.dimension
-    }
+async def health_check() -> Dict[str, Any]:
+    """Get system health status."""
+    try:
+        status = rag.get_health_status()
+        
+        # Set response status code based on health status
+        if status["status"] == "unhealthy":
+            response.status_code = 503  # Service Unavailable
+        elif status["status"] == "degraded":
+            response.status_code = 200  # OK, but with warning
+            response.headers["X-System-Status"] = "degraded"
+        else:
+            response.status_code = 200  # OK
+        
+        return status
+        
+    except Exception as e:
+        logger.error(f"Health check failed: {str(e)}")
+        response.status_code = 500
+        return {
+            "status": "error",
+            "message": str(e)
+        }
 
 @app.get("/metrics")
 async def get_metrics():

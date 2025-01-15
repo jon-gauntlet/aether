@@ -1,0 +1,43 @@
+{
+    "texts": [
+        "The transformer architecture has revolutionized natural language processing with its self-attention mechanism.",
+        "BERT and GPT models have shown remarkable performance on various NLP tasks through pre-training and fine-tuning.",
+        "Sentence embeddings enable semantic search by converting text into dense vector representations.",
+        "Vector similarity search using FAISS allows for efficient nearest neighbor lookups in high-dimensional spaces.",
+        "The RAG (Retrieval-Augmented Generation) approach combines information retrieval with language generation.",
+        "Cosine similarity is commonly used to measure the similarity between embedding vectors.",
+        "Batch processing and caching strategies can significantly improve embedding generation performance.",
+        "Memory-efficient indexing is crucial for scaling vector search to large document collections.",
+        "Query expansion techniques can improve retrieval accuracy by considering related terms.",
+        "Real-time performance monitoring helps identify bottlenecks in the retrieval pipeline.",
+        "Proper error handling and logging are essential for maintaining robust production systems.",
+        "Automated performance testing helps ensure consistent system behavior under various conditions.",
+        "Metadata filtering allows for contextual search within specific document categories.",
+        "Asynchronous processing enables better resource utilization in high-throughput scenarios.",
+        "System health checks and telemetry provide insights into operational performance."
+    ],
+    "queries": [
+        "How do transformers work in NLP?",
+        "What are the benefits of vector search?",
+        "Explain RAG system architecture",
+        "Best practices for performance optimization",
+        "Importance of system monitoring"
+    ],
+    "metadata": [
+        {"type": "technical", "category": "architecture", "timestamp": 1000},
+        {"type": "technical", "category": "models", "timestamp": 1001},
+        {"type": "technical", "category": "embeddings", "timestamp": 1002},
+        {"type": "technical", "category": "search", "timestamp": 1003},
+        {"type": "technical", "category": "architecture", "timestamp": 1004},
+        {"type": "technical", "category": "algorithms", "timestamp": 1005},
+        {"type": "technical", "category": "performance", "timestamp": 1006},
+        {"type": "technical", "category": "performance", "timestamp": 1007},
+        {"type": "technical", "category": "search", "timestamp": 1008},
+        {"type": "technical", "category": "monitoring", "timestamp": 1009},
+        {"type": "technical", "category": "reliability", "timestamp": 1010},
+        {"type": "technical", "category": "testing", "timestamp": 1011},
+        {"type": "technical", "category": "search", "timestamp": 1012},
+        {"type": "technical", "category": "performance", "timestamp": 1013},
+        {"type": "technical", "category": "monitoring", "timestamp": 1014}
+    ]
+} 

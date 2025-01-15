@@ -1,7 +1,7 @@
+"""RAG system implementation."""
 from typing import List, Optional, Dict, Any, Tuple
 import os
 import json
-import logging
 import asyncio
 import numpy as np
 import aiohttp
@@ -16,234 +16,237 @@ from rag_aether.core.metrics import (
     MetricsTracker, QueryMetrics, RetrievalMetrics,
     mean_reciprocal_rank, normalized_dcg, recall_at_k
 )
+from rag_aether.core.errors import (
+    RAGError, EmbeddingError, IndexError, RetrievalError,
+    MetadataError, with_error_handling
+)
+from rag_aether.core.logging import get_logger, setup_logging
+from rag_aether.core.performance import (
+    with_performance_monitoring, performance_section, monitor
+)
 import torch
 from sentence_transformers import CrossEncoder
 
+# Set up logging and performance monitoring
+setup_logging()
+logger = get_logger("rag_system")
+monitor.start_memory_tracking()
+
 # Load environment from the project root
 env_path = Path(__file__).parents[3] / '.env'
-logger = logging.getLogger("rag_system")
-logger.info(f"Loading environment from: {env_path}")
+logger.info("Loading environment", extra={"env_path": str(env_path)})
 load_dotenv(env_path)
-logger.info(f"ANTHROPIC_API_KEY: {os.getenv('ANTHROPIC_API_KEY')[:10]}...")
-
-class SummaryNode:
-    def __init__(self, text: str, level: int = 0):
-        self.text = text
-        self.level = level
-        self.summary = ""
-        self.children = []
-        self.embedding = None
-        self.metadata = {}
-
-class HierarchicalStore:
-    def __init__(self, embeddings_model):
-        self.root = SummaryNode("root", level=0)
-        self.embeddings = embeddings_model
-        self.index_by_level = {}  # FAISS index for each level
-        
-    async def add_document(self, text: str, metadata: Dict[str, Any], chunk_size: int = 512):
-        """Add document with hierarchical chunking and summarization."""
-        # Create leaf node
-        leaf = SummaryNode(text, level=3)
-        leaf.metadata = metadata
-        
-        # Generate summary
-        summary_prompt = f"Summarize the following text concisely while preserving key technical details:\n\n{text}"
-        summary, _ = await self._call_claude_api("", summary_prompt)
-        leaf.summary = summary
-        
-        # Create parent summaries
-        current = leaf
-        for level in reversed(range(3)):  # Create level 2, 1, 0 summaries
-            summary_prompt = f"Create a higher-level technical summary of:\n\n{current.summary}"
-            parent_summary, _ = await self._call_claude_api("", summary_prompt)
-            parent = SummaryNode(parent_summary, level=level)
-            parent.children.append(current)
-            current = parent
-            
-        # Add to root
-        self.root.children.append(current)
-        
-        # Update embeddings and indices
-        await self._update_embeddings([leaf])
-        
-    async def _update_embeddings(self, nodes: List[SummaryNode]):
-        """Update embeddings for nodes and add to appropriate indices."""
-        for node in nodes:
-            # Generate embedding
-            text_to_embed = self._preprocess_query(node.summary or node.text)
-            node.embedding = self.embeddings.encode([text_to_embed])[0]
-            
-            # Ensure index exists for this level
-            if node.level not in self.index_by_level:
-                self.index_by_level[node.level] = faiss.IndexFlatIP(self.embeddings.get_sentence_embedding_dimension())
-            
-            # Add to index
-            self.index_by_level[node.level].add(np.array([node.embedding]))
-            
-            # Recursively update children
-            if node.children:
-                await self._update_embeddings(node.children)
-
-    async def search(self, query: str, top_k: int = 3) -> List[Tuple[str, Dict[str, Any], float]]:
-        """Search using hierarchical navigation."""
-        query_embedding = self.embeddings.encode([self._preprocess_query(query)])[0]
-        
-        results = []
-        seen_texts = set()
-        
-        # Search each level, starting from root
-        for level in range(4):  # 0 to 3
-            if level not in self.index_by_level:
-                continue
-                
-            # Search at current level
-            D, I = self.index_by_level[level].search(
-                np.array([query_embedding]), 
-                min(top_k, self.index_by_level[level].ntotal)
-            )
-            
-            # Collect unique results
-            for score, idx in zip(D[0], I[0]):
-                node = self._find_node_by_embedding(self.root, self.index_by_level[level].reconstruct(idx))
-                if node and node.text not in seen_texts:
-                    seen_texts.add(node.text)
-                    results.append((node.text, node.metadata, float(score)))
-                    
-                    if len(results) >= top_k:
-                        break
-            
-            if len(results) >= top_k:
-                break
-                
-        return results[:top_k]
-        
-    def _find_node_by_embedding(self, node: SummaryNode, target_embedding: np.ndarray) -> Optional[SummaryNode]:
-        """Find node with matching embedding."""
-        if node.embedding is not None and np.allclose(node.embedding, target_embedding):
-            return node
-            
-        for child in node.children:
-            result = self._find_node_by_embedding(child, target_embedding)
-            if result:
-                return result
-                
-        return None
-
-class ContextEnhancer:
-    def __init__(self):
-        self.metadata_store = {}
-        
-    def add_metadata(self, doc_id: str, metadata: Dict[str, Any]):
-        self.metadata_store[doc_id] = metadata
-        
-    def filter_by_metadata(
-        self,
-        doc_ids: List[int],
-        metadata_filters: Optional[Dict[str, Any]] = None
-    ) -> List[int]:
-        if not metadata_filters:
-            return doc_ids
-            
-        filtered_ids = []
-        for doc_id in doc_ids:
-            metadata = self.metadata_store.get(str(doc_id), {})
-            if all(metadata.get(k) == v for k, v in metadata_filters.items()):
-                filtered_ids.append(doc_id)
-        return filtered_ids
-        
-    def get_related_docs(self, doc_id: str) -> List[str]:
-        """Get related document IDs based on metadata."""
-        metadata = self.metadata_store.get(str(doc_id), {})
-        related = []
-        
-        # Find docs with same channel
-        channel_id = metadata.get("channel_id")
-        if channel_id:
-            for other_id, other_meta in self.metadata_store.items():
-                if other_id != str(doc_id) and other_meta.get("channel_id") == channel_id:
-                    related.append(other_id)
-                    
-        return related
-
-class BatchProcessor:
-    def __init__(self):
-        self.cache = {}
-        
-    def get_cached(self, key: str) -> Optional[np.ndarray]:
-        return self.cache.get(key)
-        
-    def cache_result(self, key: str, value: np.ndarray):
-        self.cache[key] = value
-
-class ChatMessage:
-    def __init__(self, content: str, channel_id: str, user_id: str, timestamp: float):
-        self.content = content
-        self.channel_id = channel_id
-        self.user_id = user_id
-        self.timestamp = timestamp
-        self.thread_id = None
-        self.reactions = []
-        
-    def to_metadata(self) -> Dict[str, Any]:
-        """Convert chat message to metadata for RAG."""
-        return {
-            "type": "chat_message",
-            "channel_id": self.channel_id,
-            "user_id": self.user_id,
-            "timestamp": self.timestamp,
-            "thread_id": self.thread_id,
-            "reactions": self.reactions,
-            "text": self.content  # Add content to metadata for easier access
-        }
-        
-    @classmethod
-    def from_metadata(cls, content: str, metadata: Dict[str, Any]) -> 'ChatMessage':
-        """Create ChatMessage from content and metadata."""
-        msg = cls(
-            content=content,
-            channel_id=metadata["channel_id"],
-            user_id=metadata["user_id"],
-            timestamp=metadata["timestamp"]
-        )
-        msg.thread_id = metadata.get("thread_id")
-        msg.reactions = metadata.get("reactions", [])
-        return msg
-
-class PersonaConfig:
-    def __init__(
-        self,
-        name: str,
-        style: str,
-        expertise: List[str],
-        communication_preferences: Dict[str, Any]
-    ):
-        self.name = name
-        self.style = style
-        self.expertise = expertise
-        self.communication_preferences = communication_preferences
-        
-    def to_system_prompt(self) -> str:
-        """Generate system prompt for this persona."""
-        return f"""You are {self.name}, an AI assistant with expertise in {', '.join(self.expertise)}.
-Communication style: {self.style}
-Preferences: {json.dumps(self.communication_preferences, indent=2)}
-
-Use the following context from chat messages to answer questions while maintaining your persona.
-If you cannot answer based on the context, say so while staying in character."""
 
 class BaseRAG:
+    """Base RAG system implementation."""
+    
     def __init__(self, model_name: str = "BAAI/bge-large-en-v1.5"):
         self.model_name = model_name
-        self.embedding_model = SentenceTransformer(model_name)
+        self.logger = logger.with_context(model=model_name)
+        
+        with performance_section("init", "embedding_model"):
+            try:
+                self.embedding_model = SentenceTransformer(model_name)
+            except Exception as e:
+                raise EmbeddingError(
+                    f"Failed to load embedding model: {str(e)}",
+                    operation="init",
+                    component="embedding_model",
+                    details={"model_name": model_name}
+                )
+            
         self.index = None
         self.metadata = []
         self.batch_processor = BatchProcessor()
         self.initialize_index()
+        self.logger.info("BaseRAG initialized successfully")
 
+    @with_performance_monitoring(operation="initialize_index", component="faiss_index")
     def initialize_index(self):
-        dimension = self.embedding_model.get_sentence_embedding_dimension()
-        self.index = faiss.IndexIDMap(faiss.IndexFlatIP(dimension))
+        """Initialize FAISS index."""
+        try:
+            dimension = self.embedding_model.get_sentence_embedding_dimension()
+            self.index = faiss.IndexIDMap(faiss.IndexFlatIP(dimension))
+            self.logger.info(
+                "Index initialized",
+                extra={"dimension": dimension}
+            )
+        except Exception as e:
+            raise IndexError(
+                f"Failed to initialize index: {str(e)}",
+                operation="initialize_index",
+                component="faiss_index"
+            )
+
+    @with_performance_monitoring(operation="encode_texts", component="embedding")
+    @with_error_handling(operation="_encode_texts_batch", component="embedding")
+    async def _encode_texts_batch(self, texts: List[str]) -> np.ndarray:
+        """Encode a batch of texts to embeddings with caching."""
+        cache_key = str(hash(tuple(texts)))
+        cached = self.batch_processor.get_cached(cache_key)
+        
+        if cached is not None:
+            self.logger.debug(
+                "Using cached embeddings",
+                extra={"num_texts": len(texts)}
+            )
+            return cached
+            
+        try:
+            with performance_section("model_encode", "embedding"):
+                embeddings = self.embedding_model.encode(texts)
+                embeddings = embeddings / np.linalg.norm(embeddings, axis=1, keepdims=True)
+                
+            self.batch_processor.cache_result(cache_key, embeddings)
+            
+            self.logger.info(
+                "Generated embeddings",
+                extra={
+                    "num_texts": len(texts),
+                    "embedding_dim": embeddings.shape[1]
+                }
+            )
+            return embeddings
+            
+        except Exception as e:
+            raise EmbeddingError(
+                f"Failed to generate embeddings: {str(e)}",
+                operation="_encode_texts_batch",
+                component="embedding_model",
+                details={"num_texts": len(texts)}
+            )
+
+    @with_performance_monitoring(operation="ingest", component="ingestion")
+    @with_error_handling(operation="ingest_text", component="ingestion")
+    async def ingest_text(self, text: str, metadata: Dict[str, Any] = None) -> None:
+        """Ingest a single text with metadata."""
+        if metadata is None:
+            metadata = {}
+            
+        try:
+            # Get embedding
+            with performance_section("get_embedding", "embedding"):
+                embedding = (await self._encode_texts_batch([text]))[0]
+            
+            # Add to index
+            with performance_section("add_to_index", "faiss_index"):
+                doc_id = len(self.metadata)
+                self.metadata.append(metadata)
+                self.index.add_with_ids(
+                    embedding.reshape(1, -1),
+                    np.array([doc_id], dtype=np.int64)
+                )
+            
+            self.logger.info(
+                "Text ingested successfully",
+                extra={
+                    "doc_id": doc_id,
+                    "metadata": metadata
+                }
+            )
+            
+        except Exception as e:
+            if isinstance(e, RAGError):
+                raise
+            raise MetadataError(
+                f"Failed to ingest text: {str(e)}",
+                operation="ingest_text",
+                component="ingestion",
+                details={"metadata": metadata}
+            )
+
+    @with_performance_monitoring(operation="retrieve", component="retrieval")
+    @with_error_handling(operation="retrieve_with_fusion", component="retrieval")
+    async def retrieve_with_fusion(
+        self,
+        query: str,
+        k: int = 5,
+        relevant_ids: Optional[List[int]] = None,
+        metadata_filters: Optional[Dict[str, Any]] = None
+    ) -> Tuple[List[str], List[Dict[str, Any]], Dict[str, float]]:
+        """Retrieve relevant texts with metadata filtering."""
+        try:
+            # Get query embedding
+            with performance_section("query_embedding", "embedding"):
+                query_embedding = (await self._encode_texts_batch([query]))[0]
+            
+            # Search index
+            with performance_section("faiss_search", "faiss_index"):
+                scores, doc_ids = self.index.search(
+                    query_embedding.reshape(1, -1),
+                    k
+                )
+            
+            # Apply metadata filters
+            with performance_section("filter_results", "retrieval"):
+                filtered_results = []
+                for score, doc_id in zip(scores[0], doc_ids[0]):
+                    if doc_id == -1:  # FAISS padding
+                        continue
+                        
+                    metadata = self.metadata[doc_id]
+                    if self._matches_filters(metadata, metadata_filters):
+                        filtered_results.append((score, doc_id))
+                
+                # Sort by score
+                filtered_results.sort(reverse=True)
+            
+            # Prepare response
+            texts = []
+            metadata_list = []
+            metrics = {
+                "similarity_scores": [],
+                "num_results": len(filtered_results)
+            }
+            
+            for score, doc_id in filtered_results:
+                texts.append(self.texts[doc_id])
+                metadata_list.append(self.metadata[doc_id])
+                metrics["similarity_scores"].append(float(score))
+            
+            self.logger.info(
+                "Retrieval successful",
+                extra={
+                    "num_results": len(filtered_results),
+                    "max_score": max(metrics["similarity_scores"]) if metrics["similarity_scores"] else 0
+                }
+            )
+            
+            return texts, metadata_list, metrics
+            
+        except Exception as e:
+            if isinstance(e, RAGError):
+                raise
+            raise RetrievalError(
+                f"Failed to retrieve results: {str(e)}",
+                operation="retrieve_with_fusion",
+                component="retrieval",
+                details={
+                    "query": query,
+                    "k": k,
+                    "metadata_filters": metadata_filters
+                }
+            )
+
+    def _matches_filters(self, metadata: Dict[str, Any], filters: Optional[Dict[str, Any]] = None) -> bool:
+        """Check if metadata matches the given filters."""
+        if not filters:
+            return True
+            
+        for key, value in filters.items():
+            if key not in metadata:
+                return False
+                
+            if isinstance(value, dict):
+                # Handle range filters
+                if "min" in value and metadata[key] < value["min"]:
+                    return False
+                if "max" in value and metadata[key] > value["max"]:
+                    return False
+            elif metadata[key] != value:
+                return False
+                
+        return True
 
     async def _encode_texts_batch(self, texts: List[str]) -> np.ndarray:
         """Encode a batch of texts to embeddings with caching"""
@@ -360,117 +363,17 @@ class BaseRAG:
         
         return texts, metadata_list, metrics
 
-class ChatRAG(BaseRAG):
-    def __init__(self, model_name: str = "BAAI/bge-large-en-v1.5"):
-        super().__init__(model_name)
-        self.chat_messages: List[ChatMessage] = []
-        self.personas: Dict[str, PersonaConfig] = {}
-
-    async def retrieve_with_fusion(
-        self,
-        query: str,
-        k: int = 5,
-        relevant_ids: Optional[List[int]] = None,
-        metadata_filters: Optional[Dict[str, Any]] = None
-    ) -> Tuple[List[str], List[Dict[str, Any]], Dict[str, float]]:
-        """Enhanced retrieval with chat-specific fusion logic"""
-        # Get base retrieval results
-        texts, metadata, metrics = await super().retrieve_with_fusion(
-            query, k, relevant_ids, metadata_filters
-        )
-        
-        # Apply chat-specific enhancements
-        # TODO: Add chat-specific ranking adjustments
-        
-        return texts, metadata, metrics
-
-    async def ingest_chat_message(self, message: ChatMessage) -> None:
-        """Ingest a chat message with metadata."""
-        await self.ingest_text(message.content, message.to_metadata())
-
-    async def query_chat_history(
-        self,
-        query: str,
-        channel_ids: Optional[List[str]] = None,
-        time_range: Optional[Tuple[float, float]] = None,
-        max_results: int = 5
-    ) -> Dict[str, Any]:
-        """Query chat history with optional channel and time filters."""
-        metadata_filters = {}
-        if channel_ids:
-            metadata_filters["channel_id"] = channel_ids[0]  # For now, just use the first channel
-        if time_range:
-            metadata_filters["timestamp"] = {
-                "min": time_range[0],
-                "max": time_range[1]
-            }
+    def _find_node_by_embedding(self, node: SummaryNode, target_embedding: np.ndarray) -> Optional[SummaryNode]:
+        """Find node with matching embedding."""
+        if node.embedding is not None and np.allclose(node.embedding, target_embedding):
+            return node
             
-        result = await self.query(
-            query=query,
-            max_results=max_results,
-            metadata_filters=metadata_filters
-        )
-        
-        # Convert results back to ChatMessages
-        messages = []
-        for text, meta in zip(result["results"], result["metadata"]):
-            if meta.get("type") == "chat_message":
-                messages.append(ChatMessage.from_metadata(
-                    content=text,
-                    metadata=meta
-                ))
+        for child in node.children:
+            result = self._find_node_by_embedding(child, target_embedding)
+            if result:
+                return result
                 
-        # Update response format
-        result["chat_messages"] = messages
-        return result
-
-class RAGSystem(ChatRAG):
-    def __init__(
-        self,
-        model_name: str = "BAAI/bge-large-en-v1.5",
-        persona: Optional[PersonaConfig] = None,
-        firebase_adapter: Optional[FirebaseAdapter] = None,
-    ):
-        super().__init__(model_name)
-        self.persona = persona or PersonaConfig(
-            name="Assistant",
-            role="AI assistant",
-            description="A helpful AI assistant that provides accurate and relevant information."
-        )
-        self.firebase_adapter = firebase_adapter or MockFirebaseAdapter()
-        self.context_enhancer = ContextEnhancer()
-        self.metrics = MetricsTracker()
-        
-    async def _cleanup(self):
-        """Cleanup resources on shutdown."""
-        logger.info("Cleaning up RAG system resources...")
-        if self.conversation_listener:
-            self.conversation_listener.unsubscribe()
-        logger.info("Cleanup complete")
-
-    @with_retries(max_attempts=3)
-    async def initialize_from_firebase(self):
-        """Initialize the vector store and hierarchical store from Firebase data."""
-        logger.info("Initializing from Firebase...")
-        
-        # Get initial conversations
-        docs = await self.firebase.get_conversations()
-        logger.info(f"Initializing stores with {len(docs)} documents")
-        
-        # Create stores
-        for doc in docs:
-            await self.ingest_text(doc.page_content, doc.metadata)
-            await self.hierarchical_store.add_document(doc.page_content, doc.metadata)
-            
-        logger.info("Stores initialization complete")
-        
-        # Set up real-time updates
-        async def on_conversation_update(doc):
-            await self.ingest_text(doc.page_content, doc.metadata)
-            await self.hierarchical_store.add_document(doc.page_content, doc.metadata)
-        
-        self.conversation_listener = await self.firebase.watch_conversations(on_conversation_update)
-        logger.info("Firebase initialization and real-time updates configured")
+        return None
 
     def _preprocess_query(self, query: str) -> str:
         """Preprocess query for better matching."""
