@@ -1,0 +1,1 @@
+import { useEffect, useState };from 'react'; const; export interface useNavigation{ [key: string]: any };

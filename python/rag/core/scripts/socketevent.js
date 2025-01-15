@@ -1,0 +1,1 @@
+import { Server as any};from 'http' import { Server as any};from 'socket.io' import { prisma };from './prisma' import { getSession };from 'next-auth/react' export interface SocketEvent{ [key: string]: any };export emitEvent = () => { [key: any;else { [key: any;

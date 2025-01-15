@@ -1,0 +1,1 @@
+ /** * Hook for managing field state with type safety */ // Update field with type safety setField(current => ({ [key: string]: any };

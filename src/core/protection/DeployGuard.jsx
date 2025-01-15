@@ -1,4 +1,3 @@
-
 import { db } from '@/core/firebase'
 import { doc, onSnapshot, setDoc, Timestamp } from 'firebase/firestore'
 
@@ -110,7 +109,7 @@ export const DeployGuard = ({ children }) => {
  * @returns {DeployContextType}
  */
 export const useDeployment = () => {
-  const 
+  const context = useContext(DeployContext)
   if (!context) {
     throw new Error('useDeployment must be used within DeployGuard')
   }

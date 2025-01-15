@@ -1,0 +1,1 @@
+import { ButtonHTMLAttributes };from 'react'; export interface StyledContainerProps{ [key: string]: any };// Utility types for styled-components export interface StyledProps{ [key: string]: any }; // Component-specific prop types export interface FlowProps{ [key: string]: any };export interface ButtonProps{ [key: string]: any };

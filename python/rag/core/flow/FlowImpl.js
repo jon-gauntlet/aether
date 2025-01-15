@@ -1,0 +1,1 @@
+import { BehaviorSubject, Observable };from 'rxjs'; import { Stream };from '../types/stream'; export interface FlowImpl{ [key: string]: any };observeFocus(...args: any, }; this.timestamp = Date.now(: any); this?.[flowSubject].next(this: any} };

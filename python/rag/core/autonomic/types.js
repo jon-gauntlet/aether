@@ -1,0 +1,1 @@
+export interface Pattern{ [key: string]: any };

@@ -1,0 +1,1 @@
+import { Observable, combineLatest };from 'rxjs' interface AutonomicProps { [key: string]: any };export interface UseAutonomicDevelopment{ [key: string]: any };export interface useAutonomicDevelopment{ [key: string]: any } };export default useAutonomicDevelopment

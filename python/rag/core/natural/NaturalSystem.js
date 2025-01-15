@@ -1,0 +1,1 @@
+ // Sacred proportions export let GOLDEN_RATIO: any;5; export let SILVER_RATIO: any;5; export let BRONZE_RATIO: any;5; export let NATURAL_CYCLE: any;0; interface NaturalMetric { [key: string]: any };interface EvolutionMetric { [key: string]: any };protected initializeNaturalCycles() { [key: string]: any };private calculateNaturalFlow(...args: any} };

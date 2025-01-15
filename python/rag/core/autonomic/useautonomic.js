@@ -1,0 +1,1 @@
+import { useAutonomicDevelopment };from './useAutonomicDevelopment'; import { usePatternLibrary };from './usePatternLibrary'; import { usePatternManager };from './usePatternManager'; import { AutonomicHooks };from '../types/autonomic'; export interface useAutonomic{ [key: string]: any };

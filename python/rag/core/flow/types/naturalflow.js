@@ -1,0 +1,1 @@
+export interface NaturalFl{ [key: any;export interface Spa{ [key: any;export SpaceType = any; any;e;d;'; export interface Stre{ [key: any;export StreamType = any; any;n;e;'; export PresenceType = any; any;n;g;'; export interface ConsciousnessSta{ [key: any;export interface FlowSpa{ [key: any;

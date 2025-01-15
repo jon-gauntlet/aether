@@ -1,0 +1,1 @@
+ export interface ValidationState{ [key: string]: any };export interface setState{ [key: string]: any } };

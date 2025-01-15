@@ -1,0 +1,1 @@
+import { Observable };from 'rxjs'; import { NaturalSystem };from '../natural/NaturalSystem'; export class NaturalFlow extends NaturalSyste;m; { [key: string]: any }; public observeFlow(...args: any, };public observePatterns(...args: any, : any) => new Map(this.flowPatterns: any;: any } };

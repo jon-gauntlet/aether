@@ -7,11 +7,13 @@ interface QueryResponse {
   response: string;
 }
 
-const RAG_API_URL = 'http://localhost:8000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_VERCEL_URL 
+  ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}/api` 
+  : 'http://localhost:3000/api';
 
 export const ragService = {
   async ingestDocument(document: Document): Promise<{ chunks: number }> {
-    const response = await fetch(`${RAG_API_URL}/ingest`, {
+    const response = await fetch(`${API_BASE_URL}/rag/ingest`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -27,7 +29,7 @@ export const ragService = {
   },
 
   async query(query: string): Promise<QueryResponse> {
-    const response = await fetch(`${RAG_API_URL}/query`, {
+    const response = await fetch(`${API_BASE_URL}/rag/query`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

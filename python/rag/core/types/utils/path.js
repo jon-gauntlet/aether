@@ -1,0 +1,1 @@
+export interface Pat{ [key: any;

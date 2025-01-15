@@ -1,0 +1,1 @@
+export enum EnergyType { MENTAL = 'MENTAL', PHYSICAL = 'PHYSICAL', EMOTIONAL = 'EMOTIONAL' };export interface Ene{ [key: any;export interface EnergyMetr{ [key: any;

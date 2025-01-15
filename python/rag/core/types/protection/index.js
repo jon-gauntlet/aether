@@ -1,0 +1,1 @@
+import { Field, ProtectionType };from '../base'; export interface Protect{ [key: string]: any }; metadata?: { [key: string]: any };

@@ -1,0 +1,1 @@
+import { BehaviorSubject };from 'rxjs'; import { ConsciousnessEngine };from './ConsciousnessEngine'; export interface Engine{ [key: string]: any };public getState(...args: any};public getSpace(...args: any} };

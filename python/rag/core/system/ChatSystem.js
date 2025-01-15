@@ -1,0 +1,1 @@
+import { [key: string]: any };from 'rxjs'; import { collection, doc, addDoc, updateDoc, onSnapshot, query, orderBy, serverTimestamp, Timestamp, DocumentData };from 'firebase/firestore'; import { auth, db };from '../../config/firebase'; import { ChatState, Message, FirestoreMessage };from '../types/chat'; export const;
