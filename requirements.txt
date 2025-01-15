@@ -4,4 +4,9 @@ langchain-community==0.0.28
 faiss-cpu==1.8.0
 firebase-admin==6.5.0
 sentence-transformers==2.5.1
-python-dotenv==1.0.1 
+python-dotenv==1.0.1
+torch==2.2.0
+transformers==4.37.2
+numpy==1.26.3
+tqdm==4.66.1
+scikit-learn==1.4.0 
