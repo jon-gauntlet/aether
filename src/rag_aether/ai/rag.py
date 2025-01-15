@@ -8,7 +8,7 @@ from typing import List, Optional, Dict, Any
 import os
 import json
 from dotenv import load_dotenv
-from src.rag_aether.data.mock.conversations import get_mock_conversations
+from src.rag_aether.data.firebase_adapter import FirebaseAdapter
 
 load_dotenv()
 
@@ -30,7 +30,8 @@ class RAGSystem:
         )
         self.vector_store = None
         self.qa_chain = None
-
+        self.firebase = FirebaseAdapter()
+        
     def initialize_from_documents(self, documents: List[Document]) -> None:
         """Initialize vector store from documents."""
         # Split documents into chunks
@@ -49,7 +50,7 @@ class RAGSystem:
         # Initialize retriever and QA chain
         self.retriever = self.vector_store.as_retriever(
             search_type="similarity",
-            search_kwargs={"k": 4}
+            search_kwargs={"k": 3}
         )
         self.qa_chain = RetrievalQA.from_chain_type(
             llm=self.llm,
@@ -58,73 +59,37 @@ class RAGSystem:
             return_source_documents=True
         )
 
-    def initialize_from_mock_data(self) -> None:
-        """Initialize system with mock data for testing."""
-        mock_conversations = get_mock_conversations()
-        
-        # Convert conversations to documents
-        documents = []
-        for conv in mock_conversations:
-            # Add conversation context as a document
-            context_doc = Document(
-                page_content=f"Conversation: {conv['title']}\nContext: {json.dumps(conv['context'], indent=2)}",
-                metadata={
-                    'conversation_id': conv['id'],
-                    'title': conv['title'],
-                    'type': 'conversation_context',
-                    'created_at': conv['created_at']
-                }
-            )
-            documents.append(context_doc)
-            
-            # Add each message as a document
-            for msg in conv['messages']:
-                doc = Document(
-                    page_content=msg['content'],
-                    metadata={
-                        'message_id': msg['id'],
-                        'conversation_id': conv['id'],
-                        'title': conv['title'],
-                        'sender': msg['sender'],
-                        'timestamp': msg['timestamp'],
-                        'type': 'message',
-                        **msg.get('metadata', {})
-                    }
-                )
-                documents.append(doc)
-        
+    async def initialize_from_firebase(self) -> None:
+        """Initialize the system with conversations from Firebase."""
+        documents = await self.firebase.get_conversations()
         self.initialize_from_documents(documents)
+        
+        # Set up real-time updates
+        def on_conversation_update(doc: Document):
+            self.ingest_text(doc.page_content, doc.metadata)
+            
+        self.conversation_listener = await self.firebase.watch_conversations(on_conversation_update)
 
-    def ingest_text(self, text: str, metadata: Optional[Dict[str, Any]] = None) -> int:
-        """Ingest text into the RAG system."""
-        try:
-            documents = [Document(page_content=text, metadata=metadata or {})]
-            chunks = self.text_splitter.split_documents(documents)
+    def ingest_text(self, text: str, metadata: Optional[Dict[str, Any]] = None) -> None:
+        """Ingest new text into the vector store."""
+        if self.vector_store is None:
+            raise ValueError("Vector store not initialized. Call initialize_from_documents first.")
             
-            if self.vector_store is None:
-                self.vector_store = FAISS.from_documents(chunks, self.embeddings)
-            else:
-                self.vector_store.add_documents(chunks)
-            
-            self.qa_chain = RetrievalQA.from_chain_type(
-                llm=self.llm,
-                chain_type="stuff",
-                retriever=self.vector_store.as_retriever()
-            )
-            
-            return len(chunks)
-        except Exception as e:
-            print(f"Error ingesting text: {str(e)}")
-            raise
+        # Split text into chunks
+        chunks = self.text_splitter.split_text(text)
+        documents = [Document(page_content=chunk, metadata=metadata) for chunk in chunks]
+        
+        # Add to existing vector store
+        self.vector_store.add_documents(documents)
 
-    def query(self, question: str) -> str:
+    async def query(self, question: str) -> Dict[str, Any]:
         """Query the RAG system."""
         if self.qa_chain is None:
-            raise ValueError("No documents have been ingested yet")
+            raise ValueError("QA chain not initialized. Call initialize_from_documents first.")
+            
+        result = await self.qa_chain.ainvoke({"query": question})
         
-        try:
-            response = self.qa_chain.invoke({"query": question})
-            return response["result"]
-        except Exception as e:
-            print(f"Error querying RAG system: {str(e)}")
-            raise 
+        return {
+            "answer": result["result"],
+            "sources": [doc.metadata for doc in result["source_documents"]]
+        } 

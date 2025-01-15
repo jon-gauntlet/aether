@@ -1,0 +1,128 @@
+{
+  "__collections__": {
+    "users": {
+      "zippo8642": {
+        "id": "zippo8642",
+        "displayName": "Alex Chen",
+        "email": "zippo8642@gmail.com",
+        "role": "Senior Systems Architect",
+        "authProvider": "google",
+        "profile": {
+          "expertise": ["System Architecture", "Performance Optimization", "Flow State Design"],
+          "workStyle": {
+            "analytical": 0.9,
+            "systematic": 0.85,
+            "detail_oriented": 0.8,
+            "collaborative": 0.7
+          },
+          "focus_areas": [
+            "System Performance",
+            "Architecture Design",
+            "Technical Leadership",
+            "Flow State Optimization"
+          ]
+        },
+        "metrics": {
+          "average_flow_duration": 45,
+          "deep_work_preference": "morning",
+          "context_switching_cost": "high",
+          "energy_patterns": {
+            "peak_hours": ["08:00", "11:00"],
+            "recovery_needed": 25,
+            "flow_state_frequency": 0.8
+          }
+        },
+        "technical_context": {
+          "primary_languages": ["Rust", "Python", "TypeScript"],
+          "architecture_focus": ["Distributed Systems", "Real-time Processing"],
+          "performance_specialties": ["System Optimization", "Memory Management"]
+        }
+      },
+      "jdycaico@tutanota.com": {
+        "id": "jdycaico@tutanota.com",
+        "displayName": "Julia Dycaico",
+        "email": "jdycaico@tutanota.com",
+        "role": "UX Research Lead",
+        "authProvider": "email",
+        "profile": {
+          "expertise": ["User Research", "Cognitive Patterns", "Design Psychology"],
+          "workStyle": {
+            "creative": 0.9,
+            "empathetic": 0.85,
+            "collaborative": 0.9,
+            "adaptive": 0.8
+          },
+          "focus_areas": [
+            "User Behavior Analysis",
+            "Research Methodology",
+            "Pattern Recognition",
+            "Team Collaboration"
+          ]
+        },
+        "metrics": {
+          "average_flow_duration": 35,
+          "deep_work_preference": "afternoon",
+          "context_switching_cost": "medium",
+          "energy_patterns": {
+            "peak_hours": ["13:00", "16:00"],
+            "recovery_needed": 20,
+            "flow_state_frequency": 0.7
+          }
+        },
+        "research_context": {
+          "methodologies": ["Contextual Inquiry", "Pattern Analysis", "Cognitive Mapping"],
+          "specialties": ["Flow State Analysis", "User Behavior Patterns"],
+          "collaboration_focus": ["Cross-functional Teams", "Knowledge Synthesis"]
+        }
+      }
+    },
+    "conversations": {
+      "conv_001": {
+        "id": "conv_001",
+        "title": "System Architecture Review - Flow State Optimization",
+        "participants": ["zippo8642", "jdycaico@tutanota.com"],
+        "created_at": {"_seconds": 1705311000, "_nanoseconds": 0},
+        "context": {
+          "project_phase": "Design",
+          "technical_domain": "System Architecture",
+          "collaboration_type": "Cross-functional Review"
+        },
+        "messages": [
+          {
+            "id": "msg_001",
+            "sender": "zippo8642",
+            "timestamp": {"_seconds": 1705311000, "_nanoseconds": 0},
+            "content": "I've been analyzing our system's performance patterns during high-load periods. The current architecture shows interesting behavior when users enter flow states. Here's what I've found:\n\n1. Memory usage spikes by 25% during deep flow states\n2. Context switching overhead increases significantly\n3. We need to optimize our real-time processing pipeline",
+            "metadata": {
+              "flow_state": 0.85,
+              "energy_level": 0.9,
+              "technical_depth": 0.8,
+              "context": {
+                "code_references": ["src/core/flow/FlowStateManager.ts"],
+                "performance_metrics": {
+                  "memory_usage": "25% increase",
+                  "latency": "150ms average"
+                }
+              }
+            }
+          },
+          {
+            "id": "msg_002",
+            "sender": "jdycaico@tutanota.com",
+            "timestamp": {"_seconds": 1705311300, "_nanoseconds": 0},
+            "content": "This aligns with our recent user research findings. We've observed that users in flow states exhibit distinct interaction patterns:\n\n- Rapid context switching between related tasks\n- Increased sensitivity to system latency\n- Higher cognitive load during deep work phases\n\nPerhaps we could implement predictive loading based on these patterns?",
+            "metadata": {
+              "flow_state": 0.75,
+              "energy_level": 0.85,
+              "research_context": 0.9,
+              "context": {
+                "research_references": ["User Behavior Study #45", "Flow State Analysis Report"],
+                "user_patterns": ["rapid_switching", "latency_sensitivity"]
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+} 
