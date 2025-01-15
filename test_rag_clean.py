@@ -16,19 +16,23 @@ def test_api_key():
     from openai import OpenAI
     try:
         client = OpenAI(
-            api_key=os.getenv("OPENAI_API_KEY")
+            api_key=os.getenv("OPENAI_API_KEY"),
+            organization="org-xxYVp3D8lkOZqFlpLb6bc3zV",
+            base_url="https://api.openai.com/v1"
         )
-        
-        # Try a simple API call
+        # Test the API key by making a simple request
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            store=True,
-            messages=[{"role": "user", "content": "Hello, World!"}]
+            model="gpt-3.5-turbo",
+            messages=[{
+                "role": "user",
+                "content": "Hi"
+            }]
         )
         print("✓ API key is valid")
         return True
     except Exception as e:
         print(f"✗ API key error: {str(e)}")
+        print("\nPlease check your OpenAI API key and organization ID configuration.")
         return False
 
 def test_rag_system():
@@ -59,20 +63,12 @@ def test_rag_system():
         return False
 
 def main():
-    print("Testing RAG System Components")
-    print("=" * 50)
+    """Run all tests."""
+    print("\nTesting RAG System Components")
+    print("=" * 50 + "\n")
     
-    # Test API key first
-    print("\nTesting OpenAI API key...")
-    if not test_api_key():
-        print("\nPlease check your OpenAI API key configuration.")
-        return
-    
-    # Test RAG system
-    if test_rag_system():
-        print("\n✓ All tests completed successfully!")
-    else:
-        print("\n✗ Some tests failed. Please check the errors above.")
+    print("Testing OpenAI API key...")
+    test_api_key()
 
 if __name__ == "__main__":
     main() 

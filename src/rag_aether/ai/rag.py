@@ -1,4 +1,4 @@
-from langchain_openai import ChatOpenAI
+from langchain_anthropic import ChatAnthropic
 from langchain_community.vectorstores import FAISS
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.chains import RetrievalQA
@@ -6,12 +6,14 @@ from langchain_core.documents import Document
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from typing import List, Optional, Dict, Any
 import os
+import json
 from dotenv import load_dotenv
+from src.data.mock.conversations import get_mock_conversations
 
 load_dotenv()
 
 class RAGSystem:
-    def __init__(self, model_name: str = "gpt-4o-mini"):
+    def __init__(self, model_name: str = "claude-3-opus-20240229"):
         self.embeddings = HuggingFaceEmbeddings(
             model_name="all-MiniLM-L6-v2",
             model_kwargs={'device': 'cpu'}
@@ -21,10 +23,10 @@ class RAGSystem:
             chunk_overlap=200,
             length_function=len,
         )
-        self.llm = ChatOpenAI(
+        self.llm = ChatAnthropic(
             model_name=model_name,
             temperature=0,
-            model_kwargs={"store": True}
+            anthropic_api_key=os.getenv("ANTHROPIC_API_KEY")
         )
         self.vector_store = None
         self.qa_chain = None
@@ -58,55 +60,35 @@ class RAGSystem:
 
     def initialize_from_mock_data(self) -> None:
         """Initialize system with mock data for testing."""
-        mock_data = {
-            'conv_001': {
-                'title': 'System Architecture Review',
-                'participants': ['dev1', 'architect1'],
-                'created_at': '2024-01-15T10:00:00Z',
-                'messages': [
-                    {
-                        'id': 'msg_001',
-                        'sender': 'dev1',
-                        'content': 'The FlowStateManager implementation shows promising results. Key components include state tracking, memory optimization, and context preservation.',
-                        'metadata': {
-                            'flow_state': 0.8,
-                            'energy_level': 0.9,
-                            'technical_depth': 0.7,
-                            'sender_role': 'Lead Developer',
-                            'technical_domain': 'Architecture',
-                            'project_phase': 'Design'
-                        }
-                    },
-                    {
-                        'id': 'msg_002',
-                        'sender': 'architect1',
-                        'content': 'The memory system design looks solid. Have we considered the cognitive load implications during state transitions?',
-                        'metadata': {
-                            'flow_state': 0.85,
-                            'energy_level': 0.8,
-                            'technical_depth': 0.8,
-                            'sender_role': 'System Architect',
-                            'technical_domain': 'Architecture',
-                            'project_phase': 'Design'
-                        }
-                    }
-                ]
-            }
-        }
+        mock_conversations = get_mock_conversations()
         
-        # Convert to LangChain documents
+        # Convert conversations to documents
         documents = []
-        for conv_id, conv in mock_data.items():
+        for conv in mock_conversations:
+            # Add conversation context as a document
+            context_doc = Document(
+                page_content=f"Conversation: {conv['title']}\nContext: {json.dumps(conv['context'], indent=2)}",
+                metadata={
+                    'conversation_id': conv['id'],
+                    'title': conv['title'],
+                    'type': 'conversation_context',
+                    'created_at': conv['created_at']
+                }
+            )
+            documents.append(context_doc)
+            
+            # Add each message as a document
             for msg in conv['messages']:
                 doc = Document(
                     page_content=msg['content'],
                     metadata={
                         'message_id': msg['id'],
-                        'conversation_id': conv_id,
+                        'conversation_id': conv['id'],
                         'title': conv['title'],
                         'sender': msg['sender'],
-                        'timestamp': conv['created_at'],
-                        **msg['metadata']
+                        'timestamp': msg['timestamp'],
+                        'type': 'message',
+                        **msg.get('metadata', {})
                     }
                 )
                 documents.append(doc)

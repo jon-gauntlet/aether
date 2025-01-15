@@ -16,9 +16,10 @@ A Retrieval-Augmented Generation (RAG) system with flow state protection for enh
 ```bash
 pip install -r requirements.txt
 ```
-3. Create a `.env` file with your OpenAI API key:
+3. Create a `.env` file with your OpenAI service account key and organization ID:
 ```
-OPENAI_API_KEY=your_api_key_here
+OPENAI_API_KEY=sk-svcacct-your-service-account-key-here
+OPENAI_ORG_ID=org-your-org-id-here
 ```
 
 ## Project Structure

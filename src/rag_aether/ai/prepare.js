@@ -20,11 +20,13 @@ import { AIEnhancedSpace } from './space';
 class AIPreparation {
   constructor() {
     this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY
+      apiKey: process.env.OPENAI_API_KEY,
+      organization: "org-xxYVp3D8lkOZqFlpLb6bc3zV"
     });
     
     this.chat = new ChatOpenAI({
       openAIApiKey: process.env.OPENAI_API_KEY,
+      organization: "org-xxYVp3D8lkOZqFlpLb6bc3zV",
       temperature: 0.7
     });
 

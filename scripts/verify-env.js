@@ -81,12 +81,18 @@ async function verifyTypeScript() {
 
 async function verifyEnvironmentVariables() {
   console.log('🔐 Validating environment configuration...');
-  const required = ['NODE_ENV', 'PORT', 'OPENAI_API_KEY'];
+  const required = ['NODE_ENV', 'PORT'];
+  const apiKey = process.env.OPENAI_API_KEY;
   
   for (const env of required) {
     if (!process.env[env]) {
       console.warn(`⚠️ Missing ${env}`);
     }
+  }
+
+  // Verify OpenAI API key format
+  if (!apiKey || !apiKey.startsWith('sk-svcacct-')) {
+    console.warn('⚠️ Invalid OpenAI API key format - should start with sk-svcacct-');
   }
 }
 
