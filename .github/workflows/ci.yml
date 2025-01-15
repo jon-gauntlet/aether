@@ -1,0 +1,162 @@
+name: RAG System CI/CD
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  PYTHON_VERSION: "3.11"
+  NODE_VERSION: "18"
+  AWS_REGION: "us-west-2"
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      # Local test services
+      redis:
+        image: redis
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+          
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+          
+      - name: Install Node.js dependencies
+        run: |
+          cd frontend
+          npm install
+          
+      - name: Install Playwright browsers
+        run: |
+          cd frontend
+          npx playwright install --with-deps chromium
+          
+      - name: Start test services
+        run: |
+          docker-compose -f docker-compose.test.yml up -d
+          
+      - name: Run linting
+        run: |
+          flake8 src tests
+          black --check src tests
+          isort --check-only src tests
+          
+      - name: Run type checking
+        run: |
+          mypy src tests
+          
+      - name: Run unit tests
+        run: |
+          pytest tests/unit -v
+          
+      - name: Run RAG feature tests
+        run: |
+          pytest src/rag_aether/ai/testing/rag_feature_tests.py -v
+          
+      - name: Run React component tests
+        run: |
+          cd frontend
+          npm run test
+          
+      - name: Run E2E tests
+        run: |
+          pytest src/rag_aether/ai/testing/e2e_tests.py -v
+          
+      - name: Upload test reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-reports
+          path: test_logs/
+          
+  deploy-dev:
+    name: Deploy to Dev
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: development
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+          
+      - name: Run deployment tests
+        run: |
+          pytest src/rag_aether/ai/testing/deployment_tests.py -v --stage=dev
+          
+      - name: Deploy to ECS
+        run: |
+          aws ecs update-service --cluster rag-cluster-dev --service rag-api-dev --force-new-deployment
+          
+      - name: Health check
+        run: |
+          ./scripts/health_check.sh https://api-dev.rag-system.com/health
+          
+  deploy-prod:
+    name: Deploy to Production
+    needs: deploy-dev
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+          
+      - name: Run deployment tests
+        run: |
+          pytest src/rag_aether/ai/testing/deployment_tests.py -v --stage=prod
+          
+      - name: Deploy to ECS
+        run: |
+          aws ecs update-service --cluster rag-cluster-prod --service rag-api-prod --force-new-deployment
+          
+      - name: Health check
+        run: |
+          ./scripts/health_check.sh https://api.rag-system.com/health
+          
+      - name: Notify deployment
+        if: always()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          fields: repo,message,commit,author,action,eventName,ref,workflow,job,took
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }} 
