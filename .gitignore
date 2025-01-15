@@ -90,3 +90,7 @@ notebooks/
 */.ipynb_checkpoints/*
 *.ipynb 
 >>>>>>> rag/feature/rag-integration
+
+# Firebase
+firebase-service-account.json
+**/firebase-service-account.json
