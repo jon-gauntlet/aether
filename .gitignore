@@ -26,10 +26,9 @@ wheels/
 env/
 venv/
 ENV/
-
-# Jupyter
-.ipynb_checkpoints
-*/.ipynb_checkpoints/*
+.python-version
+.env.local
+.env.*.local
 
 # IDE
 .idea/
@@ -38,6 +37,10 @@ ENV/
 *.swo
 
 # Project specific
+poetry.lock
 lab/
 notebook/
-poetry.lock 
+notebooks/
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+*.ipynb 
