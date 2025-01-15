@@ -26,6 +26,220 @@ logger.info(f"Loading environment from: {env_path}")
 load_dotenv(env_path)
 logger.info(f"ANTHROPIC_API_KEY: {os.getenv('ANTHROPIC_API_KEY')[:10]}...")
 
+class SummaryNode:
+    def __init__(self, text: str, level: int = 0):
+        self.text = text
+        self.level = level
+        self.summary = ""
+        self.children = []
+        self.embedding = None
+        self.metadata = {}
+
+class HierarchicalStore:
+    def __init__(self, embeddings_model):
+        self.root = SummaryNode("root", level=0)
+        self.embeddings = embeddings_model
+        self.index_by_level = {}  # FAISS index for each level
+        
+    async def add_document(self, text: str, metadata: Dict[str, Any], chunk_size: int = 512):
+        """Add document with hierarchical chunking and summarization."""
+        # Create leaf node
+        leaf = SummaryNode(text, level=3)
+        leaf.metadata = metadata
+        
+        # Generate summary
+        summary_prompt = f"Summarize the following text concisely while preserving key technical details:\n\n{text}"
+        summary, _ = await self._call_claude_api("", summary_prompt)
+        leaf.summary = summary
+        
+        # Create parent summaries
+        current = leaf
+        for level in reversed(range(3)):  # Create level 2, 1, 0 summaries
+            summary_prompt = f"Create a higher-level technical summary of:\n\n{current.summary}"
+            parent_summary, _ = await self._call_claude_api("", summary_prompt)
+            parent = SummaryNode(parent_summary, level=level)
+            parent.children.append(current)
+            current = parent
+            
+        # Add to root
+        self.root.children.append(current)
+        
+        # Update embeddings and indices
+        await self._update_embeddings([leaf])
+        
+    async def _update_embeddings(self, nodes: List[SummaryNode]):
+        """Update embeddings for nodes and add to appropriate indices."""
+        for node in nodes:
+            # Generate embedding
+            text_to_embed = self._preprocess_query(node.summary or node.text)
+            node.embedding = self.embeddings.encode([text_to_embed])[0]
+            
+            # Ensure index exists for this level
+            if node.level not in self.index_by_level:
+                self.index_by_level[node.level] = faiss.IndexFlatIP(self.embeddings.get_sentence_embedding_dimension())
+            
+            # Add to index
+            self.index_by_level[node.level].add(np.array([node.embedding]))
+            
+            # Recursively update children
+            if node.children:
+                await self._update_embeddings(node.children)
+
+    async def search(self, query: str, top_k: int = 3) -> List[Tuple[str, Dict[str, Any], float]]:
+        """Search using hierarchical navigation."""
+        query_embedding = self.embeddings.encode([self._preprocess_query(query)])[0]
+        
+        results = []
+        seen_texts = set()
+        
+        # Search each level, starting from root
+        for level in range(4):  # 0 to 3
+            if level not in self.index_by_level:
+                continue
+                
+            # Search at current level
+            D, I = self.index_by_level[level].search(
+                np.array([query_embedding]), 
+                min(top_k, self.index_by_level[level].ntotal)
+            )
+            
+            # Collect unique results
+            for score, idx in zip(D[0], I[0]):
+                node = self._find_node_by_embedding(self.root, self.index_by_level[level].reconstruct(idx))
+                if node and node.text not in seen_texts:
+                    seen_texts.add(node.text)
+                    results.append((node.text, node.metadata, float(score)))
+                    
+                    if len(results) >= top_k:
+                        break
+            
+            if len(results) >= top_k:
+                break
+                
+        return results[:top_k]
+        
+    def _find_node_by_embedding(self, node: SummaryNode, target_embedding: np.ndarray) -> Optional[SummaryNode]:
+        """Find node with matching embedding."""
+        if node.embedding is not None and np.allclose(node.embedding, target_embedding):
+            return node
+            
+        for child in node.children:
+            result = self._find_node_by_embedding(child, target_embedding)
+            if result:
+                return result
+                
+        return None
+
+class ContextEnhancer:
+    def __init__(self):
+        self.relationship_graph = {}
+        self.metadata_index = {}
+        
+    def add_relationship(self, source_id: str, target_id: str, relationship_type: str):
+        """Add a directional relationship between documents."""
+        if source_id not in self.relationship_graph:
+            self.relationship_graph[source_id] = {}
+        self.relationship_graph[source_id][target_id] = relationship_type
+        
+    def add_metadata(self, doc_id: str, metadata: Dict[str, Any]):
+        """Index document metadata for quick lookup."""
+        self.metadata_index[doc_id] = {
+            "timestamp": metadata.get("timestamp"),
+            "author": metadata.get("author"),
+            "type": metadata.get("type"),
+            "tags": metadata.get("tags", []),
+            "references": metadata.get("references", [])
+        }
+        
+        # Add relationships from references
+        for ref in metadata.get("references", []):
+            self.add_relationship(doc_id, ref, "references")
+            
+    def get_related_docs(self, doc_id: str, max_depth: int = 2) -> List[str]:
+        """Get related document IDs up to max_depth."""
+        related = set()
+        current_level = {doc_id}
+        
+        for depth in range(max_depth):
+            next_level = set()
+            for current_id in current_level:
+                if current_id in self.relationship_graph:
+                    next_level.update(self.relationship_graph[current_id].keys())
+            related.update(next_level)
+            current_level = next_level
+            
+        return list(related - {doc_id})
+        
+    def filter_by_metadata(
+        self,
+        docs: List[str],
+        filters: Dict[str, Any]
+    ) -> List[str]:
+        """Filter documents by metadata criteria."""
+        filtered = []
+        for doc_id in docs:
+            metadata = self.metadata_index.get(doc_id, {})
+            matches = True
+            
+            for key, value in filters.items():
+                if key == "tags" and value:
+                    if not any(tag in metadata.get("tags", []) for tag in value):
+                        matches = False
+                        break
+                elif key == "type" and value:
+                    if metadata.get("type") != value:
+                        matches = False
+                        break
+                elif key == "after" and value:
+                    if not metadata.get("timestamp") or metadata["timestamp"] < value:
+                        matches = False
+                        break
+                        
+            if matches:
+                filtered.append(doc_id)
+                
+        return filtered
+
+class BatchProcessor:
+    def __init__(self, batch_size: int = 32):
+        self.batch_size = batch_size
+        self.cache = {}
+        self.last_access = {}
+        self.max_cache_size = 1000
+        
+    async def process_in_batches(
+        self,
+        items: List[Any],
+        process_fn: callable,
+        *args,
+        **kwargs
+    ) -> List[Any]:
+        """Process items in batches for better performance."""
+        results = []
+        for i in range(0, len(items), self.batch_size):
+            batch = items[i:i + self.batch_size]
+            batch_results = await process_fn(batch, *args, **kwargs)
+            results.extend(batch_results)
+        return results
+        
+    def cache_result(self, key: str, value: Any):
+        """Cache result with LRU eviction."""
+        if len(self.cache) >= self.max_cache_size:
+            # Evict least recently used
+            lru_key = min(self.last_access.items(), key=lambda x: x[1])[0]
+            del self.cache[lru_key]
+            del self.last_access[lru_key]
+        
+        self.cache[key] = value
+        self.last_access[key] = time.time()
+        
+    def get_cached(self, key: str) -> Optional[Any]:
+        """Get cached result if available."""
+        if key in self.cache:
+            self.last_access[key] = time.time()
+            return self.cache[key]
+        return None
+
 class RAGSystem:
     def __init__(self, model_name: str = "claude-3-opus-20240229", use_mock: bool = True):
         # Use a stronger bi-encoder model
@@ -56,6 +270,9 @@ class RAGSystem:
         self.health = SystemHealth()
         self.conversation_listener = None
         self.metrics = MetricsTracker()
+        self.hierarchical_store = HierarchicalStore(self.embeddings)
+        self.context_enhancer = ContextEnhancer()
+        self.batch_processor = BatchProcessor()
         
     async def _cleanup(self):
         """Cleanup resources on shutdown."""
@@ -66,38 +283,83 @@ class RAGSystem:
 
     @with_retries(max_attempts=3)
     async def initialize_from_firebase(self):
-        """Initialize the vector store from Firebase data."""
+        """Initialize the vector store and hierarchical store from Firebase data."""
         logger.info("Initializing from Firebase...")
         
         # Get initial conversations
         docs = await self.firebase.get_conversations()
-        logger.info(f"Initializing vector store with {len(docs)} documents")
+        logger.info(f"Initializing stores with {len(docs)} documents")
         
-        # Create vector store
+        # Create stores
         for doc in docs:
             await self.ingest_text(doc.page_content, doc.metadata)
+            await self.hierarchical_store.add_document(doc.page_content, doc.metadata)
             
-        logger.info("Vector store initialization complete")
+        logger.info("Stores initialization complete")
         
         # Set up real-time updates
         async def on_conversation_update(doc):
             await self.ingest_text(doc.page_content, doc.metadata)
+            await self.hierarchical_store.add_document(doc.page_content, doc.metadata)
         
         self.conversation_listener = await self.firebase.watch_conversations(on_conversation_update)
         logger.info("Firebase initialization and real-time updates configured")
 
+    async def _encode_texts_batch(
+        self,
+        texts: List[str],
+        use_cache: bool = True
+    ) -> np.ndarray:
+        """Encode texts in batches with caching."""
+        results = []
+        cache_hits = 0
+        
+        for text in texts:
+            if use_cache:
+                cache_key = f"emb_{hash(text)}"
+                cached = self.batch_processor.get_cached(cache_key)
+                if cached is not None:
+                    results.append(cached)
+                    cache_hits += 1
+                    continue
+                    
+        texts_to_encode = [
+            text for text in texts 
+            if not use_cache or self.batch_processor.get_cached(f"emb_{hash(text)}") is None
+        ]
+        
+        if texts_to_encode:
+            # Process in batches
+            embeddings = await self.batch_processor.process_in_batches(
+                texts_to_encode,
+                lambda batch: self.embeddings.encode(batch)
+            )
+            
+            # Cache new results
+            if use_cache:
+                for text, emb in zip(texts_to_encode, embeddings):
+                    cache_key = f"emb_{hash(text)}"
+                    self.batch_processor.cache_result(cache_key, emb)
+                    
+            results.extend(embeddings)
+            
+        logger.info(f"Embedding cache hits: {cache_hits}/{len(texts)}")
+        return np.array(results)
+        
     async def ingest_text(self, text: str, metadata: Dict[str, Any]):
-        """Add text to the vector store."""
-        embedding = self.embeddings.encode([text])[0]
+        """Add text to the vector store with batched processing."""
+        # Get embedding with caching
+        embedding = (await self._encode_texts_batch([text]))[0]
         embedding_normalized = embedding / np.linalg.norm(embedding)
         
-        # Add to both indices
-        self.index_l2.add(np.array([embedding], dtype=np.float32))
-        self.index_ip.add(np.array([embedding_normalized], dtype=np.float32))
+        # Add to indices
+        self.index.add(np.array([embedding_normalized]))
         
         self.texts.append(text)
         self.metadatas.append(metadata)
-
+        doc_id = str(len(self.texts) - 1)
+        self.context_enhancer.add_metadata(doc_id, metadata)
+        
     def _preprocess_query(self, query: str) -> str:
         """Preprocess query for better matching."""
         # Add query instruction prefix for bge model
@@ -212,75 +474,90 @@ Alternative phrasings:"""
         top_indices = np.argsort(scores)[-top_k:][::-1]
         return top_indices.tolist(), scores
 
+    async def _semantic_similarity_batch(
+        self,
+        query: str,
+        texts: List[str]
+    ) -> np.ndarray:
+        """Calculate semantic similarity with batched processing."""
+        # Get query embedding
+        query_embedding = (await self._encode_texts_batch([self._preprocess_query(query)]))[0]
+        
+        # Get text embeddings in batches
+        text_embeddings = await self._encode_texts_batch(texts)
+        
+        # Normalize
+        query_embedding = query_embedding / np.linalg.norm(query_embedding)
+        text_embeddings = text_embeddings / np.linalg.norm(text_embeddings, axis=1, keepdims=True)
+        
+        return np.dot(text_embeddings, query_embedding)
+        
     async def retrieve_with_fusion(
-        self, 
-        query: str, 
+        self,
+        query: str,
         k: int = 3,
-        relevant_ids: Optional[List[str]] = None
+        relevant_ids: Optional[List[str]] = None,
+        metadata_filters: Optional[Dict[str, Any]] = None
     ) -> Tuple[List[str], List[Dict[str, Any]], RetrievalMetrics]:
-        """Enhanced retrieval using dense embeddings and contrastive learning."""
+        """Enhanced retrieval with batched processing and caching."""
         start_time = time.time()
         
-        # Expand query
-        expanded_queries = await self._expand_query(query)
-        
-        # Get embeddings for all queries
-        all_scores = {}
-        all_candidates = set()
-        
-        for expanded_query in expanded_queries:
-            # Preprocess and encode query
-            processed_query = self._preprocess_query(expanded_query)
-            query_embedding = self.embeddings.encode([processed_query])[0]
-            query_normalized = query_embedding / np.linalg.norm(query_embedding)
+        # Check query cache
+        cache_key = f"query_{hash(query)}_{k}_{hash(str(metadata_filters))}"
+        cached = self.batch_processor.get_cached(cache_key)
+        if cached is not None:
+            logger.info("Query cache hit")
+            return cached
             
-            # Search with cosine similarity
-            D, I = self.index.search(
-                query_normalized.reshape(1, -1).astype('float32'), 
-                k * 2
-            )
+        # Get initial results
+        texts, metadata, metrics = await super().retrieve_with_fusion(query, k * 2, relevant_ids)
+        
+        # Process related documents in batches
+        doc_ids = [str(i) for i in range(len(texts))]
+        if metadata_filters:
+            filtered_ids = self.context_enhancer.filter_by_metadata(doc_ids, metadata_filters)
+            filtered_indices = [i for i, doc_id in enumerate(doc_ids) if doc_id in filtered_ids]
+            texts = [texts[i] for i in filtered_indices]
+            metadata = [metadata[i] for i in filtered_indices]
+            doc_ids = [doc_ids[i] for i in filtered_indices]
             
-            # Add candidates
-            candidates = I[0].tolist()
-            all_candidates.update(candidates)
+        # Get related docs
+        all_related = set()
+        for doc_id in doc_ids[:k]:
+            related = self.context_enhancer.get_related_docs(doc_id)
+            all_related.update(related)
             
-            # Calculate semantic similarity
-            candidate_texts = [self.texts[i] for i in candidates]
-            sim_scores = self._semantic_similarity(expanded_query, candidate_texts)
+        if all_related:
+            related_texts = [self.texts[int(i)] for i in all_related]
+            related_metadata = [self.metadatas[int(i)] for i in all_related]
             
-            # Update scores (take max across expanded queries)
-            for i, doc_id in enumerate(candidates):
-                all_scores[doc_id] = max(
-                    all_scores.get(doc_id, 0.0),
-                    sim_scores[i]
-                )
+            # Score related docs in batches
+            related_scores = await self._semantic_similarity_batch(query, related_texts)
+            
+            for i, score in enumerate(related_scores):
+                if score > 0.7:
+                    texts.append(related_texts[i])
+                    metadata.append(related_metadata[i])
+                    
+        # Truncate results
+        texts = texts[:k]
+        metadata = metadata[:k]
         
-        # Convert to lists for ranking
-        candidate_list = list(all_candidates)
-        score_list = [all_scores[doc_id] for doc_id in candidate_list]
-        
-        # Sort by similarity score
-        sorted_indices = np.argsort(score_list)[-k:][::-1]
-        
-        # Get final results
-        fused_ids = [candidate_list[i] for i in sorted_indices]
-        texts = [self.texts[i] for i in fused_ids]
-        metadata = [self.metadatas[i] for i in fused_ids]
-        
-        # Calculate metrics if we have relevant IDs
+        # Update metrics
         retrieval_time = (time.time() - start_time) * 1000
         metrics = RetrievalMetrics(
-            mrr=mean_reciprocal_rank(relevant_ids or [], [str(i) for i in fused_ids]),
-            ndcg=normalized_dcg(relevant_ids or [], [str(i) for i in fused_ids]),
-            recall_at_k={
-                k: recall_at_k(relevant_ids or [], [str(i) for i in fused_ids], k)
-                for k in [1, 3, 5, 10]
-            },
+            mrr=metrics.mrr,
+            ndcg=metrics.ndcg,
+            recall_at_k=metrics.recall_at_k,
             latency_ms=retrieval_time,
             num_results=len(texts)
         )
         
-        return texts, metadata, metrics
+        # Cache results
+        result = (texts, metadata, metrics)
+        self.batch_processor.cache_result(cache_key, result)
+        
+        return result
 
     @with_retries(max_attempts=3, delay=1)
     async def _call_claude_api(self, context: str, query: str) -> Tuple[str, int]:

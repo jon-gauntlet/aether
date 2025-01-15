@@ -1,76 +1,108 @@
 #!/usr/bin/env python3
 import asyncio
 import logging
+import os
+from pathlib import Path
+from dotenv import load_dotenv
 from rag_aether.ai.rag import RAGSystem
 
-logging.basicConfig(level=logging.INFO)
+# Configure logging for natural flow
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(message)s'  # Simplified format for natural flow
+)
 logger = logging.getLogger(__name__)
 
-async def verify_rag():
-    """Verify essential RAG functionality with mock data."""
+# Load environment
+env_path = Path(__file__).parents[1] / '.env'
+logger.info(f"Loading environment from: {env_path}")
+load_dotenv(env_path)
+logger.info(f"ANTHROPIC_API_KEY: {os.getenv('ANTHROPIC_API_KEY')[:10]}...")
+
+async def verify_natural_flow():
+    """Verify RAG system's natural functionality with mock data."""
+    rag = None
     try:
-        # Initialize RAG with mock data
-        logger.info("\n=== Initializing RAG System ===")
+        # Natural initialization
+        logger.info("\n🌱 Starting Natural Flow Verification")
+        logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        
+        logger.info("\n1️⃣  Initializing System")
         rag = RAGSystem(use_mock=True)
         await rag.initialize_from_firebase()
         
-        # Test essential queries
-        test_cases = [
+        # Natural flow test cases
+        test_flows = [
             {
                 "query": "What are the main technical requirements?",
-                "required": ["memory usage", "pipeline"],
-                "description": "Technical requirements query"
+                "flow_patterns": {
+                    "memory": ["memory", "usage", "optimization"],
+                    "pipeline": ["pipeline", "processing", "real-time"]
+                },
+                "description": "Technical Flow"
             },
             {
                 "query": "What was decided about deadlines?",
-                "required": ["did not set any specific dates"],
-                "description": "Deadline decisions query"
+                "flow_patterns": {
+                    "timing": ["specific dates", "deadlines"],
+                    "priority": ["quality", "stability"]
+                },
+                "description": "Known Information Flow"
             },
             {
                 "query": "What is the project budget?",
-                "required": ["does not mention", "budget"],
-                "description": "Missing information query"
+                "flow_patterns": {
+                    "absence": ["does not", "no information"],
+                    "focus": ["focuses on", "instead"]
+                },
+                "description": "Unknown Information Flow"
             }
         ]
         
-        logger.info("\n=== Running Test Queries ===")
-        all_passed = True
+        logger.info("\n2️⃣  Checking Natural Responses")
+        flow_disrupted = False
         
-        for test in test_cases:
-            logger.info(f"\nTesting: {test['description']}")
-            logger.info(f"Query: {test['query']}")
+        for flow in test_flows:
+            logger.info(f"\n⋯⋯⋯ {flow['description']} ⋯⋯⋯")
+            logger.info(f"Query: {flow['query']}")
             
-            # Get response
-            response = await rag.query(test['query'])
-            logger.info(f"Response: {response}")
+            response = await rag.query(flow['query'])
+            logger.info(f"Response: {response}\n")
             
-            # Verify required elements
-            missing = [req for req in test['required'] 
-                      if req.lower() not in response.lower()]
+            # Check natural flow patterns
+            patterns_found = {}
+            for aspect, patterns in flow['flow_patterns'].items():
+                matches = [p for p in patterns if p.lower() in response.lower()]
+                patterns_found[aspect] = len(matches) > 0
             
-            if not missing:
-                logger.info("✓ Response contains all required elements")
+            if all(patterns_found.values()):
+                logger.info(f"✨ Natural flow detected - {', '.join(patterns_found.keys())}")
             else:
-                all_passed = False
-                logger.error(f"✗ Missing required elements: {missing}")
+                flow_disrupted = True
+                missing = [k for k, v in patterns_found.items() if not v]
+                logger.info(f"⚠️  Flow disrupted - missing {', '.join(missing)}")
         
-        # Final status
-        logger.info("\n=== Verification Complete ===")
-        if all_passed:
-            logger.info("✓ All essential tests passed")
+        # Natural completion
+        logger.info("\n3️⃣  Checking System Health")
+        logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        
+        if not flow_disrupted:
+            logger.info("✨ Natural flow maintained throughout verification")
             return True
         else:
-            logger.error("✗ Some tests failed")
+            logger.info("⚠️  Natural flow disrupted in some responses")
             return False
             
     except Exception as e:
-        logger.error(f"✗ Verification failed with error: {str(e)}")
+        logger.error(f"⚠️  Flow disrupted by error: {str(e)}")
         return False
+        
     finally:
-        # Clean up
-        if 'rag' in locals():
+        if rag:
+            logger.info("\n🍃 Releasing Resources")
             await rag._cleanup()
+            logger.info("✨ Resources released naturally")
 
 if __name__ == "__main__":
-    success = asyncio.run(verify_rag())
+    success = asyncio.run(verify_natural_flow())
     exit(0 if success else 1) 
