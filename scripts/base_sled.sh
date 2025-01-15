@@ -1,6 +1,10 @@
 #!/bin/bash
 
+# <!-- LLM:component FLOW_SLED_COMPONENT base_protection core_operations -->
+# Base Flow Sled protection initialization
+
 # Base Sled Script
+# <!-- LLM:component FLOW_SLED_COMPONENT base_sled core_protection -->
 # This script is part of the Sled system for development acceleration.
 
 # Function to monitor energy levels

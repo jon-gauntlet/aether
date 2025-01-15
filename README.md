@@ -1,53 +1,43 @@
-# Aether
+# RAG Aether
 
-Natural Communication system supporting high-velocity development with zero cognitive overhead.
+A Retrieval-Augmented Generation (RAG) system with flow state protection for enhanced developer productivity.
 
-## Core Features
-- **Flow Protection**: Automatic state preservation
-- **Type Safety**: Full immutable type system
-- **Natural Growth**: Pattern-based evolution
+## Features
 
-## Quick Start
+- Flow state tracking and optimization
+- Adaptive search based on energy levels and focus depth
+- Context-aware document retrieval
+- Mock data for testing and development
+
+## Setup
+
+1. Clone the repository
+2. Install dependencies:
 ```bash
-# Start protected development
-flow start
-
-# Enter flow state
-flow deep
-
-# Natural routing
-flow to garden
+pip install -r requirements.txt
+```
+3. Create a `.env` file with your OpenAI API key:
+```
+OPENAI_API_KEY=your_api_key_here
 ```
 
-## Documentation
-- [Context](CONTEXT.md) - Current project state and requirements
-- [Essence](ESSENCE.md) - Core patterns and principles
-- [Flow SLED](docs/FLOW_SLED.md) - Flow state protection
-- [Standards](docs/STANDARDS.md) - Development standards
-- [TypeScript](docs/TYPESCRIPT.md) - Type system architecture
-- [Vision](docs/VISION.md) - Core project vision and principles
-- [Sled Vision](docs/SLED_VISION.md) - Sled system design and integration guidelines
+## Project Structure
 
-## Best Practices
-1. Trust the system's natural protection
-2. Follow energy paths for development
-3. Let patterns emerge naturally
-4. Focus on core development
-5. Enable automatic learning
+- `tools/rag/`: Core RAG implementation
+  - `core.py`: Main RAG system with flow protection
+  - `data_prep.py`: Data preparation utilities
+  - `test_rag.py`: Test suite
+- `src/data/mock/`: Mock data for testing
+  - `conversations.js`: Sample conversations
+  - `ragUtils.js`: Utility functions
 
-## Development
-```typescript
-// Protected operation
-const result = await withFlow(async () => {
-  return await operation();
-});
+## Testing
 
-// Natural routing
-await flow.to(SpaceType.GARDEN);
-
-// Pattern learning
-system.learn(pattern);
+Run the test suite:
+```bash
+python -m tools.rag.test_rag
 ```
 
 ## License
+
 MIT 

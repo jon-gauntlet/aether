@@ -1,4 +1,5 @@
-// Natural type healing system
+// <!-- LLM:component FLOW_SLED_COMPONENT type_healing core_protection -->
+// Flow Sled type system healing
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
