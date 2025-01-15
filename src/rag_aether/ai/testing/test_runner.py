@@ -10,6 +10,7 @@ import time
 from .e2e_tests import E2ETests
 from .deployment_tests import DeploymentTests
 from .react_component_tests import ReactComponentTests
+from .rag_feature_tests import RAGFeatureTests
 from ..performance_system import PerformanceMonitor
 from ..quality_system import QualitySystem
 
@@ -36,6 +37,7 @@ class TestRunner:
         self.e2e = E2ETests()
         self.deployment = DeploymentTests(aws_region=aws_region, stage=stage)
         self.react = ReactComponentTests()
+        self.rag = RAGFeatureTests()
         
         # Monitoring
         self.monitor = PerformanceMonitor()
@@ -66,7 +68,8 @@ class TestRunner:
         # Initialize all test suites
         await asyncio.gather(
             self.e2e.setup(),
-            self.react.setup()
+            self.react.setup(),
+            self.rag.setup()
         )
         
         self.logger.info("Test environment ready")
@@ -77,7 +80,8 @@ class TestRunner:
         
         await asyncio.gather(
             self.e2e.teardown(),
-            self.react.teardown()
+            self.react.teardown(),
+            self.rag.teardown()
         )
         
         self.logger.info("Cleanup complete")
@@ -128,6 +132,21 @@ class TestRunner:
             self.logger.error(f"React component tests failed: {str(e)}")
             return False
             
+    async def run_rag_tests(self):
+        """Run RAG feature tests."""
+        self.logger.info("Running RAG feature tests")
+        
+        try:
+            await self.rag.test_context_preservation()
+            await self.rag.test_query_expansion()
+            await self.rag.test_response_quality()
+            await self.rag.test_hybrid_search()
+            self.logger.info("RAG feature tests passed")
+            return True
+        except Exception as e:
+            self.logger.error(f"RAG feature tests failed: {str(e)}")
+            return False
+            
     async def run_all_tests(self) -> Dict[str, bool]:
         """Run all test suites.
         
@@ -142,7 +161,8 @@ class TestRunner:
             results = {
                 'e2e': await self.run_e2e_tests(),
                 'deployment': await self.run_deployment_tests(),
-                'react': await self.run_react_tests()
+                'react': await self.run_react_tests(),
+                'rag': await self.run_rag_tests()
             }
             
             # Generate test report
