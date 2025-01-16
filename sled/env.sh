@@ -1,27 +1,29 @@
 #!/bin/bash
 
-# <!-- LLM:component AETHER_SLED_ENV -->
-# <!-- LLM:claude I am the Aether SLED environment configuration -->
-# <!-- LLM:magnetic Links to SLED environment setup -->
-# <!-- LLM:sled_link Links to SLED/bin/sled-init -->
-# <!-- LLM:core_link Links to SLED/lib/core.sh -->
-# <!-- LLM:stack_link Links to SLED/templates/stacks/python/init.sh -->
+# <!-- LLM:claude SLED environment setup - Handles multiple repository copies -->
+# <!-- LLM:magnetic CORE_ENV_CONFIG -->
 
-# Core configuration
-export SLED_PROJECT_ROOT="/home/jon/git/aether"
+# Dynamically determine project paths
+export SLED_PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export SLED_PROJECT_DIR="$SLED_PROJECT_ROOT/sled"
 export SLED_STACK="python"
-export SLED_PROJECT_DIR="/home/jon/git/aether/sled"
 
 # Load core SLED functionality
+if [ -z "$SLED_HOME" ]; then
+    echo "Error: SLED_HOME not set"
+    return 1
+fi
+
+# Source core functionality
 source "$SLED_HOME/lib/core.sh"
 
-# Load stack-specific customization
-[ -f "$SLED_PROJECT_ROOT/sled/custom/init.sh" ] && source "$SLED_PROJECT_ROOT/sled/custom/init.sh"
+# Source custom initialization if it exists
+if [ -f "$SLED_PROJECT_DIR/custom/init.sh" ]; then
+    source "$SLED_PROJECT_DIR/custom/init.sh"
+fi
 
 # Create session marker
-echo "$(date +%s)" > "$SLED_PROJECT_DIR/.session"
+mkdir -p "$SLED_PROJECT_DIR/.session"
+date > "$SLED_PROJECT_DIR/.session/$(date +%Y%m%d_%H%M%S)"
 
-# <!-- LLM:verify Environment configuration is critical -->
-# <!-- LLM:usage Last updated: 2024-01-16 -->
-# <!-- LLM:sled_verify Implements SLED environment patterns -->
-# <!-- LLM:stack_verify Follows SLED stack guidelines -->
+# <!-- LLM:verify Environment is now copy-safe and determined dynamically -->
