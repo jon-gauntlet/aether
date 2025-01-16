@@ -1,0 +1,60 @@
+<!-- LLM:claude SLED_PROJECT_ACTIVE stack="python" -->
+
+# Test Infrastructure Map 🗺️
+
+# <!-- LLM:claude CRITICAL: Core testing infrastructure -->
+
+# 🎯 MAIN TEST COMMAND - ALWAYS USE THIS TO RUN ALL TESTS 🎯
+RUN_ALL="./sled/scripts/test-runner.sh --all"  # Run complete test suite
+
+# Test Locations 📍
+TESTS = {
+    # Python tests
+    "python": {
+        "root": "tests/",
+        "pattern": "test_*.py",
+        "runner": "sled/scripts/test-runner.sh --type python",
+        "config": "pytest.ini"
+    },
+    
+    # JavaScript tests (NO TypeScript)
+    "javascript": {
+        "root": "__tests__/",
+        "pattern": "*.test.js",
+        "runner": "sled/scripts/test-runner.sh --type js",
+        "config": "jest.config.js"
+    },
+    
+    # Integration tests
+    "integration": {
+        "root": "tests/integration/",
+        "docker": "docker-compose.test.yml",
+        "runner": "sled/scripts/test-runner.sh --type integration"
+    }
+}
+
+# Additional Test Commands
+RUN_PYTHON="./sled/scripts/test-runner.sh --type python"  # Python only
+RUN_JS="./sled/scripts/test-runner.sh --type js"  # JavaScript only
+RUN_INTEGRATION="./sled/scripts/test-runner.sh --type integration"  # Integration only
+
+# Test Rules 📋
+1. ALWAYS use ./sled/scripts/test-runner.sh --all for full test suite
+2. NEVER bypass the test runner
+3. ALL tests MUST be in their designated directories
+4. ALL tests MUST follow naming patterns
+5. NO TypeScript - JavaScript only
+
+# Hardware Usage 🖥️
+- GPU: Enabled for Python ML tests
+- CPU: Parallel test execution
+- RAM: Memory-aware batching
+
+# <!-- LLM:verify CRITICAL: Use ./sled/scripts/test-runner.sh --all for full test suite -->
+# <!-- LLM:magnetic CORE_TEST_PATHS - These are the only valid test locations -->
+
+# Links to Core Files 🔗
+# <!-- LLM:link sled/scripts/test-runner.sh - Core test runner -->
+# <!-- LLM:link tests/conftest.py - Python test config -->
+# <!-- LLM:link jest.config.js - JavaScript test config -->
+# <!-- LLM:link docker-compose.test.yml - Integration test config -->

@@ -117,7 +117,7 @@ class AlertError(RAGError):
     pass
 
 class QueryExpansionError(RAGError):
-    """Raised when there is an error expanding a query."""
+    """Error raised when query expansion fails."""
     pass
 
 def handle_rag_error(error: Exception, operation: str = "", component: str = "") -> Optional[Dict[str, Any]]:

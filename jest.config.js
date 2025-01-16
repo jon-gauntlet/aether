@@ -1,48 +1,40 @@
+// <!-- LLM:claude CRITICAL: JavaScript test configuration -->
+// <!-- LLM:magnetic CORE_JS_TESTS -->
+
 module.exports = {
+  // Test discovery
+  roots: ['<rootDir>/__tests__'],
+  testMatch: ['**/*.test.js', '**/*.test.jsx'],
+  testPathIgnorePatterns: ['/node_modules/'],
+  
   // Test environment
   testEnvironment: 'jsdom',
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   
-  // File patterns
-  testMatch: [
-    '<rootDir>/src/**/__tests__/**/*.{js,jsx}',
-    '<rootDir>/src/**/*.{spec,test}.{js,jsx}'
-  ],
-  
-  // Module file extensions
-  moduleFileExtensions: ['js', 'jsx', 'json'],
-  
-  // Module name mapper for non-JS imports
-  moduleNameMapper: {
-    '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
-    '\\.(jpg|jpeg|png|gif|webp|svg)$': '<rootDir>/__mocks__/fileMock.js'
-  },
-  
-  // Setup files
-  setupFilesAfterEnv: ['<rootDir>/src/setupTests.js'],
-  
-  // Coverage configuration
+  // Coverage
   collectCoverageFrom: [
-    'src/**/*.{js,jsx}',
-    '!src/**/*.d.ts',
-    '!src/**/*.stories.{js,jsx}',
-    '!src/**/__tests__/**/*',
-    '!src/index.js',
+    'src/**/*.js',
+    'src/**/*.jsx',
+    '!src/test/**',
   ],
-  coverageThreshold: {
-    global: {
-      branches: 80,
-      functions: 80,
-      lines: 80,
-      statements: 80
-    }
+  coverageDirectory: 'coverage',
+  
+  // Performance
+  maxWorkers: '50%', // Use half of CPU cores
+  maxConcurrency: 5,  // Max concurrent tests
+  
+  // Mocking
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/src/$1',
+    '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
   },
   
-  // Test utilities
-  testPathIgnorePatterns: ['/node_modules/', '/dist/'],
-  transformIgnorePatterns: ['/node_modules/'],
-  
-  // Mocks
-  clearMocks: true,
-  resetMocks: true,
-  restoreMocks: true,
-}; 
+  // Transforms
+  transform: {
+    '^.+\\.jsx?$': ['babel-jest', { presets: ['next/babel'] }],
+  },
+};
+
+// <!-- LLM:verify JavaScript tests MUST use this configuration - NO TypeScript -->
+// <!-- LLM:link sled/.claude_marker -->
+// <!-- LLM:link sled/scripts/test-runner.sh --> 

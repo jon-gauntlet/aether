@@ -1,1 +1,1 @@
- 
+../sled/scripts/divine_sled.sh

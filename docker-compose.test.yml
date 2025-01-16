@@ -1,56 +1,72 @@
+# <!-- LLM:claude CRITICAL: Integration test configuration -->
+# <!-- LLM:magnetic CORE_INTEGRATION_TESTS -->
+
 version: '3.8'
 
 services:
+  # Core services for integration testing
+  app:
+    build: 
+      context: .
+      target: test
+    environment:
+      - NODE_ENV=test
+      - PYTHON_ENV=test
+    volumes:
+      - .:/app
+    depends_on:
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+
+  # Test dependencies
   redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
+    image: redis:alpine
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
+      interval: 1s
       timeout: 3s
-      retries: 3
-      
+      retries: 30
+
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.9.0
+    image: elasticsearch:8.7.0
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-    ports:
-      - "9200:9200"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9200"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      
+      interval: 1s
+      timeout: 3s
+      retries: 30
+
   minio:
     image: minio/minio
-    ports:
-      - "9000:9000"
-      - "9001:9001"
+    command: server /data
     environment:
-      - MINIO_ROOT_USER=minioadmin
-      - MINIO_ROOT_PASSWORD=minioadmin
-    command: server /data --console-address ":9001"
+      - MINIO_ROOT_USER=test
+      - MINIO_ROOT_PASSWORD=test123
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      
+      interval: 1s
+      timeout: 3s
+      retries: 30
+
   localstack:
     image: localstack/localstack
-    ports:
-      - "4566:4566"
     environment:
-      - SERVICES=s3,dynamodb,sqs
-      - DEFAULT_REGION=us-west-2
       - AWS_ACCESS_KEY_ID=test
       - AWS_SECRET_ACCESS_KEY=test
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 3 
+      interval: 1s
+      timeout: 3s
+      retries: 30
+
+# <!-- LLM:verify Integration tests MUST use this configuration -->
+# <!-- LLM:link sled/.claude_marker -->
+# <!-- LLM:link sled/scripts/test-runner.sh --> 
