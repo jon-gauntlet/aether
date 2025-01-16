@@ -18,28 +18,83 @@ import { useDeployment } from '../protection/DeployGuard';
  * @property {boolean} isCoherent
  */
 
+const DEFAULT_FIELD = {
+  id: 'default',
+  type: 'energy',
+  level: 70,
+  isActive: true
+};
+
+const DEFAULT_CONSCIOUSNESS = {
+  id: 'default',
+  awarenessLevel: 80,
+  isCoherent: true
+};
+
+/**
+ * Validates field state updates
+ * @param {Partial<Field>} updates
+ * @returns {boolean}
+ */
+function validateFieldUpdates(updates) {
+  if ('level' in updates && (updates.level < 0 || updates.level > 100)) {
+    return false;
+  }
+  if ('type' in updates && typeof updates.type !== 'string') {
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Validates consciousness state updates
+ * @param {Partial<Consciousness>} updates
+ * @returns {boolean}
+ */
+function validateConsciousnessUpdates(updates) {
+  if ('awarenessLevel' in updates && (updates.awarenessLevel < 0 || updates.awarenessLevel > 100)) {
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Safely calls a system method, handling any errors
+ * @template T
+ * @param {Function} method The system method to call
+ * @param {T} args The arguments to pass to the method
+ * @returns {void}
+ */
+function safeSystemCall(method, ...args) {
+  try {
+    if (method) {
+      method(...args);
+    }
+  } catch (error) {
+    console.warn('System method error:', error);
+  }
+}
+
 /**
  * Hook for managing autonomic system state
- * @param {Object} props
- * @param {Field} [props.field]
- * @param {Consciousness} [props.consciousness]
+ * @param {AutonomicSystem} [system] Optional autonomic system instance
+ * @param {Object} [props]
+ * @param {Partial<Field>} [props.field]
+ * @param {Partial<Consciousness>} [props.consciousness]
  * @returns {Object} Autonomic system controls and state
  */
-export function useAutonomic(props = {}) {
+export function useAutonomic(system, props = {}) {
   /** @type {import('react').MutableRefObject<AutonomicSystem|undefined>} */
-  const systemRef = useRef();
-  const [field, setField] = useState(props.field || {
-    id: 'default',
-    type: 'energy',
-    level: 70,
-    isActive: true
+  const systemRef = useRef(system);
+  const [fieldState, setFieldState] = useState({
+    ...DEFAULT_FIELD,
+    ...props.field
   });
-  const [consciousness, setConsciousness] = useState(props.consciousness || {
-    id: 'default',
-    awarenessLevel: 80,
-    isCoherent: true
+  const [consciousnessState, setConsciousnessState] = useState({
+    ...DEFAULT_CONSCIOUSNESS,
+    ...props.consciousness
   });
-  const [isActive, setIsActive] = useState(true);
+  const [isActive, setIsActive] = useState(false);
   const { isProtected } = useDeployment();
 
   useEffect(() => {
@@ -48,52 +103,57 @@ export function useAutonomic(props = {}) {
     }
 
     const subscription = systemRef.current.observeFlow().subscribe(state => {
-      if (state) {
-        setField(prev => ({
-          ...prev,
-          level: state.metrics.energy * 100
-        }));
-        setConsciousness(prev => ({
-          ...prev,
-          awarenessLevel: state.metrics.presence * 100
-        }));
+      if (state.field) {
+        setFieldState(prev => ({ ...prev, ...state.field }));
+      }
+      if (state.consciousness) {
+        setConsciousnessState(prev => ({ ...prev, ...state.consciousness }));
       }
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  useEffect(() => {
-    const system = systemRef.current;
-    if (!system || !isProtected) return;
+  const updateFieldState = (updates) => {
+    if (!validateFieldUpdates(updates)) {
+      console.warn('Invalid field state update:', updates);
+      return;
+    }
 
-    const interval = setInterval(() => {
-      system.maintainHarmony();
-    }, 1618); // Golden ratio in ms
-
-    return () => clearInterval(interval);
-  }, [isProtected]);
-
-  const updateField = (updates) => {
-    setField(prev => ({ ...prev, ...updates }));
+    setFieldState(prev => ({ ...prev, ...updates }));
+    safeSystemCall(systemRef.current?.updateField, updates);
   };
 
-  const updateConsciousness = (updates) => {
-    setConsciousness(prev => ({ ...prev, ...updates }));
+  const updateConsciousnessState = (updates) => {
+    if (!validateConsciousnessUpdates(updates)) {
+      console.warn('Invalid consciousness state update:', updates);
+      return;
+    }
+
+    setConsciousnessState(prev => ({ ...prev, ...updates }));
+    safeSystemCall(systemRef.current?.updateConsciousness, updates);
+  };
+
+  const activateAutonomic = () => {
+    setIsActive(true);
+    safeSystemCall(systemRef.current?.activate);
   };
 
   const synchronize = () => {
-    const targetLevel = consciousness.awarenessLevel;
-    updateField({ level: targetLevel });
+    safeSystemCall(
+      systemRef.current?.synchronize,
+      fieldState,
+      consciousnessState
+    );
   };
 
   return {
-    field,
-    consciousness,
+    fieldState,
+    consciousnessState,
     isActive,
-    updateField,
-    updateConsciousness,
-    setActive: setIsActive,
+    updateFieldState,
+    updateConsciousnessState,
+    activateAutonomic,
     synchronize
   };
 } 

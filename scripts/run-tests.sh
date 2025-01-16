@@ -42,7 +42,7 @@ run_js_tests() {
 # Run Python tests in parallel
 run_python_tests() {
     echo "🐍 Running Python tests..."
-    pytest -n $CPU_COUNT --dist=loadfile -v tests/ src/rag_aether/ai/testing/ --durations=0 &
+    pytest -v tests/ src/rag_aether/ai/testing/ &
     PY_PID=$!
 }
 

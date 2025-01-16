@@ -1,5 +1,5 @@
 """Integration system for RAG external service connections."""
-from typing import List, Dict, Any, Optional, Union, Callable
+from typing import List, Dict, Any, Optional, Tuple, Set, Union, AsyncGenerator, Callable
 from dataclasses import dataclass
 import asyncio
 import aiohttp

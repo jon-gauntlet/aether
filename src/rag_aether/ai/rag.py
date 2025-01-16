@@ -1,5 +1,5 @@
 """RAG system implementation."""
-from typing import List, Optional, Dict, Any, Tuple, Union, AsyncIterator, Callable
+from typing import List, Optional, Dict, Any, Tuple, Union, AsyncIterator, Callable, Set
 import os
 import json
 import asyncio
@@ -22,7 +22,7 @@ from rag_aether.core.errors import (
 )
 from rag_aether.core.logging import get_logger, setup_logging
 from rag_aether.core.performance import (
-    with_performance_monitoring, performance_section, monitor
+    with_performance_monitoring, performance_section, monitor, track_operation
 )
 from rag_aether.ai.hybrid_search import HybridRetriever
 from rag_aether.ai.query_expansion import QueryProcessor
@@ -43,6 +43,8 @@ from rag_aether.core.webhooks import (
     EVENT_QUERY, EVENT_INGESTION, EVENT_ERROR,
     EVENT_RATE_LIMIT, EVENT_QUALITY
 )
+from dataclasses import dataclass
+from .types import ChatMessage
 
 # Set up logging and performance monitoring
 setup_logging()
@@ -53,6 +55,19 @@ monitor.start_memory_tracking()
 env_path = Path(__file__).parents[3] / '.env'
 logger.info("Loading environment", extra={"env_path": str(env_path)})
 load_dotenv(env_path)
+
+@dataclass
+class SummaryNode:
+    """Node in the summary tree."""
+    text: str
+    embedding: Optional[np.ndarray] = None
+    children: List["SummaryNode"] = None
+    parent: Optional["SummaryNode"] = None
+    level: int = 0
+    
+    def __post_init__(self):
+        if self.children is None:
+            self.children = []
 
 class CrossEncoderReranker:
     """Cross-encoder for reranking retrieval results."""
@@ -1103,7 +1118,7 @@ Alternative phrasings:"""
         
         return result
 
-    @with_retries(max_attempts=3, delay=1)
+    @with_retries(max_retries=3, delay=1)
     async def _call_claude_api(self, context: str, query: str) -> Tuple[str, int]:
         """Call Claude API with persona-aware prompting."""
         logger.info(f"Using API key: {self.api_key[:10]}...")
@@ -1414,3 +1429,126 @@ class FirebaseAdapter:
 class MockFirebaseAdapter(FirebaseAdapter):
     def __init__(self):
         super().__init__(use_mock=True) 
+
+class RAGSystem:
+    def __init__(
+        self,
+        model_name: str = "all-mpnet-base-v2",
+        index_path: Optional[str] = None,
+        cache_dir: Optional[str] = None,
+        config: Optional[Dict[str, Any]] = None
+    ):
+        self.model = SentenceTransformer(model_name)
+        self.cross_encoder = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')
+        self.query_processor = QueryProcessor()
+        self.doc_processor = DocumentProcessor()
+        self.quality_scorer = QualityScorer()
+        self.source_attributor = SourceAttributor()
+        self.result_diversifier = ResultDiversifier()
+        
+        # Initialize caches
+        self.query_cache = QueryCache(cache_dir) if cache_dir else None
+        self.embedding_cache = EmbeddingCache(cache_dir) if cache_dir else None
+        
+        # Initialize index
+        self.index = ShardedIndex(index_path) if index_path else None
+        self.retriever = HybridRetriever(self.model, self.cross_encoder)
+        
+        # Initialize streaming and bulk processing
+        self.streamer = ResultStreamer()
+        self.bulk_ingester = BulkIngester()
+        self.bulk_retriever = BulkRetriever()
+        
+        # Initialize monitoring
+        self.metrics = MetricsTracker()
+        self.rate_limiter = RateLimitManager(RateLimitConfig())
+        self.webhook_manager = WebhookManager()
+        
+        # Load configuration
+        self.config = config or {}
+        
+    @with_error_handling
+    @with_health_check
+    @with_performance_monitoring
+    async def process_query(
+        self,
+        query: str,
+        context: Optional[Dict[str, Any]] = None,
+        k: int = 10
+    ) -> AsyncIterator[Dict[str, Any]]:
+        """Process a query with advanced understanding and natural response generation."""
+        
+        # Check cache first
+        if self.query_cache:
+            cache_key = self.query_cache.generate_key(query, context)
+            if cached_results := await self.query_cache.get(cache_key):
+                logger.info("Cache hit for query: %s", query)
+                return self.streamer.stream_results(cached_results)
+        
+        # Process query
+        with performance_section("query_processing"):
+            expanded_query = await self.query_processor.process(
+                query,
+                context=context,
+                metrics=self.metrics
+            )
+        
+        # Retrieve results
+        with performance_section("retrieval"):
+            results = await self.retriever.retrieve(
+                expanded_query,
+                k=k,
+                diversify=True
+            )
+        
+        # Score and attribute results
+        with performance_section("post_processing"):
+            scored_results = await self.quality_scorer.score(results)
+            attributed_results = await self.source_attributor.attribute(scored_results)
+            diversified_results = await self.result_diversifier.diversify(
+                attributed_results,
+                min_similarity_threshold=self.config.get("min_similarity", 0.3)
+            )
+        
+        # Cache results
+        if self.query_cache:
+            await self.query_cache.set(cache_key, diversified_results)
+        
+        # Track metrics
+        self.metrics.track_query(
+            query=query,
+            results=diversified_results,
+            timing=monitor.get_section_timing()
+        )
+        
+        # Emit webhook event
+        await self.webhook_manager.emit(
+            EVENT_QUERY,
+            {
+                "query": query,
+                "results_count": len(diversified_results),
+                "metrics": self.metrics.get_latest()
+            }
+        )
+        
+        return self.streamer.stream_results(diversified_results)
+
+    @with_error_handling
+    @with_health_check
+    @with_performance_monitoring
+    async def ingest_documents(
+        self,
+        documents: List[DocumentChunk],
+        batch_size: int = 100
+    ) -> BulkProgress:
+        """Ingest documents with quality checks and caching."""
+        
+        # Process in batches
+        return await self.bulk_ingester.ingest(
+            documents,
+            processor=self.doc_processor,
+            index=self.index,
+            cache=self.embedding_cache,
+            batch_size=batch_size,
+            webhook_manager=self.webhook_manager
+        ) 

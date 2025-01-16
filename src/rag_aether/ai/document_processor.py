@@ -1,256 +1,125 @@
-"""Document processing for RAG system."""
+"""Document processing module for RAG system."""
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
-import re
-from datetime import datetime
 import numpy as np
+from transformers import AutoTokenizer
+from rag_aether.core.errors import DocumentProcessingError
+from rag_aether.core.logging import get_logger
+from rag_aether.core.performance import performance_section
+
+logger = get_logger(__name__)
 
 @dataclass
-class Document:
-    """Document with content and metadata."""
-    content: str
+class DocumentChunk:
+    """Represents a chunk of a document."""
+    text: str
     metadata: Dict[str, Any]
+    chunk_id: str
+    embedding: Optional[np.ndarray] = None
 
 class DocumentProcessor:
-    """Process and prepare documents for RAG system."""
+    """Handles document processing and chunking."""
     
     def __init__(
         self,
+        tokenizer_name: str = "bert-base-uncased",
         max_chunk_size: int = 512,
-        chunk_overlap: int = 128,
-        min_chunk_size: int = 64,
-        clean_text: bool = True,
-        preserve_whitespace: bool = False
+        overlap: int = 50
     ):
-        """Initialize document processor.
-        
-        Args:
-            max_chunk_size: Maximum chunk size in characters
-            chunk_overlap: Number of characters to overlap between chunks
-            min_chunk_size: Minimum chunk size in characters
-            clean_text: Whether to clean text (remove extra whitespace etc)
-            preserve_whitespace: Whether to preserve whitespace in output
-        """
+        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
         self.max_chunk_size = max_chunk_size
-        self.chunk_overlap = chunk_overlap
-        self.min_chunk_size = min_chunk_size
-        self.clean_text = clean_text
-        self.preserve_whitespace = preserve_whitespace
+        self.overlap = overlap
         
-    def process_document(
-        self,
-        content: str,
-        metadata: Optional[Dict[str, Any]] = None
-    ) -> List[Document]:
-        """Process a document into chunks with metadata.
-        
-        Args:
-            content: Document content
-            metadata: Optional metadata
-            
-        Returns:
-            List of processed document chunks
-        """
-        # Clean text if requested
-        if self.clean_text:
-            content = self._clean_text(content)
-            
-        # Split into chunks
-        chunks = self._split_into_chunks(content)
-        
-        # Create documents with metadata
-        documents = []
-        base_metadata = metadata or {}
-        
-        for i, chunk in enumerate(chunks):
-            # Create chunk metadata
-            chunk_metadata = {
-                **base_metadata,
-                "chunk_index": i,
-                "total_chunks": len(chunks),
-                "timestamp": datetime.now().isoformat(),
-            }
-            
-            # Create document
-            doc = Document(
-                content=chunk,
-                metadata=chunk_metadata
-            )
-            documents.append(doc)
-            
-        return documents
-        
-    def process_documents(
-        self,
-        contents: List[str],
-        metadata: Optional[List[Dict[str, Any]]] = None
-    ) -> List[Document]:
-        """Process multiple documents.
-        
-        Args:
-            contents: List of document contents
-            metadata: Optional list of metadata dicts
-            
-        Returns:
-            List of processed documents
-        """
-        if metadata is None:
-            metadata = [{}] * len(contents)
-            
-        if len(metadata) != len(contents):
-            raise ValueError(
-                f"Length mismatch: {len(contents)} contents vs {len(metadata)} metadata"
-            )
-            
-        documents = []
-        for content, meta in zip(contents, metadata):
-            chunks = self.process_document(content, meta)
-            documents.extend(chunks)
-            
-        return documents
-        
-    def _clean_text(self, text: str) -> str:
-        """Clean text by removing extra whitespace etc."""
-        if not self.preserve_whitespace:
-            # Remove extra whitespace
-            text = re.sub(r'\s+', ' ', text)
-            # Remove leading/trailing whitespace
-            text = text.strip()
-            
-        return text
-        
-    def _split_into_chunks(self, text: str) -> List[str]:
-        """Split text into overlapping chunks."""
-        if len(text) <= self.max_chunk_size:
-            return [text]
-            
-        chunks = []
-        start = 0
-        
-        while start < len(text):
-            # Find end of chunk
-            end = start + self.max_chunk_size
-            
-            if end >= len(text):
-                # Last chunk
-                chunk = text[start:]
-                if len(chunk) >= self.min_chunk_size:
-                    chunks.append(chunk)
-                elif chunks:
-                    # Append to previous chunk if too small
-                    chunks[-1] = chunks[-1] + chunk
-                break
-                
-            # Try to break at sentence boundary
-            sentence_end = self._find_sentence_boundary(
-                text,
-                start + self.min_chunk_size,
-                end
-            )
-            
-            if sentence_end > 0:
-                end = sentence_end
-                
-            # Extract chunk
-            chunk = text[start:end]
-            if len(chunk) >= self.min_chunk_size:
-                chunks.append(chunk)
-                
-            # Move start position
-            start = end - self.chunk_overlap
-            
-        return chunks
-        
-    def _find_sentence_boundary(
+    async def process_document(
         self,
         text: str,
-        start: int,
-        end: int
-    ) -> int:
-        """Find nearest sentence boundary between start and end."""
-        # Common sentence endings
-        boundaries = ['. ', '! ', '? ', '.\n', '!\n', '?\n']
-        
-        # Find all boundary positions
-        positions = []
-        for boundary in boundaries:
-            pos = text.rfind(boundary, start, end)
-            if pos > 0:
-                positions.append(pos + len(boundary) - 1)
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> List[DocumentChunk]:
+        """Process a document into chunks."""
+        try:
+            with performance_section("document_processing"):
+                # Tokenize document
+                tokens = self.tokenizer.encode(
+                    text,
+                    add_special_tokens=False,
+                    truncation=False
+                )
                 
-        if not positions:
-            return -1
-            
-        # Return latest boundary position
-        return max(positions)
-        
-    def merge_documents(
-        self,
-        documents: List[Document],
-        merge_metadata: bool = True
-    ) -> Document:
-        """Merge multiple documents into one.
-        
-        Args:
-            documents: Documents to merge
-            merge_metadata: Whether to merge metadata
-            
-        Returns:
-            Merged document
-        """
-        if not documents:
-            raise ValueError("No documents to merge")
-            
-        # Merge content
-        content = "\n".join(doc.content for doc in documents)
-        
-        # Merge metadata if requested
-        if merge_metadata:
-            metadata = {}
-            for doc in documents:
-                metadata.update(doc.metadata)
-        else:
-            metadata = documents[0].metadata
-            
-        return Document(content=content, metadata=metadata)
-        
-    def filter_documents(
-        self,
-        documents: List[Document],
-        min_length: Optional[int] = None,
-        max_length: Optional[int] = None,
-        metadata_filters: Optional[Dict[str, Any]] = None
-    ) -> List[Document]:
-        """Filter documents based on criteria.
-        
-        Args:
-            documents: Documents to filter
-            min_length: Minimum content length
-            max_length: Maximum content length
-            metadata_filters: Metadata key-value pairs to match
-            
-        Returns:
-            Filtered documents
-        """
-        filtered = []
-        
-        for doc in documents:
-            # Check length constraints
-            if min_length and len(doc.content) < min_length:
-                continue
-            if max_length and len(doc.content) > max_length:
-                continue
+                # Create chunks
+                chunks = []
+                start = 0
+                chunk_number = 0
                 
-            # Check metadata filters
-            if metadata_filters:
-                match = True
-                for key, value in metadata_filters.items():
-                    if key not in doc.metadata or doc.metadata[key] != value:
-                        match = False
-                        break
-                if not match:
-                    continue
+                while start < len(tokens):
+                    # Calculate end position
+                    end = min(start + self.max_chunk_size, len(tokens))
                     
-            filtered.append(doc)
+                    # Decode chunk
+                    chunk_tokens = tokens[start:end]
+                    chunk_text = self.tokenizer.decode(
+                        chunk_tokens,
+                        skip_special_tokens=True
+                    )
+                    
+                    # Create chunk with metadata
+                    chunk_metadata = {
+                        "chunk_number": chunk_number,
+                        "total_chunks": -1,  # Will update after all chunks created
+                        "start_pos": start,
+                        "end_pos": end,
+                        **(metadata or {})
+                    }
+                    
+                    chunk_id = f"{metadata.get('doc_id', 'doc')}_{chunk_number}"
+                    
+                    chunks.append(DocumentChunk(
+                        text=chunk_text,
+                        metadata=chunk_metadata,
+                        chunk_id=chunk_id
+                    ))
+                    
+                    # Move to next chunk with overlap
+                    start = end - self.overlap
+                    chunk_number += 1
+                
+                # Update total chunks in metadata
+                for chunk in chunks:
+                    chunk.metadata["total_chunks"] = len(chunks)
+                
+                logger.debug(
+                    "Processed document into %d chunks",
+                    len(chunks)
+                )
+                
+                return chunks
+                
+        except Exception as e:
+            raise DocumentProcessingError(
+                f"Failed to process document: {str(e)}"
+            ) from e
             
-        return filtered 
+    def _clean_text(self, text: str) -> str:
+        """Clean text before processing."""
+        # Remove excessive whitespace
+        text = " ".join(text.split())
+        
+        # Remove control characters
+        text = "".join(char for char in text if char.isprintable())
+        
+        return text
+        
+    def _is_valid_chunk(
+        self,
+        chunk_text: str,
+        min_chars: int = 50
+    ) -> bool:
+        """Check if a chunk is valid for processing."""
+        if len(chunk_text) < min_chars:
+            return False
+            
+        # Check if chunk has actual content
+        content_ratio = len([c for c in chunk_text if c.isalnum()]) / len(chunk_text)
+        if content_ratio < 0.3:
+            return False
+            
+        return True 

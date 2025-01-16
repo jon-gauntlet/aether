@@ -145,6 +145,130 @@ async def performance_section(operation: str, component: str):
             metadata=metadata
         )
 
+def track_operation(operation: str, component: str):
+    """Decorator for tracking operation performance."""
+    def decorator(func: Callable):
+        @functools.wraps(func)
+        async def async_wrapper(*args, **kwargs):
+            start_time = time.time()
+            start_memory = None
+            
+            if monitor._memory_tracking:
+                current, _ = tracemalloc.get_traced_memory()
+                start_memory = current
+            
+            try:
+                result = await func(*args, **kwargs)
+                duration_ms = (time.time() - start_time) * 1000
+                
+                if monitor._memory_tracking:
+                    current, peak = tracemalloc.get_traced_memory()
+                    metadata = {
+                        "memory_before": start_memory,
+                        "memory_after": current,
+                        "memory_peak": peak,
+                        "success": True
+                    }
+                else:
+                    metadata = {"success": True}
+                    
+                monitor.track_operation(
+                    operation=operation,
+                    component=component,
+                    duration_ms=duration_ms,
+                    metadata=metadata
+                )
+                
+                return result
+                
+            except Exception as e:
+                duration_ms = (time.time() - start_time) * 1000
+                
+                if monitor._memory_tracking:
+                    current, peak = tracemalloc.get_traced_memory()
+                    metadata = {
+                        "memory_before": start_memory,
+                        "memory_after": current,
+                        "memory_peak": peak,
+                        "success": False,
+                        "error": str(e)
+                    }
+                else:
+                    metadata = {
+                        "success": False,
+                        "error": str(e)
+                    }
+                    
+                monitor.track_operation(
+                    operation=operation,
+                    component=component,
+                    duration_ms=duration_ms,
+                    metadata=metadata
+                )
+                raise
+        
+        @functools.wraps(func)
+        def sync_wrapper(*args, **kwargs):
+            start_time = time.time()
+            start_memory = None
+            
+            if monitor._memory_tracking:
+                current, _ = tracemalloc.get_traced_memory()
+                start_memory = current
+            
+            try:
+                result = func(*args, **kwargs)
+                duration_ms = (time.time() - start_time) * 1000
+                
+                if monitor._memory_tracking:
+                    current, peak = tracemalloc.get_traced_memory()
+                    metadata = {
+                        "memory_before": start_memory,
+                        "memory_after": current,
+                        "memory_peak": peak,
+                        "success": True
+                    }
+                else:
+                    metadata = {"success": True}
+                    
+                monitor.track_operation(
+                    operation=operation,
+                    component=component,
+                    duration_ms=duration_ms,
+                    metadata=metadata
+                )
+                
+                return result
+                
+            except Exception as e:
+                duration_ms = (time.time() - start_time) * 1000
+                
+                if monitor._memory_tracking:
+                    current, peak = tracemalloc.get_traced_memory()
+                    metadata = {
+                        "memory_before": start_memory,
+                        "memory_after": current,
+                        "memory_peak": peak,
+                        "success": False,
+                        "error": str(e)
+                    }
+                else:
+                    metadata = {
+                        "success": False,
+                        "error": str(e)
+                    }
+                    
+                monitor.track_operation(
+                    operation=operation,
+                    component=component,
+                    duration_ms=duration_ms,
+                    metadata=metadata
+                )
+                raise
+                
+        return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
+    return decorator
+
 def with_performance_monitoring(operation: str = "", component: str = ""):
     """Decorator for monitoring function performance."""
     def decorator(func: Callable):
@@ -253,6 +377,6 @@ def with_performance_monitoring(operation: str = "", component: str = ""):
                     }
                 )
                 raise
-        
+                
         return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
     return decorator 

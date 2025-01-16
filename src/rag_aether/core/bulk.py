@@ -1,311 +1,330 @@
-"""Bulk operations for RAG system."""
-from typing import List, Dict, Any, Optional, AsyncIterator, Callable, TypeVar, Generic
+"""Bulk operations implementation for RAG system."""
+from typing import List, Dict, Any, Optional, TypeVar, Generic, Callable, Awaitable, Union
 import asyncio
 from dataclasses import dataclass
+from datetime import datetime
 from rag_aether.core.logging import get_logger
-from rag_aether.core.performance import with_performance_monitoring, performance_section
-from rag_aether.core.errors import RAGError
+from rag_aether.core.errors import BulkOperationError
+from rag_aether.core.performance import with_performance_monitoring
 
-logger = get_logger("bulk_ops")
+logger = get_logger("bulk")
 
 T = TypeVar('T')
-R = TypeVar('R')
+U = TypeVar('U')
+
+@dataclass
+class BulkConfig:
+    """Bulk operation configuration."""
+    batch_size: int = 100
+    max_concurrent_batches: int = 5
+    retry_attempts: int = 3
+    retry_delay: float = 1.0
+    timeout: float = 30.0
+
+@dataclass
+class BulkMetrics:
+    """Metrics for bulk operations."""
+    total_items: int = 0
+    processed_items: int = 0
+    failed_items: int = 0
+    total_batches: int = 0
+    completed_batches: int = 0
+    failed_batches: int = 0
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
+    
+    @property
+    def success_rate(self) -> float:
+        """Calculate success rate."""
+        if self.total_items == 0:
+            return 0.0
+        return (self.processed_items - self.failed_items) / self.total_items
+    
+    @property
+    def duration(self) -> float:
+        """Calculate operation duration in seconds."""
+        if not self.start_time or not self.end_time:
+            return 0.0
+        return (self.end_time - self.start_time).total_seconds()
 
 @dataclass
 class BulkProgress:
     """Progress information for bulk operations."""
-    total_items: int
-    processed_items: int
-    successful_items: int
-    failed_items: int
+    total: int
+    completed: int
+    failed: int
     current_batch: int
     total_batches: int
-    errors: List[Dict[str, Any]]
-    metrics: Dict[str, Any]
+    start_time: datetime
+    estimated_completion: Optional[datetime] = None
+    
+    @property
+    def progress_percentage(self) -> float:
+        """Calculate progress percentage."""
+        if self.total == 0:
+            return 0.0
+        return (self.completed / self.total) * 100
+    
+    @property
+    def elapsed_time(self) -> float:
+        """Calculate elapsed time in seconds."""
+        return (datetime.now() - self.start_time).total_seconds()
+    
+    @property
+    def estimated_remaining_time(self) -> float:
+        """Estimate remaining time in seconds."""
+        if self.completed == 0:
+            return 0.0
+        rate = self.completed / self.elapsed_time
+        remaining_items = self.total - self.completed
+        return remaining_items / rate if rate > 0 else 0.0
 
-class BulkProcessor(Generic[T, R]):
-    """Process items in bulk with batching and progress tracking."""
+class BulkProcessor(Generic[T, U]):
+    """Generic bulk processor for batch operations."""
     
     def __init__(
         self,
-        batch_size: int = 100,
-        max_concurrent_batches: int = 5,
-        max_retries: int = 3,
-        retry_delay: float = 1.0
+        config: Optional[BulkConfig] = None,
+        name: str = "default"
     ):
         """Initialize bulk processor."""
-        self.batch_size = batch_size
-        self.max_concurrent_batches = max_concurrent_batches
-        self.max_retries = max_retries
-        self.retry_delay = retry_delay
-        self.semaphore = asyncio.Semaphore(max_concurrent_batches)
+        self.config = config or BulkConfig()
+        self.name = name
+        self.metrics = BulkMetrics()
+        self.semaphore = asyncio.Semaphore(self.config.max_concurrent_batches)
         logger.info(
-            "Initialized bulk processor",
-            extra={
-                "batch_size": batch_size,
-                "max_concurrent_batches": max_concurrent_batches
-            }
+            f"Initialized bulk processor: {name}",
+            extra={"config": vars(self.config)}
         )
-    
-    @with_performance_monitoring(operation="process", component="bulk_processor")
-    async def process_items(
-        self,
-        items: List[T],
-        process_fn: Callable[[List[T]], AsyncIterator[R]],
-        progress_callback: Optional[Callable[[BulkProgress], None]] = None
-    ) -> AsyncIterator[R]:
-        """Process items in batches with progress tracking."""
-        try:
-            total_items = len(items)
-            total_batches = (total_items + self.batch_size - 1) // self.batch_size
-            progress = BulkProgress(
-                total_items=total_items,
-                processed_items=0,
-                successful_items=0,
-                failed_items=0,
-                current_batch=0,
-                total_batches=total_batches,
-                errors=[],
-                metrics={
-                    "avg_batch_time_ms": 0,
-                    "batch_times": []
-                }
-            )
-            
-            # Process batches
-            batch_tasks = []
-            for i in range(0, total_items, self.batch_size):
-                batch = items[i:i + self.batch_size]
-                task = asyncio.create_task(
-                    self._process_batch(
-                        batch,
-                        process_fn,
-                        i // self.batch_size,
-                        progress,
-                        progress_callback
-                    )
-                )
-                batch_tasks.append(task)
-                
-                # Limit concurrent batches
-                if len(batch_tasks) >= self.max_concurrent_batches:
-                    completed, batch_tasks = await asyncio.wait(
-                        batch_tasks,
-                        return_when=asyncio.FIRST_COMPLETED
-                    )
-                    for task in completed:
-                        async for result in task.result():
-                            yield result
-            
-            # Wait for remaining batches
-            if batch_tasks:
-                for task in asyncio.as_completed(batch_tasks):
-                    async for result in await task:
-                        yield result
-            
-            # Log final progress
-            if progress_callback:
-                progress_callback(progress)
-                
-            logger.info(
-                "Bulk processing completed",
-                extra={
-                    "total_items": total_items,
-                    "successful": progress.successful_items,
-                    "failed": progress.failed_items,
-                    "avg_batch_time_ms": progress.metrics["avg_batch_time_ms"]
-                }
-            )
-            
-        except Exception as e:
-            logger.error(f"Bulk processing failed: {str(e)}")
-            raise RAGError(
-                f"Bulk processing failed: {str(e)}",
-                operation="process_items",
-                component="bulk_processor"
-            )
-    
+        
     async def _process_batch(
         self,
         batch: List[T],
-        process_fn: Callable[[List[T]], AsyncIterator[R]],
-        batch_index: int,
-        progress: BulkProgress,
-        progress_callback: Optional[Callable[[BulkProgress], None]]
-    ) -> AsyncIterator[R]:
+        processor: Callable[[List[T]], Awaitable[List[U]]],
+        batch_number: int
+    ) -> List[U]:
         """Process a single batch with retries."""
-        async with self.semaphore:
-            start_time = asyncio.get_event_loop().time()
-            retry_count = 0
-            
-            while retry_count <= self.max_retries:
-                try:
-                    async for result in process_fn(batch):
-                        progress.successful_items += 1
-                        yield result
-                    
-                    # Update progress
-                    progress.processed_items += len(batch)
-                    progress.current_batch = batch_index + 1
-                    
-                    # Update metrics
-                    batch_time = (asyncio.get_event_loop().time() - start_time) * 1000
-                    progress.metrics["batch_times"].append(batch_time)
-                    progress.metrics["avg_batch_time_ms"] = (
-                        sum(progress.metrics["batch_times"]) /
-                        len(progress.metrics["batch_times"])
+        for attempt in range(self.config.retry_attempts):
+            try:
+                async with self.semaphore:
+                    results = await asyncio.wait_for(
+                        processor(batch),
+                        timeout=self.config.timeout
                     )
+                    self.metrics.completed_batches += 1
+                    self.metrics.processed_items += len(batch)
+                    return results
                     
-                    if progress_callback:
-                        progress_callback(progress)
+            except asyncio.TimeoutError:
+                logger.warning(
+                    f"Batch {batch_number} timed out (attempt {attempt + 1})",
+                    extra={
+                        "batch_size": len(batch),
+                        "attempt": attempt + 1
+                    }
+                )
+                
+            except Exception as e:
+                logger.error(
+                    f"Batch {batch_number} failed: {str(e)}",
+                    extra={
+                        "batch_size": len(batch),
+                        "attempt": attempt + 1,
+                        "error": str(e)
+                    }
+                )
+                
+            if attempt < self.config.retry_attempts - 1:
+                await asyncio.sleep(
+                    self.config.retry_delay * (attempt + 1)
+                )
+                
+        self.metrics.failed_batches += 1
+        self.metrics.failed_items += len(batch)
+        raise BulkOperationError(
+            f"Batch {batch_number} failed after {self.config.retry_attempts} attempts",
+            operation="process_batch",
+            component="bulk",
+            batch_number=batch_number,
+            batch_size=len(batch)
+        )
+        
+    @with_performance_monitoring(operation="process", component="bulk")
+    async def process_items(
+        self,
+        items: List[T],
+        processor: Callable[[List[T]], Awaitable[List[U]]]
+    ) -> List[U]:
+        """Process items in batches."""
+        if not items:
+            return []
+            
+        self.metrics = BulkMetrics()
+        self.metrics.start_time = datetime.now()
+        self.metrics.total_items = len(items)
+        
+        # Create batches
+        batches = [
+            items[i:i + self.config.batch_size]
+            for i in range(0, len(items), self.config.batch_size)
+        ]
+        self.metrics.total_batches = len(batches)
+        
+        try:
+            # Process batches concurrently
+            tasks = [
+                self._process_batch(batch, processor, i)
+                for i, batch in enumerate(batches)
+            ]
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            
+            # Handle results
+            processed_results: List[U] = []
+            for batch_results in results:
+                if isinstance(batch_results, Exception):
+                    logger.error(f"Batch failed: {str(batch_results)}")
+                else:
+                    processed_results.extend(batch_results)
                     
-                    return
-                    
-                except Exception as e:
-                    retry_count += 1
-                    if retry_count <= self.max_retries:
-                        logger.warning(
-                            f"Batch {batch_index} failed, retrying ({retry_count}/{self.max_retries}): {str(e)}"
-                        )
-                        await asyncio.sleep(self.retry_delay * retry_count)
-                    else:
-                        logger.error(f"Batch {batch_index} failed after {self.max_retries} retries")
-                        progress.failed_items += len(batch)
-                        progress.errors.append({
-                            "batch_index": batch_index,
-                            "error": str(e),
-                            "items": batch
-                        })
-                        if progress_callback:
-                            progress_callback(progress)
-                        raise
+            self.metrics.end_time = datetime.now()
+            
+            # Log completion
+            logger.info(
+                f"Bulk operation completed: {self.name}",
+                extra={
+                    "total_items": self.metrics.total_items,
+                    "processed_items": self.metrics.processed_items,
+                    "failed_items": self.metrics.failed_items,
+                    "success_rate": self.metrics.success_rate,
+                    "duration": self.metrics.duration
+                }
+            )
+            
+            return processed_results
+            
+        except Exception as e:
+            logger.error(f"Bulk operation failed: {str(e)}")
+            raise BulkOperationError(
+                f"Bulk operation failed: {str(e)}",
+                operation="process_items",
+                component="bulk"
+            )
+            
+    def get_metrics(self) -> Dict[str, Any]:
+        """Get processor metrics."""
+        return {
+            "name": self.name,
+            "total_items": self.metrics.total_items,
+            "processed_items": self.metrics.processed_items,
+            "failed_items": self.metrics.failed_items,
+            "total_batches": self.metrics.total_batches,
+            "completed_batches": self.metrics.completed_batches,
+            "failed_batches": self.metrics.failed_batches,
+            "success_rate": self.metrics.success_rate,
+            "duration": self.metrics.duration
+        }
+
+class BulkManager:
+    """Manage multiple bulk processors."""
+    
+    def __init__(self):
+        """Initialize bulk manager."""
+        self.processors: Dict[str, BulkProcessor] = {}
+        logger.info("Initialized bulk manager")
+        
+    def get_processor(
+        self,
+        name: str,
+        config: Optional[BulkConfig] = None
+    ) -> BulkProcessor:
+        """Get or create bulk processor."""
+        if name not in self.processors:
+            self.processors[name] = BulkProcessor(
+                config=config,
+                name=name
+            )
+        return self.processors[name]
+        
+    def get_all_metrics(self) -> Dict[str, Dict[str, Any]]:
+        """Get metrics for all processors."""
+        return {
+            name: processor.get_metrics()
+            for name, processor in self.processors.items()
+        }
 
 class BulkIngester:
-    """Bulk ingestion of documents with batching."""
+    """Bulk ingestion processor for documents."""
     
     def __init__(
         self,
-        rag_system: Any,
-        batch_size: int = 100,
-        max_concurrent_batches: int = 5
+        config: Optional[BulkConfig] = None,
+        quality_threshold: float = 0.7
     ):
         """Initialize bulk ingester."""
-        self.rag = rag_system
-        self.processor = BulkProcessor[Dict[str, Any], None](
-            batch_size=batch_size,
-            max_concurrent_batches=max_concurrent_batches
-        )
+        self.processor = BulkProcessor(config=config, name="ingester")
+        self.quality_threshold = quality_threshold
         logger.info(
             "Initialized bulk ingester",
-            extra={
-                "batch_size": batch_size,
-                "max_concurrent_batches": max_concurrent_batches
-            }
+            extra={"quality_threshold": quality_threshold}
         )
-    
-    @with_performance_monitoring(operation="ingest", component="bulk_ingester")
+        
     async def ingest_documents(
         self,
         documents: List[Dict[str, Any]],
-        progress_callback: Optional[Callable[[BulkProgress], None]] = None
-    ) -> BulkProgress:
+        processor: Callable[[List[Dict[str, Any]]], Awaitable[List[bool]]]
+    ) -> List[bool]:
         """Ingest documents in bulk."""
-        try:
-            async def process_batch(batch: List[Dict[str, Any]]) -> AsyncIterator[None]:
-                """Process a batch of documents."""
-                for doc in batch:
-                    await self.rag.ingest_text(
-                        text=doc["text"],
-                        metadata=doc.get("metadata"),
-                        doc_id=doc.get("id")
-                    )
-                    yield None
-            
-            progress = BulkProgress(
-                total_items=len(documents),
-                processed_items=0,
-                successful_items=0,
-                failed_items=0,
-                current_batch=0,
-                total_batches=(len(documents) + self.processor.batch_size - 1) // self.processor.batch_size,
-                errors=[],
-                metrics={"avg_batch_time_ms": 0, "batch_times": []}
-            )
-            
-            async for _ in self.processor.process_items(
-                documents,
-                process_batch,
-                progress_callback
-            ):
-                pass
-            
-            return progress
-            
-        except Exception as e:
-            logger.error(f"Bulk ingestion failed: {str(e)}")
-            raise RAGError(
-                f"Bulk ingestion failed: {str(e)}",
-                operation="ingest_documents",
-                component="bulk_ingester"
-            )
+        return await self.processor.process_items(documents, processor)
+    
+    def get_progress(self) -> BulkProgress:
+        """Get ingestion progress."""
+        metrics = self.processor.metrics
+        return BulkProgress(
+            total=metrics.total_items,
+            completed=metrics.processed_items,
+            failed=metrics.failed_items,
+            current_batch=metrics.completed_batches,
+            total_batches=metrics.total_batches,
+            start_time=metrics.start_time or datetime.now()
+        )
 
 class BulkRetriever:
-    """Bulk retrieval of documents with batching."""
+    """Bulk retrieval processor for queries."""
     
     def __init__(
         self,
-        rag_system: Any,
-        batch_size: int = 50,
-        max_concurrent_batches: int = 5
+        config: Optional[BulkConfig] = None,
+        min_relevance: float = 0.5,
+        max_results: int = 10
     ):
         """Initialize bulk retriever."""
-        self.rag = rag_system
-        self.processor = BulkProcessor[str, Dict[str, Any]](
-            batch_size=batch_size,
-            max_concurrent_batches=max_concurrent_batches
-        )
+        self.processor = BulkProcessor(config=config, name="retriever")
+        self.min_relevance = min_relevance
+        self.max_results = max_results
         logger.info(
             "Initialized bulk retriever",
             extra={
-                "batch_size": batch_size,
-                "max_concurrent_batches": max_concurrent_batches
+                "min_relevance": min_relevance,
+                "max_results": max_results
             }
         )
-    
-    @with_performance_monitoring(operation="retrieve", component="bulk_retriever")
+        
     async def retrieve_documents(
         self,
         queries: List[str],
-        k: int = 5,
-        metadata_filter: Optional[Dict[str, Any]] = None,
-        progress_callback: Optional[Callable[[BulkProgress], None]] = None
-    ) -> AsyncIterator[Dict[str, Any]]:
-        """Retrieve documents for multiple queries."""
-        try:
-            async def process_batch(batch: List[str]) -> AsyncIterator[Dict[str, Any]]:
-                """Process a batch of queries."""
-                for query in batch:
-                    result = await self.rag.retrieve_with_fusion(
-                        query=query,
-                        k=k,
-                        metadata_filter=metadata_filter
-                    )
-                    yield {
-                        "query": query,
-                        "results": result
-                    }
-            
-            async for result in self.processor.process_items(
-                queries,
-                process_batch,
-                progress_callback
-            ):
-                yield result
-                
-        except Exception as e:
-            logger.error(f"Bulk retrieval failed: {str(e)}")
-            raise RAGError(
-                f"Bulk retrieval failed: {str(e)}",
-                operation="retrieve_documents",
-                component="bulk_retriever"
-            ) 
+        retriever: Callable[[List[str]], Awaitable[List[List[Dict[str, Any]]]]]
+    ) -> List[List[Dict[str, Any]]]:
+        """Retrieve documents for queries in bulk."""
+        return await self.processor.process_items(queries, retriever)
+    
+    def get_progress(self) -> BulkProgress:
+        """Get retrieval progress."""
+        metrics = self.processor.metrics
+        return BulkProgress(
+            total=metrics.total_items,
+            completed=metrics.processed_items,
+            failed=metrics.failed_items,
+            current_batch=metrics.completed_batches,
+            total_batches=metrics.total_batches,
+            start_time=metrics.start_time or datetime.now()
+        ) 

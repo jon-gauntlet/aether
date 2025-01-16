@@ -36,6 +36,10 @@ class RAGError(Exception):
             f"Trace:\n{self.context.trace}"
         )
 
+class StreamingError(RAGError):
+    """Raised when there's an error with streaming operations."""
+    pass
+
 class EmbeddingError(RAGError):
     """Raised when there's an error generating embeddings."""
     pass
@@ -58,6 +62,58 @@ class StorageError(RAGError):
 
 class HealthCheckError(RAGError):
     """Raised when system health check fails."""
+    pass
+
+class QueryProcessingError(RAGError):
+    """Error raised when query processing fails."""
+    pass
+
+class CacheError(RAGError):
+    """Error raised when cache operations fail."""
+    pass
+
+class BulkOperationError(RAGError):
+    """Error raised when bulk operations fail."""
+    pass
+
+class WebhookError(RAGError):
+    """Error raised when webhook operations fail."""
+    pass
+
+class RateLimitError(RAGError):
+    """Error raised when rate limit is exceeded."""
+    pass
+
+class SearchError(RAGError):
+    """Error raised when search operations fail."""
+    pass
+
+class DocumentProcessingError(RAGError):
+    """Error raised when document processing fails."""
+    pass
+
+class PersonaError(RAGError):
+    """Error raised when persona operations fail."""
+    pass
+
+class IntegrationError(RAGError):
+    """Error raised when integration operations fail."""
+    pass
+
+class QualityError(RAGError):
+    """Error raised when quality checks fail."""
+    pass
+
+class PerformanceError(RAGError):
+    """Error raised when performance operations fail."""
+    pass
+
+class TelemetryError(RAGError):
+    """Error raised when telemetry operations fail."""
+    pass
+
+class AlertError(RAGError):
+    """Error raised when alert operations fail."""
     pass
 
 def handle_rag_error(error: Exception, operation: str = "", component: str = "") -> Optional[Dict[str, Any]]:

@@ -1,341 +1,330 @@
-"""Performance optimization system for RAG operations."""
-from typing import Dict, Any, Optional, List, Callable, TypeVar, Union
+"""Performance monitoring system for RAG operations."""
+from typing import Dict, Any, Optional, List, Callable
 from dataclasses import dataclass
 import time
-import asyncio
-import logging
-import numpy as np
-from datetime import datetime, timedelta
-from collections import deque
 import psutil
-import torch
+import logging
+import asyncio
+from functools import wraps
 
-T = TypeVar('T')
+logger = logging.getLogger(__name__)
 
 @dataclass
 class PerformanceMetrics:
-    """Performance metrics for RAG operations."""
-    latency: float
-    throughput: float
-    memory_usage: float
-    cpu_usage: float
-    gpu_usage: Optional[float]
-    batch_size: int
-    timestamp: str
-    operation: str
-    metadata: Dict[str, Any]
+    """Performance metrics for an operation."""
+    operation_name: str
+    duration_ms: float
+    memory_mb: Optional[float] = None
+    success: bool = True
+    metadata: Optional[Dict[str, Any]] = None
+
+class PerformanceMonitor:
+    """Monitors and tracks performance metrics for RAG operations."""
+    
+    def __init__(self, track_memory: bool = True):
+        self.track_memory = track_memory
+        self._metrics: List[PerformanceMetrics] = []
+    
+    def track_operation(self, operation_name: str, duration_ms: float, 
+                       memory_mb: Optional[float] = None, success: bool = True,
+                       metadata: Optional[Dict[str, Any]] = None):
+        """Track a completed operation's metrics."""
+        metrics = PerformanceMetrics(
+            operation_name=operation_name,
+            duration_ms=duration_ms,
+            memory_mb=memory_mb,
+            success=success,
+            metadata=metadata
+        )
+        self._metrics.append(metrics)
+        logger.info(f"Performance metrics: {metrics}")
+    
+    def get_metrics(self) -> List[PerformanceMetrics]:
+        """Get all tracked metrics."""
+        return self._metrics.copy()
+    
+    def clear_metrics(self):
+        """Clear all tracked metrics."""
+        self._metrics.clear()
+    
+    def get_memory_usage(self) -> float:
+        """Get current memory usage in MB."""
+        if not self.track_memory:
+            return 0.0
+        process = psutil.Process()
+        return process.memory_info().rss / 1024 / 1024
+
+monitor = PerformanceMonitor()
+
+def with_performance_monitoring(func: Callable) -> Callable:
+    """Decorator to monitor performance of a function."""
+    @wraps(func)
+    async def async_wrapper(*args, **kwargs):
+        start_time = time.time()
+        start_memory = monitor.get_memory_usage()
+        success = True
+        try:
+            result = await func(*args, **kwargs)
+            return result
+        except Exception as e:
+            success = False
+            raise e
+        finally:
+            duration = (time.time() - start_time) * 1000
+            memory_delta = monitor.get_memory_usage() - start_memory
+            monitor.track_operation(
+                operation_name=func.__name__,
+                duration_ms=duration,
+                memory_mb=memory_delta if monitor.track_memory else None,
+                success=success
+            )
+    
+    @wraps(func)
+    def sync_wrapper(*args, **kwargs):
+        start_time = time.time()
+        start_memory = monitor.get_memory_usage()
+        success = True
+        try:
+            result = func(*args, **kwargs)
+            return result
+        except Exception as e:
+            success = False
+            raise e
+        finally:
+            duration = (time.time() - start_time) * 1000
+            memory_delta = monitor.get_memory_usage() - start_memory
+            monitor.track_operation(
+                operation_name=func.__name__,
+                duration_ms=duration,
+                memory_mb=memory_delta if monitor.track_memory else None,
+                success=success
+            )
+    
+    return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
+
+def performance_section(section_name: str):
+    """Context manager to track performance of a code section."""
+    class PerformanceContext:
+        def __init__(self, name: str):
+            self.name = name
+            self.start_time = None
+            self.start_memory = None
+        
+        def __enter__(self):
+            self.start_time = time.time()
+            self.start_memory = monitor.get_memory_usage()
+            return self
+        
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            duration = (time.time() - self.start_time) * 1000
+            memory_delta = monitor.get_memory_usage() - self.start_memory
+            monitor.track_operation(
+                operation_name=self.name,
+                duration_ms=duration,
+                memory_mb=memory_delta if monitor.track_memory else None,
+                success=exc_type is None
+            )
+    
+    return PerformanceContext(section_name) 
+
+"""Performance optimization system for RAG operations."""
+
+from typing import Dict, Any, Optional, List, Tuple
+from dataclasses import dataclass
+import time
+import logging
+import numpy as np
+import psutil
+from rag_aether.core.performance import with_performance_monitoring, performance_section
+
+logger = logging.getLogger(__name__)
 
 @dataclass
 class ResourceUsage:
     """System resource usage metrics."""
     cpu_percent: float
     memory_percent: float
-    gpu_percent: Optional[float]
-    disk_io: Dict[str, float]
-    network_io: Dict[str, float]
+    memory_mb: float
+    disk_io_read: int
+    disk_io_write: int
+    network_io_sent: int
+    network_io_recv: int
+    timestamp: float
 
-class PerformanceMonitor:
-    """Monitor performance metrics for RAG operations."""
-    
-    def __init__(
-        self,
-        window_size: int = 100,
-        log_interval: float = 60.0,
-        enable_gpu: bool = torch.cuda.is_available()
-    ):
-        """Initialize performance monitor.
+    @classmethod
+    def capture(cls) -> 'ResourceUsage':
+        """Capture current system resource usage."""
+        process = psutil.Process()
         
-        Args:
-            window_size: Size of sliding window for metrics
-            log_interval: Interval for logging metrics in seconds
-            enable_gpu: Whether to monitor GPU metrics
-        """
-        self.window_size = window_size
-        self.log_interval = log_interval
-        self.enable_gpu = enable_gpu
+        # Get CPU and memory usage
+        cpu_percent = process.cpu_percent()
+        memory_info = process.memory_info()
+        memory_percent = process.memory_percent()
+        memory_mb = memory_info.rss / (1024 * 1024)
         
-        # Initialize metric storage
-        self.metrics: Dict[str, deque[PerformanceMetrics]] = {}
-        self.last_log_time = time.time()
-        self.logger = logging.getLogger("performance_monitor")
+        # Get disk I/O
+        disk_io = process.io_counters()
+        disk_io_read = disk_io.read_bytes
+        disk_io_write = disk_io.write_bytes
         
-        # Initialize resource monitoring
-        self.process = psutil.Process()
-        if enable_gpu:
-            try:
-                import pynvml
-                pynvml.nvmlInit()
-                self.gpu_handle = pynvml.nvmlDeviceGetHandleByIndex(0)
-            except Exception as e:
-                self.logger.warning(f"Failed to initialize GPU monitoring: {e}")
-                self.enable_gpu = False
-                
-    def measure(self, operation: str = "default") -> "PerformanceContext":
-        """Create context manager for measuring operation performance."""
-        return PerformanceContext(self, operation)
+        # Get network I/O
+        net_io = psutil.net_io_counters()
+        network_io_sent = net_io.bytes_sent
+        network_io_recv = net_io.bytes_recv
         
-    def record_metrics(
-        self,
-        metrics: PerformanceMetrics,
-        operation: str = "default"
-    ):
-        """Record performance metrics."""
-        if operation not in self.metrics:
-            self.metrics[operation] = deque(maxlen=self.window_size)
-            
-        self.metrics[operation].append(metrics)
-        
-        # Log metrics if interval elapsed
-        current_time = time.time()
-        if current_time - self.last_log_time >= self.log_interval:
-            self._log_metrics()
-            self.last_log_time = current_time
-            
-    def get_metrics(
-        self,
-        operation: str = "default",
-        window: Optional[int] = None
-    ) -> List[PerformanceMetrics]:
-        """Get recent performance metrics."""
-        if operation not in self.metrics:
-            return []
-            
-        metrics = list(self.metrics[operation])
-        if window is not None:
-            metrics = metrics[-window:]
-            
-        return metrics
-        
-    def get_statistics(
-        self,
-        operation: str = "default",
-        window: Optional[int] = None
-    ) -> Dict[str, Dict[str, float]]:
-        """Get statistical summary of metrics."""
-        metrics = self.get_metrics(operation, window)
-        if not metrics:
-            return {}
-            
-        stats = {}
-        for field in ["latency", "throughput", "memory_usage", "cpu_usage"]:
-            values = [getattr(m, field) for m in metrics]
-            stats[field] = {
-                "mean": np.mean(values),
-                "std": np.std(values),
-                "min": np.min(values),
-                "max": np.max(values),
-                "p50": np.percentile(values, 50),
-                "p95": np.percentile(values, 95),
-                "p99": np.percentile(values, 99)
-            }
-            
-        return stats
-        
-    def get_resource_usage(self) -> ResourceUsage:
-        """Get current system resource usage."""
-        cpu_percent = psutil.cpu_percent(interval=0.1)
-        memory_percent = psutil.virtual_memory().percent
-        
-        disk_io = psutil.disk_io_counters()._asdict()
-        network_io = psutil.net_io_counters()._asdict()
-        
-        gpu_percent = None
-        if self.enable_gpu:
-            try:
-                import pynvml
-                info = pynvml.nvmlDeviceGetUtilizationRates(self.gpu_handle)
-                gpu_percent = info.gpu
-            except Exception as e:
-                self.logger.warning(f"Failed to get GPU usage: {e}")
-                
-        return ResourceUsage(
+        return cls(
             cpu_percent=cpu_percent,
             memory_percent=memory_percent,
-            gpu_percent=gpu_percent,
-            disk_io=disk_io,
-            network_io=network_io
+            memory_mb=memory_mb,
+            disk_io_read=disk_io_read,
+            disk_io_write=disk_io_write,
+            network_io_sent=network_io_sent,
+            network_io_recv=network_io_recv,
+            timestamp=time.time()
         )
-        
-    def _log_metrics(self):
-        """Log performance metrics summary."""
-        for operation, metrics in self.metrics.items():
-            if not metrics:
-                continue
-                
-            stats = self.get_statistics(operation)
-            self.logger.info(
-                f"Performance metrics for {operation}:",
-                extra={
-                    "operation": operation,
-                    "metrics": stats
-                }
-            )
 
-class PerformanceContext:
-    """Context manager for measuring operation performance."""
-    
-    def __init__(self, monitor: PerformanceMonitor, operation: str):
-        """Initialize performance context."""
-        self.monitor = monitor
-        self.operation = operation
-        self.start_time = None
-        self.start_resources = None
-        self.batch_size = 1
-        self.metadata = {}
-        
-    def __enter__(self):
-        """Enter performance measurement context."""
-        self.start_time = time.time()
-        self.start_resources = self.monitor.get_resource_usage()
-        return self
-        
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """Exit performance measurement context."""
-        if exc_type is not None:
-            return
-            
-        end_time = time.time()
-        end_resources = self.monitor.get_resource_usage()
-        
-        duration = end_time - self.start_time
-        
-        # Calculate metrics
-        metrics = PerformanceMetrics(
-            latency=duration,
-            throughput=self.batch_size / duration,
-            memory_usage=end_resources.memory_percent,
-            cpu_usage=end_resources.cpu_percent,
-            gpu_usage=end_resources.gpu_percent,
-            batch_size=self.batch_size,
-            timestamp=datetime.now().isoformat(),
-            operation=self.operation,
-            metadata=self.metadata
-        )
-        
-        self.monitor.record_metrics(metrics, self.operation)
-        
-    def set_batch_size(self, size: int):
-        """Set batch size for operation."""
-        self.batch_size = size
-        
-    def add_metadata(self, **kwargs):
-        """Add metadata for operation."""
-        self.metadata.update(kwargs)
+@dataclass
+class PerformanceMetrics:
+    """Performance metrics for RAG operations."""
+    operation_name: str
+    duration_ms: float
+    memory_mb: float
+    success: bool
+    metadata: Optional[Dict[str, Any]] = None
 
 class PerformanceOptimizer:
-    """Optimize performance of RAG operations."""
-    
+    """Optimizes performance of RAG operations."""
+
     def __init__(
         self,
-        monitor: PerformanceMonitor,
-        target_latency: float = 1.0,
-        target_memory: float = 80.0,
-        optimization_interval: float = 300.0
+        min_batch_size: int = 32,
+        max_batch_size: int = 256,
+        target_latency_ms: float = 100.0,
+        min_success_rate: float = 0.95,
     ):
-        """Initialize performance optimizer.
+        """Initialize the performance optimizer.
         
         Args:
-            monitor: Performance monitor instance
-            target_latency: Target latency in seconds
-            target_memory: Target memory usage percentage
-            optimization_interval: Interval for optimization in seconds
+            min_batch_size: Minimum batch size for operations
+            max_batch_size: Maximum batch size for operations
+            target_latency_ms: Target latency in milliseconds
+            min_success_rate: Minimum required success rate
         """
-        self.monitor = monitor
-        self.target_latency = target_latency
-        self.target_memory = target_memory
-        self.optimization_interval = optimization_interval
+        self.min_batch_size = min_batch_size
+        self.max_batch_size = max_batch_size
+        self.target_latency_ms = target_latency_ms
+        self.min_success_rate = min_success_rate
         
-        self.logger = logging.getLogger("performance_optimizer")
-        self.last_optimization = time.time()
+        self.metrics: List[PerformanceMetrics] = []
+        self.current_batch_size = min_batch_size
         
-        # Optimization parameters
-        self.batch_sizes: Dict[str, int] = {}
-        self.cache_sizes: Dict[str, int] = {}
+        # Track resource usage
+        self.resource_usage: List[ResourceUsage] = []
+        self.last_resource_check = 0.0
+        self.resource_check_interval = 1.0  # seconds
         
-    async def optimize(self, operation: str = "default"):
-        """Optimize performance for operation."""
-        current_time = time.time()
-        if current_time - self.last_optimization < self.optimization_interval:
-            return
+    @with_performance_monitoring
+    def optimize_embeddings(self, embeddings: np.ndarray) -> np.ndarray:
+        """Optimize embeddings for better performance.
+        
+        Args:
+            embeddings: Input embeddings to optimize
             
-        stats = self.monitor.get_statistics(operation)
-        if not stats:
-            return
+        Returns:
+            Optimized embeddings
+        """
+        with performance_section("embedding_optimization"):
+            # Track resource usage
+            self._update_resource_usage()
             
-        # Check if optimization needed
-        latency_p95 = stats["latency"]["p95"]
-        memory_usage = stats["memory_usage"]["mean"]
-        
-        if latency_p95 > self.target_latency or memory_usage > self.target_memory:
-            await self._optimize_resources(operation, stats)
+            # Normalize embeddings
+            norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
+            normalized = embeddings / norms
             
-        self.last_optimization = current_time
-        
-    async def _optimize_resources(
-        self,
-        operation: str,
-        stats: Dict[str, Dict[str, float]]
-    ):
-        """Optimize resource usage for operation."""
-        # Adjust batch size based on latency
-        current_batch_size = self.batch_sizes.get(operation, 1)
-        latency_p95 = stats["latency"]["p95"]
-        
-        if latency_p95 > self.target_latency:
-            # Reduce batch size
-            new_batch_size = max(1, current_batch_size - 1)
-        else:
-            # Try increasing batch size
-            new_batch_size = current_batch_size + 1
+            # Quantize to float16 for efficiency
+            optimized = normalized.astype(np.float16)
             
-        self.batch_sizes[operation] = new_batch_size
-        
-        # Adjust cache size based on memory usage
-        memory_usage = stats["memory_usage"]["mean"]
-        current_cache_size = self.cache_sizes.get(operation, 1000)
-        
-        if memory_usage > self.target_memory:
-            # Reduce cache size
-            new_cache_size = int(current_cache_size * 0.8)
-        else:
-            # Try increasing cache size
-            new_cache_size = int(current_cache_size * 1.2)
+            return optimized
             
-        self.cache_sizes[operation] = new_cache_size
+    @with_performance_monitoring
+    def optimize_query(self, query: str) -> Tuple[str, Dict[str, Any]]:
+        """Optimize query processing.
         
-        self.logger.info(
-            f"Optimized {operation} parameters:",
-            extra={
-                "operation": operation,
-                "batch_size": new_batch_size,
-                "cache_size": new_cache_size
+        Args:
+            query: Input query to optimize
+            
+        Returns:
+            Tuple of (optimized query, optimization metadata)
+        """
+        with performance_section("query_optimization"):
+            # Track resource usage
+            self._update_resource_usage()
+            
+            # Track query length
+            query_len = len(query)
+            
+            # Simple query preprocessing
+            query = query.strip().lower()
+            
+            metadata = {
+                "original_length": query_len,
+                "optimized_length": len(query)
             }
+            
+            return query, metadata
+            
+    @with_performance_monitoring
+    def update_metrics(self, metrics: PerformanceMetrics) -> None:
+        """Update performance metrics and adjust optimization parameters.
+        
+        Args:
+            metrics: New metrics to incorporate
+        """
+        self.metrics.append(metrics)
+        
+        # Keep last 100 metrics
+        if len(self.metrics) > 100:
+            self.metrics.pop(0)
+            
+        # Calculate statistics
+        recent_latencies = [m.duration_ms for m in self.metrics[-10:]]
+        avg_latency = sum(recent_latencies) / len(recent_latencies)
+        
+        success_rate = sum(1 for m in self.metrics[-100:] if m.success) / len(self.metrics[-100:])
+        
+        # Track resource usage
+        self._update_resource_usage()
+        
+        # Adjust batch size based on performance
+        if avg_latency > self.target_latency_ms and success_rate >= self.min_success_rate:
+            self.current_batch_size = max(
+                self.min_batch_size,
+                int(self.current_batch_size * 0.8)
+            )
+        elif avg_latency < self.target_latency_ms * 0.8 and success_rate >= self.min_success_rate:
+            self.current_batch_size = min(
+                self.max_batch_size,
+                int(self.current_batch_size * 1.2)
+            )
+            
+        logger.info(
+            f"Performance metrics updated - "
+            f"avg_latency: {avg_latency:.2f}ms, "
+            f"success_rate: {success_rate:.2%}, "
+            f"batch_size: {self.current_batch_size}"
         )
         
-    def get_batch_size(self, operation: str = "default") -> int:
-        """Get optimal batch size for operation."""
-        return self.batch_sizes.get(operation, 1)
+    def get_batch_size(self) -> int:
+        """Get the current optimal batch size."""
+        return self.current_batch_size
         
-    def get_cache_size(self, operation: str = "default") -> int:
-        """Get optimal cache size for operation."""
-        return self.cache_sizes.get(operation, 1000)
-
-def with_performance_monitoring(operation: str = "default"):
-    """Decorator for monitoring function performance."""
-    def decorator(func: Callable[..., T]) -> Callable[..., T]:
-        async def wrapper(self, *args, **kwargs) -> T:
-            monitor = getattr(self, "performance_monitor", None)
-            if monitor is None:
-                return await func(self, *args, **kwargs)
-                
-            with monitor.measure(operation) as perf:
-                perf.add_metadata(
-                    function=func.__name__,
-                    args_length=len(args),
-                    kwargs_keys=list(kwargs.keys())
-                )
-                result = await func(self, *args, **kwargs)
-                return result
-                
-        return wrapper
-    return decorator 
+    def _update_resource_usage(self) -> None:
+        """Update resource usage tracking if interval has elapsed."""
+        current_time = time.time()
+        if current_time - self.last_resource_check >= self.resource_check_interval:
+            self.resource_usage.append(ResourceUsage.capture())
+            self.last_resource_check = current_time
+            
+            # Keep last 100 resource usage samples
+            if len(self.resource_usage) > 100:
+                self.resource_usage.pop(0) 

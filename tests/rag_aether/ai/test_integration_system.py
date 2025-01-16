@@ -3,7 +3,9 @@ import pytest
 import aiohttp
 import asyncio
 from unittest.mock import Mock, patch
-from datetime import datetime
+from datetime import datetime, timedelta
+from typing import Dict, List
+import numpy as np
 
 from rag_aether.ai.integration_system import (
     IntegrationSystem,
@@ -15,6 +17,8 @@ from rag_aether.ai.integration_system import (
     IntegrationError,
     ServiceResponse
 )
+from rag_aether.ai.rag_system import RAGSystem
+from rag_aether.core.metrics import MetricsTracker
 
 @pytest.fixture
 def mock_response():
@@ -42,6 +46,38 @@ async def integration_system():
     # Cleanup
     for name in list(system.services.keys()):
         await system.unregister_service(name)
+
+@pytest.fixture
+def rag_system():
+    """Create a RAG system with production features"""
+    return RAGSystem(use_production_features=True)
+
+@pytest.fixture
+def sample_messages():
+    """Create sample messages for testing"""
+    return [
+        {
+            "content": "Hello, this is a test message",
+            "channel": "general",
+            "user_id": "user1",
+            "timestamp": datetime.now().timestamp(),
+            "thread_id": "thread1"
+        },
+        {
+            "content": "This is a response in the same thread",
+            "channel": "general",
+            "user_id": "user2",
+            "timestamp": (datetime.now() + timedelta(minutes=5)).timestamp(),
+            "thread_id": "thread1"
+        },
+        {
+            "content": "This is in a different channel",
+            "channel": "random",
+            "user_id": "user1",
+            "timestamp": (datetime.now() + timedelta(minutes=10)).timestamp(),
+            "thread_id": None
+        }
+    ]
 
 @pytest.mark.asyncio
 async def test_service_registration(integration_system, service_config):
@@ -267,3 +303,141 @@ async def test_retry_mechanism(service_config):
             assert response.status == 200
             assert response.data["success"] is True
             assert mock_request.call_count == 3  # Verify retry count 
+
+def test_production_features_integration(rag_system, sample_messages):
+    """Test integration of production features"""
+    # 1. Message ingestion with production features
+    for msg in sample_messages:
+        rag_system.ingest_message(msg)
+    
+    assert len(rag_system.messages) == len(sample_messages)
+    assert rag_system.base_rag is not None
+    
+    # 2. Search with query expansion
+    results = rag_system.search_context(
+        "test message",
+        k=2,
+        channel="general"
+    )
+    
+    assert len(results) <= 2
+    assert all(r["channel"] == "general" for r in results)
+    
+    # 3. Enhanced context with production features
+    context = rag_system.get_enhanced_context(
+        "test message",
+        include_channels=True,
+        include_threads=True
+    )
+    
+    assert "semantic_matches" in context
+    assert len(context["semantic_matches"]) > 0
+    
+    # 4. Response generation with production features
+    response = rag_system.generate_response(
+        "What was the test message?",
+        max_context_messages=2,
+        format="json"
+    )
+    
+    assert "answer" in response
+    assert "metadata" in response
+    assert "context" in response
+
+def test_caching_integration(rag_system, sample_messages):
+    """Test caching integration"""
+    # 1. Ingest messages
+    for msg in sample_messages:
+        rag_system.ingest_message(msg)
+    
+    # 2. First search to populate cache
+    query = "test message"
+    first_results = rag_system.search_context(query, k=2)
+    
+    # 3. Second search should use cache
+    with rag_system.metrics.track_operation("cached_search") as metrics:
+        second_results = rag_system.search_context(query, k=2)
+        
+    assert metrics.duration < 0.1  # Cache lookup should be fast
+    assert len(first_results) == len(second_results)
+
+def test_quality_scoring_integration(rag_system, sample_messages):
+    """Test quality scoring integration"""
+    # 1. Ingest messages
+    for msg in sample_messages:
+        rag_system.ingest_message(msg)
+    
+    # 2. Search with quality scoring
+    results = rag_system.search_context("test message", k=2)
+    
+    # Check relevance scores
+    assert all(0 <= r["relevance_score"] <= 1.0 for r in results)
+    
+    # 3. Generate response with quality checks
+    response = rag_system.generate_response(
+        "What was discussed?",
+        max_context_messages=2
+    )
+    
+    assert response["metadata"]["num_context_messages"] > 0
+
+def test_metrics_integration(rag_system, sample_messages):
+    """Test metrics integration"""
+    metrics = MetricsTracker()
+    
+    # 1. Track message ingestion
+    with metrics.track_operation("batch_ingest"):
+        for msg in sample_messages:
+            rag_system.ingest_message(msg)
+    
+    assert metrics.get_operation_count("batch_ingest") == 1
+    
+    # 2. Track search operations
+    with metrics.track_operation("search"):
+        results = rag_system.search_context("test", k=2)
+    
+    assert metrics.get_operation_count("search") == 1
+    assert metrics.get_average_duration("search") > 0
+
+def test_error_handling_integration(rag_system):
+    """Test error handling integration"""
+    # 1. Invalid message format
+    with pytest.raises(Exception):
+        rag_system.ingest_message({"invalid": "message"})
+    
+    # 2. Empty query
+    with pytest.raises(Exception):
+        rag_system.search_context("")
+    
+    # 3. Invalid time window
+    with pytest.raises(Exception):
+        rag_system.search_context("test", time_window_hours=-1)
+
+def test_concurrent_operations_integration(rag_system, sample_messages):
+    """Test concurrent operations integration"""
+    import concurrent.futures
+    
+    # 1. Concurrent message ingestion
+    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+        futures = [
+            executor.submit(rag_system.ingest_message, msg)
+            for msg in sample_messages
+        ]
+        concurrent.futures.wait(futures)
+    
+    assert len(rag_system.messages) == len(sample_messages)
+    
+    # 2. Concurrent searches
+    queries = ["test", "message", "channel"]
+    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+        futures = [
+            executor.submit(rag_system.search_context, q)
+            for q in queries
+        ]
+        results = concurrent.futures.wait(futures)
+    
+    assert len(results.done) == len(queries)
+
+# Run tests
+if __name__ == "__main__":
+    pytest.main([__file__]) 

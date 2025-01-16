@@ -4,8 +4,9 @@ import pytest
 from hypothesis import given, settings, strategies as st
 from hypothesis.stateful import Bundle, RuleBasedStateMachine, rule, invariant
 import numpy as np
+from datetime import datetime, timedelta
+from rag_aether.ai.rag_system import RAGSystem
 
-from rag_aether.ai.rag import BaseRAG
 from tests.rag_aether.test_utils import (
     MockEmbeddingModel,
     text_content_strategy,
@@ -18,6 +19,23 @@ from tests.rag_aether.test_utils import (
     measure_performance,
     PerformanceMetrics
 )
+
+# Custom strategies
+@st.composite
+def message_strategy(draw):
+    """Generate valid message dictionaries"""
+    return {
+        "content": draw(st.text(min_size=1, max_size=1000)),
+        "channel": draw(st.text(min_size=1, max_size=50)),
+        "user_id": draw(st.text(min_size=1, max_size=50)),
+        "timestamp": draw(st.floats(min_value=0, max_value=datetime.now().timestamp())),
+        "thread_id": draw(st.one_of(st.none(), st.text(min_size=1, max_size=50)))
+    }
+
+@st.composite
+def query_strategy(draw):
+    """Generate valid query strings"""
+    return draw(st.text(min_size=1, max_size=200))
 
 # Core RAG Properties
 @given(
@@ -149,6 +167,126 @@ def test_performance_properties():
     
     # Property 3: Memory usage should be bounded
     assert index_metrics.memory_usage < 1e9, "Memory usage too high"
+
+# Property-based tests
+@given(messages=st.lists(message_strategy(), min_size=1, max_size=10))
+def test_message_ingestion_properties(messages: List[Dict]):
+    """Test properties of message ingestion"""
+    rag = RAGSystem(use_production_features=True)
+    
+    # Property 1: All messages should be ingested successfully
+    for msg in messages:
+        rag.ingest_message(msg)
+        assert len(rag.messages) > 0
+        
+    # Property 2: Messages should maintain order
+    for i, msg in enumerate(messages):
+        assert rag.messages[i]["content"] == msg["content"]
+        
+    # Property 3: Vector IDs should be sequential
+    for i, msg in enumerate(rag.messages):
+        assert msg["vector_id"] == i
+
+@given(
+    messages=st.lists(message_strategy(), min_size=1, max_size=10),
+    query=query_strategy()
+)
+def test_search_context_properties(messages: List[Dict], query: str):
+    """Test properties of context search"""
+    rag = RAGSystem(use_production_features=True)
+    
+    # Ingest messages
+    for msg in messages:
+        rag.ingest_message(msg)
+    
+    # Property 1: Search should return requested number of results
+    k = 3
+    results = rag.search_context(query, k=k)
+    assert len(results) <= k
+    
+    # Property 2: Results should have relevance scores
+    for result in results:
+        assert "relevance_score" in result
+        assert isinstance(result["relevance_score"], float)
+    
+    # Property 3: Results should maintain time ordering within relevance
+    for i in range(len(results) - 1):
+        if abs(results[i]["relevance_score"] - results[i+1]["relevance_score"]) < 0.01:
+            assert results[i]["timestamp"] >= results[i+1]["timestamp"]
+
+@given(
+    messages=st.lists(message_strategy(), min_size=1, max_size=10),
+    query=query_strategy(),
+    time_window=st.integers(min_value=1, max_value=24)
+)
+def test_time_window_properties(messages: List[Dict], query: str, time_window: int):
+    """Test properties of time window filtering"""
+    rag = RAGSystem(use_production_features=True)
+    
+    # Ingest messages
+    for msg in messages:
+        rag.ingest_message(msg)
+    
+    # Property 1: Time window should filter old messages
+    results = rag.search_context(query, time_window_hours=time_window)
+    now = datetime.now()
+    
+    for result in results:
+        msg_time = datetime.fromisoformat(result["ingested_at"])
+        age_hours = (now - msg_time).total_seconds() / 3600
+        assert age_hours <= time_window
+
+@given(
+    messages=st.lists(message_strategy(), min_size=1, max_size=10),
+    query=query_strategy()
+)
+def test_channel_context_properties(messages: List[Dict], query: str):
+    """Test properties of channel context"""
+    rag = RAGSystem(use_production_features=True)
+    
+    # Ingest messages
+    for msg in messages:
+        rag.ingest_message(msg)
+    
+    # Get context with channels
+    context = rag.get_enhanced_context(query, include_channels=True)
+    
+    if context.get("channel_context"):
+        channel = context["semantic_matches"][0]["channel"]
+        
+        # Property 1: Channel context should only contain messages from that channel
+        for msg in context["channel_context"]:
+            assert msg["channel"] == channel
+        
+        # Property 2: Channel context should be time-ordered
+        for i in range(len(context["channel_context"]) - 1):
+            assert context["channel_context"][i]["timestamp"] >= context["channel_context"][i+1]["timestamp"]
+
+@given(
+    messages=st.lists(message_strategy(), min_size=1, max_size=10),
+    query=query_strategy()
+)
+def test_thread_context_properties(messages: List[Dict], query: str):
+    """Test properties of thread context"""
+    rag = RAGSystem(use_production_features=True)
+    
+    # Ingest messages
+    for msg in messages:
+        rag.ingest_message(msg)
+    
+    # Get context with threads
+    context = rag.get_enhanced_context(query, include_threads=True)
+    
+    if context.get("thread_context"):
+        thread_id = context["semantic_matches"][0]["thread_id"]
+        
+        # Property 1: Thread context should only contain messages from that thread
+        for msg in context["thread_context"]:
+            assert msg["thread_id"] == thread_id
+        
+        # Property 2: Thread context should be time-ordered
+        for i in range(len(context["thread_context"]) - 1):
+            assert context["thread_context"][i]["timestamp"] <= context["thread_context"][i+1]["timestamp"]
 
 # Run the state machine
 TestRAGStateMachine.TestCase.settings = settings(max_examples=100)

@@ -10,10 +10,12 @@ export const useFlowPattern = (flowState) => {
   const [activePattern, setActivePattern] = useState(null);
 
   useEffect(() => {
-    // Reset learning state when flow state changes
-    setIsLearning(false);
-    setActivePattern(null);
-  }, [flowState]);
+    // Only reset if transitioning out of flow state
+    if (flowState.state !== 'flow' && isLearning) {
+      setIsLearning(false);
+      setActivePattern(null);
+    }
+  }, [flowState.state, isLearning]);
 
   const learnCurrentState = (energyLevels, metrics) => {
     setIsLearning(true);

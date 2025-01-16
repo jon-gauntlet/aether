@@ -1,257 +1,164 @@
 """Rate limiting implementation for RAG system."""
-from typing import Dict, Any, Optional, List, Tuple
+from typing import Dict, Any, Optional
 import time
 import asyncio
 from dataclasses import dataclass
-from collections import deque
 from rag_aether.core.logging import get_logger
-from rag_aether.core.performance import with_performance_monitoring, performance_section
-from rag_aether.core.errors import RAGError
+from rag_aether.core.errors import RateLimitError
+from rag_aether.core.performance import with_performance_monitoring
 
 logger = get_logger("rate_limit")
 
 @dataclass
 class RateLimitConfig:
     """Rate limit configuration."""
-    requests_per_second: float
-    burst_size: int
-    window_size: float = 60.0  # Window size in seconds
-    max_delay: float = 5.0     # Maximum delay before rejection
+    requests_per_second: float = 10.0
+    burst_size: int = 50
+    max_delay: float = 5.0
+    min_delay: float = 0.1
 
 class TokenBucket:
-    """Token bucket rate limiter."""
+    """Token bucket rate limiter implementation."""
     
     def __init__(
         self,
         rate: float,
-        capacity: int
+        capacity: int,
+        initial_tokens: Optional[int] = None
     ):
         """Initialize token bucket."""
         self.rate = rate
         self.capacity = capacity
-        self.tokens = capacity
-        self.last_update = time.time()
-        logger.info(
-            "Initialized token bucket",
-            extra={
-                "rate": rate,
-                "capacity": capacity
-            }
-        )
-    
-    def _add_tokens(self) -> None:
-        """Add tokens based on elapsed time."""
-        now = time.time()
+        self.tokens = initial_tokens if initial_tokens is not None else capacity
+        self.last_update = time.monotonic()
+        self.total_requests = 0
+        self.delayed_requests = 0
+        
+    def update(self) -> None:
+        """Update token count based on elapsed time."""
+        now = time.monotonic()
         elapsed = now - self.last_update
-        new_tokens = elapsed * self.rate
-        
-        self.tokens = min(self.capacity, self.tokens + new_tokens)
-        self.last_update = now
-    
-    async def acquire(self, tokens: int = 1) -> Tuple[bool, float]:
-        """Try to acquire tokens."""
-        self._add_tokens()
-        
-        if self.tokens >= tokens:
-            self.tokens -= tokens
-            return True, 0.0
-        else:
-            # Calculate wait time
-            missing_tokens = tokens - self.tokens
-            wait_time = missing_tokens / self.rate
-            return False, wait_time
-
-class SlidingWindow:
-    """Sliding window rate limiter."""
-    
-    def __init__(
-        self,
-        window_size: float,
-        max_requests: int
-    ):
-        """Initialize sliding window."""
-        self.window_size = window_size
-        self.max_requests = max_requests
-        self.requests: deque[float] = deque()
-        logger.info(
-            "Initialized sliding window",
-            extra={
-                "window_size": window_size,
-                "max_requests": max_requests
-            }
+        self.tokens = min(
+            self.capacity,
+            self.tokens + elapsed * self.rate
         )
-    
-    def _cleanup(self) -> None:
-        """Remove expired timestamps."""
-        now = time.time()
-        while self.requests and now - self.requests[0] > self.window_size:
-            self.requests.popleft()
-    
-    async def check_rate_limit(self) -> Tuple[bool, float]:
-        """Check if request is allowed."""
-        self._cleanup()
+        self.last_update = now
         
-        if len(self.requests) < self.max_requests:
-            self.requests.append(time.time())
-            return True, 0.0
-        else:
-            # Calculate wait time
-            wait_time = self.window_size - (time.time() - self.requests[0])
-            return False, max(0, wait_time)
+    async def acquire(self, tokens: int = 1) -> float:
+        """Acquire tokens and return delay if needed."""
+        self.update()
+        
+        if tokens > self.capacity:
+            raise ValueError(
+                f"Requested tokens ({tokens}) exceeds capacity ({self.capacity})"
+            )
+            
+        delay = 0.0
+        if tokens > self.tokens:
+            # Calculate required delay
+            delay = (tokens - self.tokens) / self.rate
+            self.delayed_requests += 1
+            await asyncio.sleep(delay)
+            self.update()
+            
+        self.tokens -= tokens
+        self.total_requests += 1
+        return delay
 
 class RateLimiter:
-    """Combined rate limiter using token bucket and sliding window."""
+    """Rate limiter with configuration and metrics."""
     
     def __init__(
         self,
-        config: RateLimitConfig,
-        component: str = "default"
+        config: Optional[RateLimitConfig] = None,
+        name: str = "default"
     ):
         """Initialize rate limiter."""
-        self.config = config
-        self.component = component
-        
-        # Initialize limiters
-        self.token_bucket = TokenBucket(
-            rate=config.requests_per_second,
-            capacity=config.burst_size
+        self.config = config or RateLimitConfig()
+        self.name = name
+        self.bucket = TokenBucket(
+            rate=self.config.requests_per_second,
+            capacity=self.config.burst_size
         )
-        self.sliding_window = SlidingWindow(
-            window_size=config.window_size,
-            max_requests=int(config.requests_per_second * config.window_size)
-        )
-        
-        # Track metrics
-        self.total_requests = 0
-        self.rejected_requests = 0
-        self.delayed_requests = 0
-        self.total_delay = 0.0
-        
         logger.info(
-            "Initialized rate limiter",
+            f"Initialized rate limiter: {name}",
             extra={
-                "component": component,
-                "config": vars(config)
+                "rate": self.config.requests_per_second,
+                "burst_size": self.config.burst_size
             }
         )
-    
-    @with_performance_monitoring(operation="check", component="rate_limiter")
-    async def check_rate_limit(self) -> None:
-        """Check rate limit and wait if needed."""
+        
+    @with_performance_monitoring(operation="check", component="rate_limit")
+    async def check_rate_limit(self, tokens: int = 1) -> None:
+        """Check rate limit and delay if needed."""
         try:
-            self.total_requests += 1
+            delay = await self.bucket.acquire(tokens)
             
-            # Check token bucket first
-            allowed, wait_time = await self.token_bucket.acquire()
-            if not allowed:
-                # Check sliding window as backup
-                allowed, window_wait = await self.sliding_window.check_rate_limit()
-                wait_time = max(wait_time, window_wait)
-            
-            if wait_time > 0:
-                if wait_time > self.config.max_delay:
-                    self.rejected_requests += 1
-                    raise RAGError(
-                        "Rate limit exceeded",
-                        operation="check_rate_limit",
-                        component=self.component,
-                        details={
-                            "wait_time": wait_time,
-                            "max_delay": self.config.max_delay
-                        }
-                    )
+            if delay > self.config.max_delay:
+                raise RateLimitError(
+                    f"Rate limit exceeded for {self.name}",
+                    operation="check",
+                    component="rate_limit",
+                    retry_after=delay
+                )
                 
-                self.delayed_requests += 1
-                self.total_delay += wait_time
-                
+            if delay > 0:
                 logger.warning(
-                    "Rate limit delay",
+                    f"Rate limited {self.name}",
                     extra={
-                        "wait_time": wait_time,
-                        "component": self.component
+                        "delay": delay,
+                        "tokens": tokens
                     }
                 )
                 
-                await asyncio.sleep(wait_time)
-            
         except Exception as e:
-            if not isinstance(e, RAGError):
+            if not isinstance(e, RateLimitError):
                 logger.error(f"Rate limit check failed: {str(e)}")
-                raise RAGError(
-                    f"Rate limit check failed: {str(e)}",
-                    operation="check_rate_limit",
-                    component=self.component
-                )
             raise
-    
+            
     def get_metrics(self) -> Dict[str, Any]:
         """Get rate limiter metrics."""
         return {
-            "total_requests": self.total_requests,
-            "rejected_requests": self.rejected_requests,
-            "delayed_requests": self.delayed_requests,
-            "avg_delay": (
-                self.total_delay / self.delayed_requests
-                if self.delayed_requests > 0
-                else 0.0
-            ),
-            "rejection_rate": (
-                self.rejected_requests / self.total_requests
-                if self.total_requests > 0
-                else 0.0
-            )
+            "name": self.name,
+            "total_requests": self.bucket.total_requests,
+            "delayed_requests": self.bucket.delayed_requests,
+            "current_tokens": self.bucket.tokens,
+            "rate": self.config.requests_per_second,
+            "burst_size": self.config.burst_size
         }
 
 class RateLimitManager:
-    """Manage rate limiters for different components."""
+    """Manage multiple rate limiters."""
     
     def __init__(self):
         """Initialize rate limit manager."""
         self.limiters: Dict[str, RateLimiter] = {}
-        self.default_configs = {
-            "embedding": RateLimitConfig(
-                requests_per_second=10.0,
-                burst_size=20,
-                window_size=60.0
-            ),
-            "retrieval": RateLimitConfig(
-                requests_per_second=5.0,
-                burst_size=10,
-                window_size=60.0
-            ),
-            "ingestion": RateLimitConfig(
-                requests_per_second=2.0,
-                burst_size=5,
-                window_size=60.0
-            ),
-            "default": RateLimitConfig(
-                requests_per_second=20.0,
-                burst_size=40,
-                window_size=60.0
-            )
-        }
         logger.info("Initialized rate limit manager")
-    
+        
     def get_limiter(
         self,
-        component: str,
+        name: str,
         config: Optional[RateLimitConfig] = None
     ) -> RateLimiter:
-        """Get or create rate limiter for component."""
-        if component not in self.limiters:
-            limiter_config = config or self.default_configs.get(
-                component,
-                self.default_configs["default"]
+        """Get or create rate limiter."""
+        if name not in self.limiters:
+            self.limiters[name] = RateLimiter(
+                config=config,
+                name=name
             )
-            self.limiters[component] = RateLimiter(
-                config=limiter_config,
-                component=component
-            )
-        return self.limiters[component]
-    
-    def get_metrics(self) -> Dict[str, Dict[str, Any]]:
+        return self.limiters[name]
+        
+    async def check_rate_limits(
+        self,
+        limits: Dict[str, int]
+    ) -> None:
+        """Check multiple rate limits."""
+        for name, tokens in limits.items():
+            await self.get_limiter(name).check_rate_limit(tokens)
+            
+    def get_all_metrics(self) -> Dict[str, Dict[str, Any]]:
         """Get metrics for all rate limiters."""
         return {
-            component: limiter.get_metrics()
-            for component, limiter in self.limiters.items()
+            name: limiter.get_metrics()
+            for name, limiter in self.limiters.items()
         } 

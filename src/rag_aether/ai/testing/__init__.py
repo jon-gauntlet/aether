@@ -1,24 +1,22 @@
-"""RAG system testing framework."""
+"""Testing module for RAG system."""
 
 from .performance_tests import RAGPerformanceTests, PerformanceResult
 from .e2e_tests import E2ETests
-from .integration_tests import IntegrationTests
-from .property_tests import PropertyTests
-from .rag_feature_tests import RAGFeatureTests
-from .react_component_tests import ReactComponentTests
+from .property_tests import RAGProperties as PropertyTests
+from .integration_tests import RAGIntegrationTests as IntegrationTests
+from .stress_tests import RAGStressTests as StressTests
+from .rag_feature_tests import RAGFeatureTests as FeatureTests
+from .react_component_tests import ReactComponentTests as ComponentTests
 from .deployment_tests import DeploymentTests
-from .stress_tests import StressTests
-from .test_rag_system import RAGSystemTests
 
 __all__ = [
     'RAGPerformanceTests',
     'PerformanceResult',
     'E2ETests',
-    'IntegrationTests',
     'PropertyTests',
-    'RAGFeatureTests',
-    'ReactComponentTests',
-    'DeploymentTests',
+    'IntegrationTests',
     'StressTests',
-    'RAGSystemTests'
+    'FeatureTests',
+    'ComponentTests',
+    'DeploymentTests'
 ] 

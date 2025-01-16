@@ -1,423 +1,260 @@
-"""Telemetry system for RAG operations."""
+"""Telemetry implementation for RAG system."""
+from typing import Dict, Any, List, Optional, Union, Set
 import time
-from typing import Dict, Any, List, Optional
-from dataclasses import dataclass, field
-from datetime import datetime
-import json
-from pathlib import Path
 import asyncio
-from collections import deque
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from collections import defaultdict
 import numpy as np
 from rag_aether.core.logging import get_logger
+from rag_aether.core.errors import TelemetryError
+from rag_aether.core.performance import with_performance_monitoring
 
 logger = get_logger("telemetry")
 
 @dataclass
-class TelemetryPoint:
-    """Single telemetry measurement."""
+class MetricPoint:
+    """Individual metric data point."""
+    value: Union[int, float]
     timestamp: datetime
-    operation: str
-    component: str
-    metrics: Dict[str, Any]
     labels: Dict[str, str] = field(default_factory=dict)
 
-class TelemetryBuffer:
-    """Buffer for storing telemetry points."""
+@dataclass
+class MetricConfig:
+    """Metric configuration."""
+    name: str
+    description: str
+    unit: str
+    aggregation: str = "avg"  # One of: avg, sum, min, max, count
+    retention_days: int = 7
+    labels: Set[str] = field(default_factory=set)
+
+@dataclass
+class MetricSummary:
+    """Summary statistics for a metric."""
+    count: int = 0
+    sum: float = 0.0
+    min: float = float('inf')
+    max: float = float('-inf')
+    avg: float = 0.0
+    p50: float = 0.0
+    p90: float = 0.0
+    p95: float = 0.0
+    p99: float = 0.0
+
+class MetricStore:
+    """Store and aggregate metric data points."""
     
-    def __init__(self, max_size: int = 1000):
-        self.buffer = deque(maxlen=max_size)
-        
-    def add(self, point: TelemetryPoint):
-        """Add telemetry point to buffer."""
-        self.buffer.append(point)
-        
-    def get_points(
+    def __init__(
         self,
-        operation: Optional[str] = None,
-        component: Optional[str] = None,
-        start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None
-    ) -> List[TelemetryPoint]:
-        """Get filtered telemetry points."""
-        points = list(self.buffer)
+        config: MetricConfig
+    ):
+        """Initialize metric store."""
+        self.config = config
+        self.points: List[MetricPoint] = []
+        self.last_cleanup: datetime = datetime.now()
+        logger.info(
+            f"Initialized metric store: {config.name}",
+            extra={"config": vars(config)}
+        )
         
-        if operation:
-            points = [p for p in points if p.operation == operation]
-        if component:
-            points = [p for p in points if p.component == component]
+    def add_point(
+        self,
+        value: Union[int, float],
+        timestamp: Optional[datetime] = None,
+        labels: Optional[Dict[str, str]] = None
+    ) -> None:
+        """Add metric data point."""
+        point = MetricPoint(
+            value=value,
+            timestamp=timestamp or datetime.now(),
+            labels=labels or {}
+        )
+        self.points.append(point)
+        self._cleanup_old_points()
+        
+    def _cleanup_old_points(self) -> None:
+        """Remove points older than retention period."""
+        now = datetime.now()
+        if (now - self.last_cleanup).total_seconds() < 3600:
+            return
+            
+        cutoff = now - timedelta(days=self.config.retention_days)
+        self.points = [
+            point for point in self.points
+            if point.timestamp > cutoff
+        ]
+        self.last_cleanup = now
+        
+    def get_summary(
+        self,
+        start_time: Optional[datetime] = None,
+        end_time: Optional[datetime] = None,
+        labels: Optional[Dict[str, str]] = None
+    ) -> MetricSummary:
+        """Get summary statistics for metric points."""
+        # Filter points
+        points = self.points
         if start_time:
             points = [p for p in points if p.timestamp >= start_time]
         if end_time:
             points = [p for p in points if p.timestamp <= end_time]
+        if labels:
+            points = [
+                p for p in points
+                if all(p.labels.get(k) == v for k, v in labels.items())
+            ]
             
-        return points
-    
-    def clear(self):
-        """Clear buffer."""
-        self.buffer.clear()
-
-class TelemetryCollector:
-    """Collector for system telemetry."""
-    
-    def __init__(self, output_dir: Optional[Path] = None):
-        self.output_dir = output_dir or Path("telemetry")
-        self.output_dir.mkdir(exist_ok=True)
-        self.buffer = TelemetryBuffer()
-        self._collection_task: Optional[asyncio.Task] = None
-        self._running = False
-        
-        # Initialize psutil for system monitoring
-        try:
-            import psutil
-            self._psutil = psutil
-            self._has_psutil = True
-        except ImportError:
-            logger.warning("psutil not available - system metrics will be limited")
-            self._has_psutil = False
-            
-        # Initialize alert manager
-        from rag_aether.core.alerts import manager as alert_manager
-        self.alert_manager = alert_manager
-        
-        # Load default alert config if exists
-        config_path = Path("config/alerts.json")
-        if config_path.exists():
-            self.alert_manager.load_config(config_path)
-    
-    def start(self):
-        """Start telemetry collection."""
-        if not self._running:
-            self._running = True
-            self._collection_task = asyncio.create_task(self._collect_loop())
-            logger.info("Telemetry collection started")
-    
-    def stop(self):
-        """Stop telemetry collection."""
-        if self._running:
-            self._running = False
-            if self._collection_task:
-                self._collection_task.cancel()
-            logger.info("Telemetry collection stopped")
-    
-    async def _collect_loop(self):
-        """Background collection loop."""
-        try:
-            while self._running:
-                await self._collect_metrics()
-                await asyncio.sleep(60)  # Collect every minute
-        except asyncio.CancelledError:
-            pass
-        except Exception as e:
-            logger.error(f"Telemetry collection error: {str(e)}")
-            raise
-    
-    async def _collect_metrics(self):
-        """Collect system metrics."""
-        try:
-            # Collect basic system metrics
-            metrics = {
-                "cpu_percent": await self._get_cpu_usage(),
-                "memory_percent": await self._get_memory_usage(),
-                "disk_usage": await self._get_disk_usage()
-            }
-            
-            # Add process-specific metrics if psutil available
-            if self._has_psutil:
-                try:
-                    process = self._psutil.Process()
-                    
-                    # Get process metrics
-                    metrics.update({
-                        "process_cpu_percent": await asyncio.to_thread(process.cpu_percent),
-                        "process_memory_percent": await asyncio.to_thread(
-                            lambda: process.memory_percent()
-                        ),
-                        "process_threads": await asyncio.to_thread(
-                            lambda: process.num_threads()
-                        ),
-                        "process_fds": await asyncio.to_thread(
-                            lambda: process.num_fds()
-                        ) if hasattr(process, "num_fds") else None
-                    })
-                    
-                    # Get memory details
-                    mem_info = await asyncio.to_thread(process.memory_info)
-                    metrics.update({
-                        "process_rss_mb": mem_info.rss / (1024 * 1024),
-                        "process_vms_mb": mem_info.vms / (1024 * 1024)
-                    })
-                    
-                except Exception as e:
-                    logger.error(f"Error collecting process metrics: {str(e)}")
-            
-            point = TelemetryPoint(
-                timestamp=datetime.now(),
-                operation="system_metrics",
-                component="system",
-                metrics=metrics
-            )
-            
-            self.buffer.add(point)
-            await self._save_point(point)
-            
-            # Process alerts
-            await self.alert_manager.process_metrics({"metrics": metrics})
-            
-        except Exception as e:
-            logger.error(f"Error collecting metrics: {str(e)}")
-    
-    async def _get_cpu_usage(self) -> float:
-        """Get CPU usage percentage."""
-        if not self._has_psutil:
-            return 0.0
-            
-        try:
-            # Get CPU usage over 1 second interval
-            return await asyncio.to_thread(self._psutil.cpu_percent, interval=1)
-        except Exception as e:
-            logger.error(f"Error getting CPU usage: {str(e)}")
-            return 0.0
-    
-    async def _get_memory_usage(self) -> float:
-        """Get memory usage percentage."""
-        if not self._has_psutil:
-            return 0.0
-            
-        try:
-            # Get virtual memory stats
-            mem = await asyncio.to_thread(self._psutil.virtual_memory)
-            return mem.percent
-        except Exception as e:
-            logger.error(f"Error getting memory usage: {str(e)}")
-            return 0.0
-    
-    async def _get_disk_usage(self) -> Dict[str, float]:
-        """Get disk usage statistics."""
-        if not self._has_psutil:
-            return {"used_percent": 0.0}
-            
-        try:
-            # Get disk usage for the telemetry directory
-            disk_usage = await asyncio.to_thread(
-                self._psutil.disk_usage,
-                str(self.output_dir)
-            )
-            
-            return {
-                "used_percent": disk_usage.percent,
-                "total_gb": disk_usage.total / (1024 ** 3),
-                "used_gb": disk_usage.used / (1024 ** 3),
-                "free_gb": disk_usage.free / (1024 ** 3)
-            }
-        except Exception as e:
-            logger.error(f"Error getting disk usage: {str(e)}")
-            return {"used_percent": 0.0}
-    
-    async def _save_point(self, point: TelemetryPoint):
-        """Save telemetry point to file."""
-        try:
-            data = {
-                "timestamp": point.timestamp.isoformat(),
-                "operation": point.operation,
-                "component": point.component,
-                "metrics": point.metrics,
-                "labels": point.labels
-            }
-            
-            file_path = self.output_dir / f"telemetry_{point.timestamp.strftime('%Y%m%d')}.jsonl"
-            with open(file_path, "a") as f:
-                f.write(json.dumps(data) + "\n")
-                
-        except Exception as e:
-            logger.error(f"Error saving telemetry point: {str(e)}")
-    
-    def add_point(
-        self,
-        operation: str,
-        component: str,
-        metrics: Dict[str, Any],
-        labels: Optional[Dict[str, str]] = None
-    ):
-        """Add telemetry point."""
-        point = TelemetryPoint(
-            timestamp=datetime.now(),
-            operation=operation,
-            component=component,
-            metrics=metrics,
-            labels=labels or {}
-        )
-        
-        self.buffer.add(point)
-        asyncio.create_task(self._save_point(point))
-        
-        # Process alerts
-        asyncio.create_task(
-            self.alert_manager.process_metrics({
-                "operation": operation,
-                "component": component,
-                "metrics": metrics
-            })
-        )
-    
-    def get_component_metrics(
-        self,
-        component: str,
-        operation: Optional[str] = None,
-        window_minutes: int = 60
-    ) -> Dict[str, Any]:
-        """Get aggregated metrics for a component."""
-        start_time = datetime.now().replace(
-            minute=datetime.now().minute - window_minutes
-        )
-        
-        points = self.buffer.get_points(
-            operation=operation,
-            component=component,
-            start_time=start_time
-        )
-        
         if not points:
-            return {}
+            return MetricSummary()
             
-        # Aggregate metrics
-        all_metrics = {}
-        for point in points:
-            for key, value in point.metrics.items():
-                if isinstance(value, (int, float)):
-                    if key not in all_metrics:
-                        all_metrics[key] = []
-                    all_metrics[key].append(value)
-        
         # Calculate statistics
-        stats = {}
-        for key, values in all_metrics.items():
-            stats[key] = {
-                "avg": np.mean(values),
-                "min": np.min(values),
-                "max": np.max(values),
-                "std": np.std(values),
-                "p95": np.percentile(values, 95)
-            }
-            
-        return stats
-    
-    def get_operation_metrics(
+        values = np.array([p.value for p in points])
+        return MetricSummary(
+            count=len(values),
+            sum=float(np.sum(values)),
+            min=float(np.min(values)),
+            max=float(np.max(values)),
+            avg=float(np.mean(values)),
+            p50=float(np.percentile(values, 50)),
+            p90=float(np.percentile(values, 90)),
+            p95=float(np.percentile(values, 95)),
+            p99=float(np.percentile(values, 99))
+        )
+        
+    def get_points(
         self,
-        operation: str,
-        window_minutes: int = 60
-    ) -> Dict[str, Any]:
-        """Get aggregated metrics for an operation."""
-        start_time = datetime.now().replace(
-            minute=datetime.now().minute - window_minutes
+        start_time: Optional[datetime] = None,
+        end_time: Optional[datetime] = None,
+        labels: Optional[Dict[str, str]] = None
+    ) -> List[MetricPoint]:
+        """Get filtered metric points."""
+        points = self.points
+        if start_time:
+            points = [p for p in points if p.timestamp >= start_time]
+        if end_time:
+            points = [p for p in points if p.timestamp <= end_time]
+        if labels:
+            points = [
+                p for p in points
+                if all(p.labels.get(k) == v for k, v in labels.items())
+            ]
+        return points
+
+class TelemetryManager:
+    """Manage system telemetry and metrics."""
+    
+    def __init__(self):
+        """Initialize telemetry manager."""
+        self.stores: Dict[str, MetricStore] = {}
+        self._task: Optional[asyncio.Task] = None
+        logger.info("Initialized telemetry manager")
+        
+    def register_metric(
+        self,
+        name: str,
+        description: str,
+        unit: str,
+        aggregation: str = "avg",
+        retention_days: int = 7,
+        labels: Optional[Set[str]] = None
+    ) -> MetricStore:
+        """Register new metric."""
+        if name in self.stores:
+            raise ValueError(f"Metric already exists: {name}")
+            
+        config = MetricConfig(
+            name=name,
+            description=description,
+            unit=unit,
+            aggregation=aggregation,
+            retention_days=retention_days,
+            labels=labels or set()
+        )
+        store = MetricStore(config)
+        self.stores[name] = store
+        return store
+        
+    @with_performance_monitoring(operation="record", component="telemetry")
+    def record_value(
+        self,
+        metric_name: str,
+        value: Union[int, float],
+        labels: Optional[Dict[str, str]] = None
+    ) -> None:
+        """Record metric value."""
+        if metric_name not in self.stores:
+            raise ValueError(f"Metric not found: {metric_name}")
+            
+        store = self.stores[metric_name]
+        store.add_point(value, labels=labels)
+        
+    def get_metric_summary(
+        self,
+        metric_name: str,
+        start_time: Optional[datetime] = None,
+        end_time: Optional[datetime] = None,
+        labels: Optional[Dict[str, str]] = None
+    ) -> MetricSummary:
+        """Get metric summary statistics."""
+        if metric_name not in self.stores:
+            raise ValueError(f"Metric not found: {metric_name}")
+            
+        store = self.stores[metric_name]
+        return store.get_summary(
+            start_time=start_time,
+            end_time=end_time,
+            labels=labels
         )
         
-        points = self.buffer.get_points(
-            operation=operation,
-            start_time=start_time
+    def get_metric_points(
+        self,
+        metric_name: str,
+        start_time: Optional[datetime] = None,
+        end_time: Optional[datetime] = None,
+        labels: Optional[Dict[str, str]] = None
+    ) -> List[MetricPoint]:
+        """Get metric data points."""
+        if metric_name not in self.stores:
+            raise ValueError(f"Metric not found: {metric_name}")
+            
+        store = self.stores[metric_name]
+        return store.get_points(
+            start_time=start_time,
+            end_time=end_time,
+            labels=labels
         )
         
-        if not points:
-            return {}
+    def get_all_metrics(self) -> Dict[str, Dict[str, Any]]:
+        """Get summaries for all metrics."""
+        return {
+            name: {
+                "config": vars(store.config),
+                "summary": vars(store.get_summary()),
+                "points": len(store.points)
+            }
+            for name, store in self.stores.items()
+        }
+        
+    async def start_cleanup(self, interval: int = 3600) -> None:
+        """Start periodic cleanup of old points."""
+        if self._task:
+            return
             
-        # Group by component
-        by_component = {}
-        for point in points:
-            if point.component not in by_component:
-                by_component[point.component] = []
-            by_component[point.component].append(point)
-            
-        # Aggregate metrics by component
-        stats = {}
-        for component, component_points in by_component.items():
-            all_metrics = {}
-            for point in component_points:
-                for key, value in point.metrics.items():
-                    if isinstance(value, (int, float)):
-                        if key not in all_metrics:
-                            all_metrics[key] = []
-                        all_metrics[key].append(value)
-            
-            component_stats = {}
-            for key, values in all_metrics.items():
-                component_stats[key] = {
-                    "avg": np.mean(values),
-                    "min": np.min(values),
-                    "max": np.max(values),
-                    "std": np.std(values),
-                    "p95": np.percentile(values, 95)
-                }
-            
-            stats[component] = component_stats
-            
-        return stats
-
-# Global telemetry collector instance
-collector = TelemetryCollector()
-
-def track_operation(operation: str, component: str):
-    """Decorator for tracking operation telemetry."""
-    def decorator(func):
-        async def async_wrapper(*args, **kwargs):
-            start_time = time.time()
+        async def cleanup_loop():
+            while True:
+                for store in self.stores.values():
+                    store._cleanup_old_points()
+                await asyncio.sleep(interval)
+                
+        self._task = asyncio.create_task(cleanup_loop())
+        
+    async def stop_cleanup(self) -> None:
+        """Stop periodic cleanup."""
+        if self._task:
+            self._task.cancel()
             try:
-                result = await func(*args, **kwargs)
-                duration = (time.time() - start_time) * 1000
-                
-                collector.add_point(
-                    operation=operation,
-                    component=component,
-                    metrics={
-                        "duration_ms": duration,
-                        "success": True
-                    }
-                )
-                
-                return result
-                
-            except Exception as e:
-                duration = (time.time() - start_time) * 1000
-                
-                collector.add_point(
-                    operation=operation,
-                    component=component,
-                    metrics={
-                        "duration_ms": duration,
-                        "success": False,
-                        "error": str(e)
-                    }
-                )
-                raise
-                
-        def sync_wrapper(*args, **kwargs):
-            start_time = time.time()
-            try:
-                result = func(*args, **kwargs)
-                duration = (time.time() - start_time) * 1000
-                
-                collector.add_point(
-                    operation=operation,
-                    component=component,
-                    metrics={
-                        "duration_ms": duration,
-                        "success": True
-                    }
-                )
-                
-                return result
-                
-            except Exception as e:
-                duration = (time.time() - start_time) * 1000
-                
-                collector.add_point(
-                    operation=operation,
-                    component=component,
-                    metrics={
-                        "duration_ms": duration,
-                        "success": False,
-                        "error": str(e)
-                    }
-                )
-                raise
-                
-        return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
-    return decorator 
+                await self._task
+            except asyncio.CancelledError:
+                pass
+            self._task = None 

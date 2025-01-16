@@ -12,6 +12,8 @@ import json
 from dataclasses import dataclass
 from contextlib import contextmanager
 import time
+import psutil
+import os
 
 # Enhanced mock embedding model with more realistic behavior
 class MockEmbeddingModel:
@@ -121,9 +123,21 @@ def assert_results_ordered(scores: List[float], tolerance: float = 1e-5):
 
 def assert_response_quality(response: str, context: str, min_length: int = 10):
     """Assert response meets quality criteria."""
+    # Basic checks
     assert len(response) >= min_length, f"Response too short: {len(response)} chars"
     assert response.strip(), "Response is empty or whitespace"
-    # Add more quality checks as needed
+    
+    # Content relevance
+    assert any(word in response.lower() for word in context.lower().split()), \
+        "Response appears unrelated to context"
+    
+    # Structure checks
+    assert response[0].isupper(), "Response should start with capital letter"
+    assert response[-1] in '.!?', "Response should end with punctuation"
+    
+    # Formatting
+    assert not response.isupper(), "Response should not be all uppercase"
+    assert '\n\n\n' not in response, "Response has too many consecutive newlines"
 
 # Enhanced async testing utilities
 class AsyncMock(MagicMock):
@@ -213,13 +227,19 @@ class PerformanceMetrics:
 
 def measure_performance(func: Callable, *args, **kwargs) -> PerformanceMetrics:
     """Measure performance metrics of a function."""
+    process = psutil.Process(os.getpid())
+    start_memory = process.memory_info().rss
     start_time = time.time()
+    
     result = func(*args, **kwargs)
+    
     end_time = time.time()
+    end_memory = process.memory_info().rss
+    memory_used = end_memory - start_memory
     
     return PerformanceMetrics(
         latency=end_time - start_time,
-        memory_usage=0.0,  # Add memory measurement
+        memory_usage=memory_used,
         throughput=1.0 / (end_time - start_time)
     )
 
