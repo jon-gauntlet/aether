@@ -6,8 +6,10 @@ from dataclasses import dataclass
 import logging
 from transformers import T5Tokenizer, T5ForConditionalGeneration
 import torch
+import ast
 from ..core.errors import QueryExpansionError, QueryProcessingError
 from ..core.performance import with_performance_monitoring
+from difflib import SequenceMatcher
 
 logger = logging.getLogger(__name__)
 
@@ -55,16 +57,26 @@ class QueryExpander:
         try:
             self.tokenizer = T5Tokenizer.from_pretrained(model_name)
             self.model = T5ForConditionalGeneration.from_pretrained(model_name)
-            self.cache: Dict[str, List[str]] = {}
+            self.cache: Dict[str, Dict[str, Any]] = {}
             self.cache_size = cache_size
             self._lock = asyncio.Lock()
             self.processor = QueryProcessor()
+            self.generate_count = 0
         except Exception as e:
             raise QueryExpansionError(f"Failed to initialize query expander: {str(e)}")
 
+    def _parse_context(self, context: Optional[str]) -> Dict[str, Any]:
+        """Parse string context into dictionary."""
+        if not context:
+            return {}
+        try:
+            return ast.literal_eval(context)
+        except:
+            return {"raw": context}
+
     @with_performance_monitoring
-    async def expand_query(self, query: str, context: Optional[str] = None, metadata: Optional[Dict[str, Any]] = None) -> List[str]:
-        """Expand a query into multiple variations."""
+    async def expand_query(self, query: str, context: Optional[str] = None, metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Expand a query into multiple variations with metadata."""
         if not query:
             raise QueryExpansionError("Query cannot be empty")
             
@@ -86,8 +98,10 @@ class QueryExpander:
                     max_length=128,
                     num_return_sequences=3,
                     num_beams=5,
-                    temperature=0.7
+                    temperature=0.7,
+                    do_sample=True
                 )
+                self.generate_count += 1
                 
                 variations = [
                     self.tokenizer.decode(output, skip_special_tokens=True)
@@ -95,75 +109,81 @@ class QueryExpander:
                 ]
                 
                 filtered_variations = self._filter_similar(variations)
+                parsed_context = self._parse_context(context)
+                
+                result = {
+                    "original_query": query,
+                    "expanded_queries": filtered_variations,
+                    "context": parsed_context,
+                    "metadata": metadata or {}
+                }
                 
                 if len(self.cache) >= self.cache_size:
                     self._prune_cache()
-                self.cache[cache_key] = filtered_variations
+                    
+                self.cache[cache_key] = result
+                return result
                 
-                return filtered_variations
-                
+        except QueryProcessingError:
+            raise
         except Exception as e:
-            logger.error(f"Error expanding query: {str(e)}")
             raise QueryExpansionError(f"Failed to expand query: {str(e)}")
 
     @with_performance_monitoring
-    async def expand_queries(self, queries: List[str]) -> List[List[str]]:
+    async def expand_queries(self, queries: List[str]) -> List[Dict[str, Any]]:
         """Expand multiple queries in parallel."""
         if not queries:
             raise QueryExpansionError("Queries list cannot be empty")
             
-        try:
-            tasks = [self.expand_query(query) for query in queries]
-            return await asyncio.gather(*tasks)
-        except Exception as e:
-            logger.error(f"Error in batch query expansion: {str(e)}")
-            raise QueryExpansionError(f"Failed to expand queries in batch: {str(e)}")
-    
+        tasks = [self.expand_query(query) for query in queries]
+        return await asyncio.gather(*tasks)
+
     def _filter_similar(self, variations: List[str], threshold: float = 0.8) -> List[str]:
-        """Filter out very similar variations."""
-        filtered: Set[str] = set()
-        for var in variations:
-            if not any(self._similarity(var, f) > threshold for f in filtered):
-                filtered.add(var)
-        return list(filtered)
-    
+        """Filter out similar variations using sequence matching."""
+        if not variations:
+            return []
+            
+        filtered = [variations[0]]
+        for var in variations[1:]:
+            if not any(self._similarity(var, existing) > threshold for existing in filtered):
+                filtered.append(var)
+        return filtered
+
     def _similarity(self, str1: str, str2: str) -> float:
-        """Calculate string similarity."""
-        set1 = set(str1.lower().split())
-        set2 = set(str2.lower().split())
-        intersection = len(set1.intersection(set2))
-        union = len(set1.union(set2))
-        return intersection / union if union > 0 else 0.0
-    
+        """Calculate similarity ratio between two strings."""
+        return SequenceMatcher(None, str1, str2).ratio()
+
     def _prune_cache(self) -> None:
-        """Remove oldest items from cache."""
-        items = list(self.cache.items())
-        items.sort(key=lambda x: len(x[1]))
-        for key, _ in items[:len(items)//2]:
-            del self.cache[key]
+        """Remove oldest items from cache when it reaches capacity."""
+        if len(self.cache) > self.cache_size:
+            items = sorted(self.cache.items(), key=lambda x: len(x[1]["expanded_queries"]))
+            to_remove = len(self.cache) - self.cache_size
+            for key, _ in items[:to_remove]:
+                del self.cache[key]
 
 def expand_query(query: str, context: Optional[str] = None) -> Dict[str, Any]:
-    """Utility function to expand a single query."""
+    """Standalone function to expand a single query."""
     expander = QueryExpander()
     return asyncio.run(expander.expand_query(query, context))
 
 def get_flow_context(query: str) -> Dict[str, Any]:
     """Extract flow-related context from query."""
     flow_terms = {
-        "state": ["flow", "resting", "transition"],
-        "metrics": ["energy", "focus", "productivity"],
-        "patterns": ["work", "break", "cycle"]
+        "performance": ["speed", "latency", "throughput"],
+        "state": ["flow", "state", "condition"],
+        "patterns": ["pattern", "behavior", "trend"]
     }
     
-    context = {category: [] for category in flow_terms}
+    context = {
+        "has_flow_terms": False,
+        "flow_context": {k: [] for k in flow_terms}
+    }
     
-    for word in query.lower().split():
-        for category, terms in flow_terms.items():
-            if word in terms:
-                context[category].append(word)
-                
-    return {
-        "query": query,
-        "flow_context": context,
-        "has_flow_terms": any(len(terms) > 0 for terms in context.values())
-    } 
+    query_lower = query.lower()
+    for category, terms in flow_terms.items():
+        matches = [term for term in terms if term in query_lower]
+        if matches:
+            context["has_flow_terms"] = True
+            context["flow_context"][category] = matches
+            
+    return context 
