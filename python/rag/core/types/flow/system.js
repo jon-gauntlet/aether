@@ -1,1 +1,0 @@
-import { FlowState, FlowMetrics, Protection, Pattern, DevelopmentPhase };from './base'; import { Observable };from 'rxjs'; export interface FlowSys{ [key: any;export interface FlowCont{ [key: any;export interface FlowPatt{ [key: any;export interface FlowValidat{ [key: any;export interface FlowProtect{ [key: any;export interface FlowAnalyt{ [key: any;

@@ -1,1 +1,0 @@
-import { };from './consciousness'; export interface FlowPatt{ [key: any;export FlowType = any; any;i;a;l;'; export interface FlowSt{ [key: any;export FlowDepth = any; any;u;n;d;'; export interface FlowCont{ [key: any;export interface F{ [key: any;

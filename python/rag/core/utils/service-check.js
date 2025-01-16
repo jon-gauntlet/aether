@@ -1,1 +1,0 @@
-export interface ServiceStatus{ [key: string]: any };export async function testServices(...args: any{ [key: string]: any };return status };

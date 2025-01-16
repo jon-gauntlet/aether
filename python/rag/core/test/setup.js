@@ -1,1 +1,0 @@
-import 'reflect-metadata'; // Mock Redis jest.mock('ioredis': any, (: any) => { [key: string]: any } ); // Global test teardown afterAll(async (: any) => { // Add any global teardown here } ); // Reset mocks between tests beforeEach((: any) => { jest.clearAllMocks() } ); // Custom test matchers expect.extend({ [key: string]: any };else { [key: any;

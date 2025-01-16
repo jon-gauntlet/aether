@@ -1,1 +1,0 @@
-export interface PatternAnalytic{ [key: any;

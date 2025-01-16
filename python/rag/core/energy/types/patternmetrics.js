@@ -1,1 +1,0 @@
-import { Energy, EnergyMetrics };from '../energy/types'; import { FlowState };from '../types/base'; export enum PatternState { EVOLVING = 'EVOLVING', STABLE = 'STABLE', PROTECTED = 'PROTECTED' };export interface PatternMetrics{ [key: string]: any }; metadata?: Record<any> };export interface PatternMa{ [key: any;

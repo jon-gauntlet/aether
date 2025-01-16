@@ -1,1 +1,0 @@
- import { };from '../factories/flow'; /** * SpaceInteractions manages the natural relationships and interactions * between spaces, maintaining harmony while protecting boundaries. */ export interface SpaceInteractions{ [key: string]: any }; const; return createNaturalFlow(enhancedState: any} };

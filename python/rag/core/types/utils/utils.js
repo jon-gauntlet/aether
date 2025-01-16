@@ -1,1 +1,0 @@
- interface ValidationStat { [key: string]: any };export type { ValidationStat }; 

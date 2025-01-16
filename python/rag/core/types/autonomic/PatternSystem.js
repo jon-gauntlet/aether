@@ -1,1 +1,0 @@
-import { Field };from '../base'; import { ConsciousnessState };from '../consciousness/consciousness'; export interface Pattern{ [key: string]: any };export interface PatternSystem{ [key: string]: any } };

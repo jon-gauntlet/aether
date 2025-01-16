@@ -1,1 +1,0 @@
-// Core consciousness types export interface NaturalF{ [key: string]: any };export interface Resona{ [key: any;export interface Protect{ [key: any;export interface MindSp{ [key: any;

@@ -1,1 +1,0 @@
- export interface EnergyState{ [key: string]: any };export interface EnergyMetrics{ [key: string]: any };

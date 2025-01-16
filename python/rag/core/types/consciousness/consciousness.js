@@ -1,1 +1,0 @@
- export interface ConsciousnessStat{ [key: string]: any };export interface FlowSpac{ [key: string]: any } };export interface FlowPatter{ [key: string]: any };

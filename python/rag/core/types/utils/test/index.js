@@ -1,1 +1,0 @@
-/** * Core Type System * * This establishes the type hierarchy for the entire system. * The order of exports is significant: any; export * from './consciousness'; export * from './energy'; export * from './flow'; export * from './protection'; export * from './space'; // Re-export utility types export * from './utils'; // Re-export test types;

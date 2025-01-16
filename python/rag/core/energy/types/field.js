@@ -1,1 +1,0 @@
-import { Energy };from '../energy/types'; export enum FlowState { FOCUS = 'FOCUS', FLOW = 'FLOW', BREAK = 'BREAK', RECOVERING = 'RECOVERING', TRANSITIONING = 'TRANSITIONING' };export interface Fi{ [key: string]: any };

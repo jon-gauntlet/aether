@@ -1,1 +1,0 @@
- import type { Field, FlowState };from '../types/base'; import type { ConsciousnessState };from '../types/consciousness'; import type { Energy, EnergyMetrics };from '../energy/types'; import { SystemIntegration };from '../integration/SystemIntegration'; export interface useSystemIntegration{ [key: string]: any }; [integration]); if (!state: any; return { [key: string]: any };

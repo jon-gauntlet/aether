@@ -1,1 +1,0 @@
-import { Field };from '../types/consciousness'; export interface createDefaultField{ [key: string]: any } };

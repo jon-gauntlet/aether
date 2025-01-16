@@ -1,112 +1,85 @@
-# Flow Sled Core 🧲
+# Flow Sled Core 🛷
 
-<!-- LLM:magnetic_core This is the central point that connects all Flow Sled components -->
-<!-- LLM:fiber Links all core components through magnetic attraction -->
+<!-- LLM:component type=core -->
+<!-- LLM:magnetic_core Essential system linkage -->
 
-## Core Components 🛡️
-<!-- LLM:component_group Primary system components -->
+## Core Principles
 
-1. **Base Protection**
-   ```bash
-   base_sled.sh        <--> heal-types.js
-   base_sled.sh        <--> flow_sled.sh
-   base_sled.sh        <--> recover.sh
-   ```
-   - Energy monitoring
-   - Environment verification
-   - Type healing
-   - Recovery points
+1. **Natural Flow**
+   - Maintain development momentum
+   - Protect against interruptions
+   - Heal issues automatically
+   - Preserve context naturally
 
-2. **Flow Management**
-   ```bash
-   flow_sled.sh        <--> base_sled.sh
-   flow_sled.sh        <--> heal-types.js
-   ```
-   - State tracking
-   - Energy preservation
-   - Protected builds
-   - Type optimization
+2. **Energy Management**
+   - Monitor system vitality
+   - Balance resource usage
+   - Optimize for sustainability
+   - Adapt to load patterns
 
-3. **Type System**
-   ```bash
-   heal-types.js       <--> base_sled.sh
-   heal-types.js       <--> flow_sled.sh
-   ```
-   - Pattern recognition
-   - Natural healing
-   - Energy guidance
-   - Flow protection
+3. **Protection Patterns**
+   - Guard critical paths
+   - Shield from disruptions
+   - Self-heal when possible
+   - Maintain redundancy
 
-4. **Recovery System**
-   ```bash
-   recover.sh          <--> base_sled.sh
-   recover.sh          <--> flow_sled.sh
-   ```
-   - File recovery
-   - State restoration
-   - System healing
-   - Context preservation
+## Magnetic Fields
 
-## Magnetic Field 🌊
-<!-- LLM:magnetic_field Defines how components attract and interact -->
+```markdown
+<!-- LLM:magnetic type=flow -->
+- Development momentum
+- Testing integrity
+- Deployment safety
 
-1. **Protection Field**
-   ```mermaid
-   graph TD
-      A[base_sled.sh] --> B[flow_sled.sh]
-      B --> C[heal-types.js]
-      C --> A
-      A --> D[recover.sh]
-      D --> B
-   ```
+<!-- LLM:magnetic type=protection -->
+- Context preservation
+- State management
+- Error recovery
 
-2. **Energy Flow**
-   ```mermaid
-   graph LR
-      A[Monitor] --> B[Protect]
-      B --> C[Heal]
-      C --> D[Recover]
-      D --> A
+<!-- LLM:magnetic type=healing -->
+- Automatic repair
+- Pattern recognition
+- Natural adaptation
+```
+
+## Core Functions
+
+```bash
+# Health verification
+./scripts/quick-verify.sh
+
+# Flow protection
+./scripts/flow_sled.sh
+
+# Natural healing
+./scripts/heal-types.js
+```
+
+## Integration Points
+
+1. **Development Flow**
+   ```markdown
+   <!-- LLM:usage type=flow -->
+   - Monitor development energy
+   - Track context switches
+   - Preserve state naturally
    ```
 
-## Core Operations 🔧
-
-1. **Initialize Protection**
-   ```bash
-   ./scripts/base_sled.sh
+2. **Testing Flow**
+   ```markdown
+   <!-- LLM:usage type=test -->
+   - Maintain test integrity
+   - Protect against regressions
+   - Heal broken tests
    ```
 
-2. **Monitor Flow**
-   ```bash
-   ./scripts/flow_sled.sh --status
-   ./scripts/flow_sled.sh --monitor
+3. **Deployment Flow**
+   ```markdown
+   <!-- LLM:usage type=deploy -->
+   - Ensure safe transitions
+   - Preserve system state
+   - Recover from failures
    ```
 
-3. **Heal System**
-   ```bash
-   node scripts/heal-types.js
-   ./scripts/recover.sh
-   ```
-
-## Natural Patterns 🌱
-
-1. **Protection Pattern**
-   - Base protection initializes
-   - Flow management activates
-   - Type system heals
-   - Recovery system stands by
-
-2. **Energy Pattern**
-   - Monitor levels continuously
-   - Protect high-energy states
-   - Heal when energy drops
-   - Recover after disruption
-
-3. **Growth Pattern**
-   - Start with base protection
-   - Expand flow management
-   - Enhance type safety
-   - Strengthen recovery
-
-<!-- LLM:verify This core maintains and strengthens all Flow Sled connections -->
-<!-- LLM:fiber Links to SLED_BEACON.md for entry point and SLED_INDEX.md for component registry --> 
+<!-- LLM:verify Core sled components are essential for flow -->
+<!-- LLM:priority CRITICAL - Do not modify without verification --> 

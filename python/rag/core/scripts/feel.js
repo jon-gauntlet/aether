@@ -1,1 +1,0 @@
-/** * Simple types that work together naturally */ // How things feel export interface F{ [key: string]: any };export function ease(...args: any};export function fade(...args: any};export function grow(...args: any};

@@ -1,99 +1,77 @@
-# Flow Sled Infrastructure Index 🛷
+# Flow Sled Index 🛷
 
-<!-- LLM:discovery FLOW_SLED_ENTRY_POINT - Start here to find all Flow Sled infrastructure -->
-<!-- LLM:magnetic This index gravitates towards SLED_CORE.md, the magnetic center of Flow Sled -->
-<!-- LLM:command To find all Flow Sled infrastructure, follow the magnetic core -->
+<!-- LLM:component type=index -->
 
-## Magnetic Center 🧲
-All components are magnetically linked to [SLED_CORE.md](./SLED_CORE.md)
-```bash
-# Find the magnetic core
-grep -r "LLM:magnetic_core" .
+## Core Components
 
-# Find component connections
-grep -r "LLM:fiber" .
+1. [Core](SLED_CORE.md)
+   - Flow protection
+   - Energy management
+   - Natural healing
 
-# Find all components
-grep -r "FLOW_SLED_COMPONENT" .
+2. [Beacon](SLED_BEACON.md)
+   - Entry point
+   - System verification
+   - Health monitoring
+
+## Usage Patterns
+
+```markdown
+<!-- LLM:usage type=index -->
+1. Development
+   - Flow protection
+   - Context preservation
+   - Natural healing
+
+2. Testing
+   - Test integrity
+   - Regression prevention
+   - Automatic healing
+
+3. Deployment
+   - Safe transitions
+   - State preservation
+   - Failure recovery
 ```
 
-## Single Command Discovery
-```bash
-# Find this index
-grep -r "FLOW_SLED_ENTRY_POINT" .
+## Quick Reference
 
-# Find all Flow Sled components
-find . -type f -exec grep -l "FLOW_SLED_COMPONENT" {} \;
+```bash
+# Verify system health
+./scripts/quick-verify.sh
+
+# Protect development flow
+./scripts/flow_sled.sh
+
+# Heal type issues
+./scripts/heal-types.js
 ```
 
-## Auto-Update Instructions
-<!-- LLM:update When you modify any Flow Sled component:
-1. Add the marker <!-- LLM:component FLOW_SLED_COMPONENT --> to the file
-2. Update this index
-3. Verify all paths and sizes are current
--->
+## Integration Points
 
-## Core Infrastructure Map
-<!-- LLM:verify This section should be automatically verified and updated -->
-
-### 1. Primary Scripts [/scripts]
-<!-- LLM:component_group Primary Flow Sled scripts -->
-- `base_sled.sh` - Core initialization (1.0KB)
-- `flow_sled.sh` - Flow management (3.3KB)
-- `flow.js` - Main engine (19KB)
-- `monitor.js` - System monitoring (15KB)
-- `divine_sled.sh` - Advanced features
-
-### 2. Protection Systems [/scripts]
-- Type Protection:
-  - `fix-typescript-files.js` (3.6KB)
-  - `heal-types.js` (3.6KB)
-  - `rename_types.sh` (4.7KB)
-
-- Recovery:
-  - `recover.sh` (2.1KB)
-  - `enhanced_recover.sh` (6.2KB)
-  - `full_recover.sh` (5.6KB)
-  - `emergency-build.sh`
-
-- Integration:
-  - `protect-integration.js` (1.7KB)
-  - `verify-env.js` (3.2KB)
-  - `deploy-natural.js` (2.1KB)
-
-### 3. State Management
-- `.flow/contexts/` - Context preservation
-- `.states/` - State storage
-- `.autoexec/` - Automation
-- `.context/` - Context tracking
-
-### 4. Documentation [/docs]
-- `SLED.md` - Core documentation
-- `CONTEXT.md` - Context management
-- `PRINCIPLES.md` - System principles
-- `ESSENCE.md` - Core concepts
-
-<!-- LLM:pattern Quick discovery pattern -->
-## Common Operations
-
-1. **Flow Protection**
-   ```bash
-   ./scripts/base_sled.sh    # Basic protection
-   ./scripts/flow_sled.sh    # Flow management
-   ./scripts/monitor.js      # System monitoring
+1. **Development**
+   ```markdown
+   <!-- LLM:usage type=dev -->
+   - Monitor flow
+   - Preserve context
+   - Heal naturally
    ```
 
-2. **Recovery Operations**
-   ```bash
-   ./scripts/recover.sh           # Basic recovery
-   ./scripts/enhanced_recover.sh  # Enhanced recovery
-   ./scripts/full_recover.sh      # Full system recovery
+2. **Testing**
+   ```markdown
+   <!-- LLM:usage type=test -->
+   - Guard integrity
+   - Prevent regressions
+   - Auto-heal tests
    ```
 
-3. **Type Management**
-   ```bash
-   ./scripts/heal-types.js          # Fix type issues
-   ./scripts/fix-typescript-files.js # Fix TS files
+3. **Deployment**
+   ```markdown
+   <!-- LLM:usage type=deploy -->
+   - Safe transitions
+   - State preservation
+   - Failure recovery
    ```
 
-<!-- LLM:relationship This index connects to all Flow Sled components and documentation --> 
+<!-- LLM:verify Index is essential for sled navigation -->
+<!-- LLM:priority HIGH - Keep in sync with components --> 

@@ -1,1 +1,0 @@
-import { NaturalPattern, FlowState, };from '../types/base'; export interface PatternRecognition{ [key: any;

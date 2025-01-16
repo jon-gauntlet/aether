@@ -1,1 +1,0 @@
-import { BehaviorSubject, Observable };from 'rxjs'; import { map, distinctUntilChanged };from 'rxjs/operators'; import { ConsciousnessState, Connection, FlowSpace };from '../types'; export interface StateManager{ [key: string]: any };observeSpace(...args: any, };updateEnergy(value: any};removeConnection(from: any;

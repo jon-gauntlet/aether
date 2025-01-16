@@ -1,1 +1,0 @@
- // Make a new spot export function spot(...args: any;: any, space: any};// Mix feelings together export function mix(...args: any};// Connect things export function link(...args: any; return good[move].includes(work: any};// Check if there's room export function hasSpace(...args: any};

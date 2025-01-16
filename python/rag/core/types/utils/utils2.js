@@ -1,1 +1,0 @@
- export interface FlowPattern{ [key: string]: any };

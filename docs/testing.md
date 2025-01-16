@@ -1,158 +1,162 @@
-# Testing Infrastructure
+# Optimized Testing with Poetry
 
-## Overview
+## Core Principles
 
-The Aether project implements a comprehensive testing strategy across multiple layers:
+1. **Speed First**
+   - Fast feedback loop
+   - Parallel test execution
+   - Smart test selection
+   - Minimal dependencies
 
-### Test Categories
-
-1. **JavaScript/React Tests**
-   - Framework: Vitest
-   - Location: `src/**/__tests__/*.{test,spec}.{js,jsx}`
-   - Coverage: Components, hooks, utilities
-   - Key Features:
-     - Parallel execution
-     - React Testing Library integration
-     - Component isolation
-     - State management validation
-
-2. **Python/RAG Tests**
-   - Framework: pytest
-   - Location: `tests/rag_aether/` and `src/rag_aether/ai/testing/`
-   - Coverage: RAG system, AI components, core utilities
-   - Key Features:
-     - Property-based testing with Hypothesis
-     - Parallel test execution
-     - Comprehensive system validation
-
-3. **End-to-End Tests**
-   - Framework: Playwright
-   - Location: `e2e/`
-   - Coverage: Full system integration
-   - Features:
-     - Cross-browser testing
-     - User flow validation
-     - API integration verification
-
-### Integrated Test Runner
-
-The project includes an optimized test runner (`scripts/run-tests.sh`) that:
-
-1. **Environment Setup**
-   - Configures test environment variables
-   - Starts required Docker services
-   - Ensures service health checks pass
-
-2. **Parallel Execution**
-   - Runs JavaScript and Python tests concurrently
-   - Utilizes available CPU cores efficiently
-   - Manages test isolation
-
-3. **Test Flow**
-   ```mermaid
-   graph TD
-     A[Start Services] --> B[Health Check]
-     B --> C[Run JS Tests]
-     B --> D[Run Python Tests]
-     C --> E{All Passed?}
-     D --> E
-     E -->|Yes| F[Run E2E Tests]
-     E -->|No| G[Report Failures]
-     F --> H[Cleanup]
-     G --> H
+2. **Test Categories**
+   ```python
+   @pytest.mark.unit        # < 10ms, no I/O
+   @pytest.mark.fast        # < 100ms, minimal I/O
+   @pytest.mark.integration # External services
    ```
 
-4. **Results Reporting**
-   - Clear status indicators for each test suite
-   - Detailed failure reporting
-   - Test duration metrics
+3. **Development Modes**
+   ```bash
+   # Quick development testing (< 1s)
+   poetry run pytest --quick
+
+   # Focus on specific tests
+   poetry run pytest --focus=rag_search
+   
+   # Watch mode for TDD
+   poetry run ptw --now tests/
+   
+   # Full test suite (pre-commit)
+   poetry run pytest -n auto
+   ```
+
+## Project Setup
+
+```bash
+# Install dependencies
+poetry install
+
+# Install pre-commit hooks
+poetry run pre-commit install
+```
+
+## Test Structure
+
+```python
+tests/
+├── conftest.py    # Test helpers & fixtures
+├── unit/          # Ultra-fast tests
+│   ├── test_rag/  # RAG-specific tests
+│   └── test_api/  # API tests
+├── fast/          # Quick integration tests
+└── integration/   # Full service tests
+```
+
+## Writing Tests
+
+1. **Speed Optimization**
+   ```python
+   # Good - Fast fixture from conftest.py
+   def test_rag_search(mock_rag_system):
+       result = mock_rag_system.search("test")
+       assert result.status == "success"
+   
+   # Good - Fast test with mocked embeddings
+   def test_embeddings(mock_embeddings):
+       vectors = mock_embeddings("test query")
+       assert len(vectors) == 384
+   ```
+
+2. **Test Patterns**
+   ```python
+   @pytest.mark.unit
+   def test_feature(mock_rag_system, capture_logs):
+       # Arrange - use pre-configured mocks
+       query = "test query"
+       
+       # Act - capture logs for debugging
+       with capture_logs as logs:
+           result = mock_rag_system.process(query)
+       
+       # Assert - check both result and logs
+       assert result.status == "success"
+       assert "Processing query" in logs.text
+   ```
+
+3. **Best Practices**
+   - Use fixtures from conftest.py
+   - Leverage logging for debugging
+   - Keep tests focused and fast
+   - One assertion per test
 
 ## Running Tests
 
-### Full Suite
+### Development Mode
 ```bash
-./scripts/run-tests.sh
+# Quick iteration
+poetry run pytest --quick
+
+# Focus on specific area
+poetry run pytest --focus=embedding
+
+# Watch specific tests
+poetry run ptw --now tests/ -k test_rag
+
+# Debug with logs
+poetry run pytest -v --log-cli-level=INFO
 ```
 
 ### CI Mode
 ```bash
-./scripts/run-tests.sh --ci
+# Full suite with coverage
+poetry run pytest --cov=rag_aether
+
+# Parallel execution
+poetry run pytest -n auto
 ```
 
-### Individual Suites
+## Debugging Tips
 
-JavaScript/React:
-```bash
-npm test
-```
+1. **Quick Debug**
+   ```bash
+   # Run with detailed logs
+   poetry run pytest --log-cli-level=DEBUG -v
 
-Python/RAG:
-```bash
-pytest tests/rag_aether/
-```
+   # Focus on failing tests
+   poetry run pytest --focus=failing_test_name
 
-E2E:
-```bash
-npm run test:e2e
-```
+   # Show local variables on failure
+   poetry run pytest --showlocals
+   ```
 
-## Test Infrastructure
+2. **Common Issues**
+   - Check logs with `capture_logs` fixture
+   - Use `mock_rag_system` for fast tests
+   - Enable focus mode for targeted debugging
+   - Run with `--quick` during development
 
-### Docker Services
-- Redis for caching
-- Elasticsearch for search
-- MinIO for object storage
-- LocalStack for AWS service simulation
+3. **Performance Issues**
+   - Check test durations in CI output
+   - Use session-scoped fixtures
+   - Mock expensive operations
+   - Run tests in parallel
 
-### Health Monitoring
-- Service readiness checks
-- Test environment validation
-- Resource cleanup
+## Maintenance
 
-## Best Practices
+1. **Regular Tasks**
+   ```bash
+   # Update dependencies
+   poetry update
+   
+   # Clean cache
+   poetry run pytest --cache-clear
+   ```
 
-1. **Test Organization**
-   - Co-locate tests with implementation
-   - Use descriptive test names
-   - Group related tests in describe blocks
-
-2. **Test Coverage**
-   - Unit tests for core logic
-   - Integration tests for subsystems
-   - E2E tests for critical paths
-
-3. **Test Data**
-   - Use fixtures for common data
-   - Implement proper cleanup
-   - Avoid test interdependence
-
-4. **Performance**
-   - Optimize slow tests
-   - Use appropriate timeouts
-   - Clean up resources properly
-
-## Debugging Tests
-
-1. **Common Issues**
-   - Service availability
-   - Resource cleanup
-   - Test isolation
-
-2. **Debugging Tools**
-   - Test runner verbose mode
-   - Docker service logs
-   - Test-specific debugging flags
-
-## Continuous Integration
-
-The test infrastructure is integrated with CI/CD:
-
-1. **GitHub Actions**
-   - Automated test runs
-   - Coverage reporting
-   - Performance tracking
-
-2. **Quality Gates**
-   - Coverage thresholds
-   - Performance benchmarks
-   - Code quality metrics 
+2. **Performance Monitoring**
+   ```bash
+   # Show test durations
+   poetry run pytest --durations=10
+   
+   # Profile tests
+   poetry run pytest --profile
+   ``` 

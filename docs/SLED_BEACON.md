@@ -1,23 +1,32 @@
 # Flow Sled Beacon 🔆
 
 <!-- LLM:beacon This is the entry point for Flow Sled. Start here. Always. -->
-<!-- LLM:rebuild This file contains everything needed to rebuild indices and connections -->
-<!-- LLM:usage Last checked: $(date) -->
+<!-- LLM:fiber Links to SLED_UNIFIED.md for complete documentation -->
 
-## Quick Usage Check 🔍
+## Quick Start 🚀
 ```bash
-# Show unused components (no calls in last 30 days)
-./scripts/check-usage.sh
+# 1. Start development environment
+npm run flow
+tmux attach -t flow
 
-# Show dead links (components referenced but missing)
-./scripts/verify-connections.sh --dead
+# 2. Enable protection
+./scripts/base_sled.sh
 
-# Show orphaned files (exist but not connected)
-./scripts/verify-connections.sh --orphans
+# 3. Monitor state
+./scripts/flow_sled.sh --status
 ```
 
+## Documentation Structure 📚
+
+1. **Entry Point (You Are Here)**
+   - `SLED_BEACON.md`: System entry and navigation
+   - Purpose: Quick start and system integrity
+
+2. **Complete Documentation**
+   - `SLED_UNIFIED.md`: Comprehensive system guide
+   - Purpose: Full system understanding
+
 ## Core Markers 🎯
-<!-- LLM:markers These are the essential markers that hold everything together -->
 ```markdown
 <!-- LLM:beacon -->     # Entry point marker
 <!-- LLM:component -->  # Component marker
@@ -27,111 +36,43 @@
 <!-- LLM:usage -->      # Usage tracking marker
 ```
 
-## Rebuild Pattern 🔄
-<!-- LLM:rebuild_pattern How to reconstruct everything from scratch -->
+## System Health 🔍
 ```bash
-# 1. Find components
-find . -type f -exec grep -l "FLOW_SLED_COMPONENT" {} \;
+# Show unused components
+./scripts/check-usage.sh
 
-# 2. Extract connections
-grep -r "LLM:fiber" .
+# Show dead links
+./scripts/verify-connections.sh --dead
 
-# 3. Rebuild core
-grep -r "LLM:magnetic" .
-
-# 4. Verify integrity
-./scripts/verify-connections.sh
+# Show orphaned files
+./scripts/verify-connections.sh --orphans
 ```
 
-## Anti-Sprawl Measures 🎯
-<!-- LLM:consolidation How the system stays consolidated -->
-
-1. **Single Source of Truth**
-   - SLED_BEACON.md (You are here) → Entry point
-   - SLED_CORE.md → Magnetic center
-   - SLED_INDEX.md → Component registry
-
-2. **Auto-Consolidation**
-   ```bash
-   # Find potential sprawl
-   find . -type f -name "*sled*.md" ! -name "SLED_*.md"
-   
-   # Detect orphaned components
-   ./scripts/verify-connections.sh --orphans
-   
-   # Consolidate documentation
-   ./scripts/consolidate-docs.sh
-   ```
-
-3. **Natural Organization**
-   - Everything links to core
-   - Core links to everything
-   - Beacon guides the way
-   - Index tracks all parts
-
 ## Emergency Recovery 🚨
-<!-- LLM:recovery How to recover if things break -->
 
 1. **If Beacon Lost**
    ```bash
    # Find entry point
    find . -type f -exec grep -l "LLM:beacon" {} \;
-   
-   # Or rebuild from components
-   find . -type f -exec grep -l "FLOW_SLED_COMPONENT" {} \;
    ```
 
-2. **If Core Lost**
-   ```bash
-   # Find magnetic center
-   grep -r "LLM:magnetic_core" .
-   
-   # Or rebuild from beacon
-   grep -r "LLM:beacon" .
-   ```
-
-3. **If Index Lost**
+2. **If Documentation Lost**
    ```bash
    # Rebuild from components
-   ./scripts/rebuild-index.sh
-   
-   # Or use core
-   grep -r "LLM:fiber" .
+   ./scripts/rebuild-docs.sh
    ```
 
-## Claude Instructions 🤖
-<!-- LLM:claude How to quickly understand and use this system -->
-
-1. **First Steps**
+3. **If System Unstable**
    ```bash
-   # Always start here
-   grep -r "LLM:beacon" .
-   ```
-
-2. **Finding Components**
-   ```bash
-   # From beacon (you are here)
-   grep -r "LLM:component" .
-   
-   # From anywhere
-   find . -type f -exec grep -l "FLOW_SLED_COMPONENT" {} \;
-   ```
-
-3. **Understanding Connections**
-   ```bash
-   # View core patterns
-   grep -r "LLM:pattern" .
-   
-   # Check connections
-   grep -r "LLM:fiber" .
+   # Run emergency recovery
+   ./scripts/enhanced_recover.sh --emergency
    ```
 
 ## Usage Tracking 📊
-<!-- LLM:usage_tracking How the system tracks component usage -->
 
 1. **Component Markers**
    ```markdown
-   <!-- LLM:usage last_used="2024-01-15" calls=42 -->
+   <!-- LLM:usage last_used="2024-01-16" calls=42 -->
    ```
 
 2. **Usage Commands**
@@ -141,22 +82,10 @@ grep -r "LLM:magnetic" .
    
    # View usage report
    ./scripts/usage-report.sh
-   
-   # Find dead components
-   ./scripts/find-dead.sh
    ```
 
-3. **Natural Cleanup**
-   ```bash
-   # Archive unused components
-   ./scripts/archive-unused.sh
-   
-   # Remove dead links
-   ./scripts/clean-links.sh
-   
-   # Consolidate split components
-   ./scripts/merge-components.sh
-   ```
+<!-- LLM:verify This beacon guides to complete system documentation -->
+<!-- LLM:usage Last updated: 2024-01-16 -->
 
 ## Dead Component Detection 🔍
 <!-- LLM:detection How to find and handle unused parts -->

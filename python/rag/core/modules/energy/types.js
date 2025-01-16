@@ -1,1 +1,0 @@
-import type { BaseState, BaseMetrics };from '@core/types/base/index'; import { createTypeGuard, createValidator, type ValidationResult };from '@core/types;'; // Energy-specific metrics export interface EnergyMetrics{ [key: string]: any } ); // Validation functions export let validateEnergyMetrics: any; const warnings: any; if (value.mental < 0.2: any;

@@ -1,1 +1,0 @@
- import { interval };from 'rxjs'; energy: any; flow: any}; context: any; protection: any; pattern: any; export interface useAutonomicSystem{ [key: string]: any }; []); return { } };

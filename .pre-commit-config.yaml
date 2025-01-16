@@ -1,0 +1,42 @@
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v4.5.0
+  hooks:
+    - id: trailing-whitespace
+    - id: end-of-file-fixer
+    - id: check-yaml
+    - id: check-toml
+    - id: check-added-large-files
+
+- repo: https://github.com/psf/black
+  rev: 23.7.0
+  hooks:
+    - id: black
+      language_version: python3.13
+      args: [--fast]
+
+- repo: https://github.com/pycqa/isort
+  rev: 5.12.0
+  hooks:
+    - id: isort
+      args: [--profile=black, --filter-files]
+
+- repo: local
+  hooks:
+    - id: full-test-suite
+      name: full-test-suite
+      entry: ./scripts/run-tests.sh
+      language: system
+      pass_filenames: false
+      verbose: true
+      stages: [commit]
+      # Show output even when passing to help identify slow tests
+      always_run: true
+      
+    - id: mypy-fast
+      name: mypy-fast
+      entry: poetry run mypy
+      language: system
+      types: [python]
+      args: [--ignore-missing-imports, --follow-imports=skip]
+      require_serial: true 

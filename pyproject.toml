@@ -20,6 +20,9 @@ rank-bm25 = "^0.2.2"
 pytest = "^7.4.4"
 pytest-asyncio = "^0.23.5"
 pytest-cov = "^4.1.0"
+pytest-xdist = "^3.5.0"
+pytest-testmon = "^2.1.0"
+pytest-watch = "^4.2.0"
 hypothesis = "^6.92.1"
 black = "^23.7.0"
 isort = "^5.12.0"
@@ -37,10 +40,27 @@ testpaths = ["tests"]
 python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
-addopts = "-v --tb=short"
+addopts = "-v --tb=short -n auto --durations=10"
 asyncio_mode = "auto"
 markers = [
-    "asyncio: mark test as async/await test",
-    "slow: mark test as slow running",
-    "integration: mark test as integration test"
+    "unit: mark test as unit test",
+    "fast: mark test as fast test",
+    "integration: mark test as integration test",
+    "slow: mark test as slow running"
+]
+
+fast_select = "not slow and not integration"
+
+[tool.coverage.run]
+branch = true
+source = ["rag_aether"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "pass",
+    "raise ImportError"
 ] 

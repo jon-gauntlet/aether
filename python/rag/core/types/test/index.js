@@ -1,1 +1,0 @@
-/// <any> import type { Assertion, AsymmetricMatchersContaining };from 'vitest'; declare module 'vitest' { [key: any;interface AsymmetricMatchersContaining { [key: any;export * from './setup'; 

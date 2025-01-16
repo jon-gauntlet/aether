@@ -1,1 +1,0 @@
-import { NaturalFlow };from '../flow/types'; export interface ConsciousnessSt{ [key: any;export interface ThoughtStr{ [key: any;export interface ThoughtEvolut{ [key: any;export interface Resona{ [key: any;export interface Fi{ [key: any;export interface Poin{ [key: any;export interface De{ [key: any;export interface MindSp{ [key: any;

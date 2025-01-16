@@ -1,1 +1,0 @@
-// Foundational types for the space system export type Presence = any;t;'; export type Harmony = any;t;'; export type Energy = any;w;'; export type Depth = any;p;'; export type FlowType = any;l;'; export type SpaceType = any;c;'; 

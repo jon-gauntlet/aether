@@ -1,1 +1,0 @@
- import { Field, Resonance };from './core'; // Pure data state for serialization and updates export interface FlowState{ [key: string]: any };
