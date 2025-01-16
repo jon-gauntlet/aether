@@ -1,57 +1,65 @@
-# Aether RAG System
+# RAG Aether MVP
 
-A professional-grade RAG (Retrieval-Augmented Generation) system with Firebase integration.
-
-## Features
-
-- Semantic search using FAISS and sentence-transformers
-- Real-time updates with Firebase
-- Async API with FastAPI
-- Professional-grade LLM integration with Claude
+A streamlined Retrieval-Augmented Generation system with React frontend.
 
 ## Setup
 
-1. Install dependencies:
+### Backend
 ```bash
-poetry install
+# Install dependencies
+pip install -e ".[dev]"
+
+# Run the FastAPI server
+uvicorn rag_aether.api.routes:app --reload
 ```
 
-2. Set up environment variables:
+### Frontend
 ```bash
-cp .env.example .env
+# Install dependencies
+npm install
+
+# Run the development server
+npm run dev
 ```
 
-Then edit `.env` with your:
-- Anthropic API key
-- Path to Firebase service account JSON file
+## Features
 
-3. Start the demo:
-```bash
-./scripts/start-demo.sh
-```
-
-## Testing
-
-Run the test suite:
-```bash
-poetry run pytest
-```
-
-Or test the RAG system directly:
-```bash
-poetry run python scripts/test_rag_query.py
-```
-
-## Architecture
-
-The system consists of three main components:
-
-1. **Vector Store**: Uses FAISS for efficient similarity search and sentence-transformers for embeddings
-2. **Firebase Integration**: Real-time data synchronization and persistence
-3. **LLM Integration**: Direct integration with Claude API for high-quality responses
+- Document ingestion with metadata support
+- Vector search using FAISS
+- Basic query caching
+- React UI with TypeScript
+- Tailwind styling
 
 ## Development
 
-- Code style: Black + isort
-- Type checking: mypy
-- Testing: pytest + pytest-asyncio 
+### Backend Tests
+```bash
+pytest
+```
+
+### Frontend Development
+```bash
+# Lint
+npm run lint
+
+# Format
+npm run format
+
+# Build
+npm run build
+```
+
+## API Endpoints
+
+- `POST /documents` - Add documents
+- `POST /search` - Search documents
+- `GET /health` - Health check
+
+## Environment Variables
+
+Create a `.env` file:
+
+```
+MODEL_NAME=BAAI/bge-small-en
+USE_CACHE=true
+``` 

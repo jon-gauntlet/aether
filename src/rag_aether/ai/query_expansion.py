@@ -1,197 +1,169 @@
-"""Query processing and expansion module."""
+"""Query expansion module for enhancing search recall."""
 
-from typing import List, Dict, Any, Optional, Tuple
-from transformers import T5ForConditionalGeneration, T5Tokenizer
-import torch
-import logging
+import asyncio
+from typing import List, Dict, Any, Optional, Set
 from dataclasses import dataclass
-
-from rag_aether.core.errors import QueryProcessingError
-from rag_aether.core.performance import with_performance_monitoring, performance_section
+import logging
+from transformers import T5Tokenizer, T5ForConditionalGeneration
+import torch
+from ..core.errors import QueryExpansionError, QueryProcessingError
+from ..core.performance import with_performance_monitoring
 
 logger = logging.getLogger(__name__)
 
 @dataclass
 class ExpandedQuery:
-    """A query with its expansions and metadata."""
+    """Represents an expanded query with metadata."""
     original: str
     expanded: str
-    metadata: Optional[Dict[str, Any]] = None
+    metadata: Dict[str, Any]
 
 class QueryProcessor:
-    """Processes and expands queries using T5."""
-
-    def __init__(
-        self,
-        model_name: str = "t5-small",
-        device: Optional[str] = None,
-        max_length: int = 512,
-        num_return_sequences: int = 1,
-        temperature: float = 0.7,
-    ):
-        """Initialize the query processor.
-        
-        Args:
-            model_name: Name of the T5 model to use
-            device: Device to run model on (cuda/cpu)
-            max_length: Maximum length of expanded query
-            num_return_sequences: Number of expansions to generate
-            temperature: Sampling temperature
-        """
-        self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
-        self.model = T5ForConditionalGeneration.from_pretrained(model_name).to(self.device)
-        self.tokenizer = T5Tokenizer.from_pretrained(model_name)
-        
+    """Processes and validates queries before expansion."""
+    
+    def __init__(self, max_length: int = 512, min_length: int = 3):
+        """Initialize query processor with length constraints."""
         self.max_length = max_length
-        self.num_return_sequences = num_return_sequences
-        self.temperature = temperature
-
-    @with_performance_monitoring
-    def process(self, query: str, context: Optional[str] = None) -> ExpandedQuery:
-        """Process and expand a query.
+        self.min_length = min_length
+        self._lock = asyncio.Lock()
         
-        Args:
-            query: Query text to expand
-            context: Optional context to help with expansion
-            
-        Returns:
-            ExpandedQuery with original and expanded queries
-        """
-        with performance_section("query_processing"):
-            try:
-                # Prepare input
-                input_text = f"expand query: {query}"
-                if context:
-                    input_text = f"context: {context}\n{input_text}"
-                    
-                # Tokenize
-                inputs = self.tokenizer(
-                    input_text,
-                    return_tensors="pt",
-                    max_length=self.max_length,
-                    truncation=True
-                ).to(self.device)
-                
-                # Generate expansion
-                outputs = self.model.generate(
-                    **inputs,
-                    max_length=self.max_length,
-                    num_return_sequences=self.num_return_sequences,
-                    temperature=self.temperature,
-                    do_sample=True
-                )
-                
-                # Decode expansion
-                expanded = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-                
-                metadata = {
-                    "model": self.model.name_or_path,
-                    "context_length": len(context) if context else 0,
-                    "temperature": self.temperature
-                }
-                
-                return ExpandedQuery(
-                    original=query,
-                    expanded=expanded,
-                    metadata=metadata
-                )
-                
-            except Exception as e:
-                logger.error(f"Error processing query: {str(e)}")
-                raise QueryProcessingError(f"Failed to process query: {str(e)}")
-
     @with_performance_monitoring
-    def process_batch(
-        self,
-        queries: List[str],
-        contexts: Optional[List[str]] = None
-    ) -> List[ExpandedQuery]:
-        """Process multiple queries in batch.
+    async def process(self, query: str) -> str:
+        """Process and validate a query."""
+        if not query or len(query.strip()) < self.min_length:
+            raise QueryProcessingError("Query is too short")
+            
+        if len(query) > self.max_length:
+            raise QueryProcessingError("Query exceeds maximum length")
+            
+        return query.strip()
         
-        Args:
-            queries: List of queries to process
-            contexts: Optional list of contexts for each query
+    @with_performance_monitoring
+    async def process_batch(self, queries: List[str]) -> List[str]:
+        """Process multiple queries in parallel."""
+        if not queries:
+            raise QueryProcessingError("Queries list cannot be empty")
             
-        Returns:
-            List of ExpandedQuery objects
-        """
-        if contexts and len(queries) != len(contexts):
-            raise ValueError("Number of queries and contexts must match")
-            
-        results = []
-        for i, query in enumerate(queries):
-            context = contexts[i] if contexts else None
-            results.append(self.process(query, context))
-            
-        return results 
+        tasks = [self.process(query) for query in queries]
+        return await asyncio.gather(*tasks)
 
 class QueryExpander:
-    """Expands queries using T5 model."""
-    def __init__(self, model_name: str = "t5-base"):
-        self.model = T5ForConditionalGeneration.from_pretrained(model_name)
-        self.tokenizer = T5Tokenizer.from_pretrained(model_name)
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.model.to(self.device)
-
-    @with_performance_monitoring
-    def expand_query(self, query: str, max_length: int = 100) -> ExpandedQuery:
-        """Expand a query using T5."""
+    """Expands queries using T5 model for better recall."""
+    
+    def __init__(self, model_name: str = "t5-small", cache_size: int = 1000):
+        """Initialize query expander with T5 model."""
         try:
-            with performance_section("query_expansion"):
-                input_text = f"expand query: {query}"
-                input_ids = self.tokenizer.encode(input_text, return_tensors="pt").to(self.device)
-                
-                outputs = self.model.generate(
-                    input_ids,
-                    max_length=max_length,
-                    num_beams=4,
-                    no_repeat_ngram_size=2,
-                    early_stopping=True
-                )
-                
-                expanded = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-                
-                return ExpandedQuery(
-                    original=query,
-                    expanded=expanded,
-                    metadata={
-                        "model": self.model.name_or_path,
-                        "device": str(self.device)
-                    }
-                )
+            self.tokenizer = T5Tokenizer.from_pretrained(model_name)
+            self.model = T5ForConditionalGeneration.from_pretrained(model_name)
+            self.cache: Dict[str, List[str]] = {}
+            self.cache_size = cache_size
+            self._lock = asyncio.Lock()
+            self.processor = QueryProcessor()
         except Exception as e:
-            logger.error(f"Error expanding query: {e}")
-            raise QueryProcessingError(f"Failed to expand query: {e}")
+            raise QueryExpansionError(f"Failed to initialize query expander: {str(e)}")
 
     @with_performance_monitoring
-    def batch_expand(self, queries: List[str], max_length: int = 100) -> List[ExpandedQuery]:
-        """Expand multiple queries in batch."""
+    async def expand_query(self, query: str, context: Optional[str] = None, metadata: Optional[Dict[str, Any]] = None) -> List[str]:
+        """Expand a query into multiple variations."""
+        if not query:
+            raise QueryExpansionError("Query cannot be empty")
+            
+        cache_key = f"{query}:{context or ''}"
+        
         try:
-            with performance_section("batch_query_expansion"):
-                input_texts = [f"expand query: {q}" for q in queries]
-                inputs = self.tokenizer(input_texts, return_tensors="pt", padding=True).to(self.device)
+            async with self._lock:
+                if cache_key in self.cache:
+                    return self.cache[cache_key]
+                    
+                processed_query = await self.processor.process(query)
+                input_text = f"expand query: {processed_query}"
+                if context:
+                    input_text = f"{input_text} context: {context}"
                 
+                inputs = self.tokenizer(input_text, return_tensors="pt", max_length=512, truncation=True)
                 outputs = self.model.generate(
-                    inputs.input_ids,
-                    max_length=max_length,
-                    num_beams=4,
-                    no_repeat_ngram_size=2,
-                    early_stopping=True
+                    **inputs,
+                    max_length=128,
+                    num_return_sequences=3,
+                    num_beams=5,
+                    temperature=0.7
                 )
                 
-                expanded_texts = self.tokenizer.batch_decode(outputs, skip_special_tokens=True)
-                
-                return [
-                    ExpandedQuery(
-                        original=query,
-                        expanded=expanded,
-                        metadata={
-                            "model": self.model.name_or_path,
-                            "device": str(self.device)
-                        }
-                    )
-                    for query, expanded in zip(queries, expanded_texts)
+                variations = [
+                    self.tokenizer.decode(output, skip_special_tokens=True)
+                    for output in outputs
                 ]
+                
+                filtered_variations = self._filter_similar(variations)
+                
+                if len(self.cache) >= self.cache_size:
+                    self._prune_cache()
+                self.cache[cache_key] = filtered_variations
+                
+                return filtered_variations
+                
         except Exception as e:
-            logger.error(f"Error in batch query expansion: {e}")
-            raise QueryProcessingError(f"Failed to expand queries in batch: {e}") 
+            logger.error(f"Error expanding query: {str(e)}")
+            raise QueryExpansionError(f"Failed to expand query: {str(e)}")
+
+    @with_performance_monitoring
+    async def expand_queries(self, queries: List[str]) -> List[List[str]]:
+        """Expand multiple queries in parallel."""
+        if not queries:
+            raise QueryExpansionError("Queries list cannot be empty")
+            
+        try:
+            tasks = [self.expand_query(query) for query in queries]
+            return await asyncio.gather(*tasks)
+        except Exception as e:
+            logger.error(f"Error in batch query expansion: {str(e)}")
+            raise QueryExpansionError(f"Failed to expand queries in batch: {str(e)}")
+    
+    def _filter_similar(self, variations: List[str], threshold: float = 0.8) -> List[str]:
+        """Filter out very similar variations."""
+        filtered: Set[str] = set()
+        for var in variations:
+            if not any(self._similarity(var, f) > threshold for f in filtered):
+                filtered.add(var)
+        return list(filtered)
+    
+    def _similarity(self, str1: str, str2: str) -> float:
+        """Calculate string similarity."""
+        set1 = set(str1.lower().split())
+        set2 = set(str2.lower().split())
+        intersection = len(set1.intersection(set2))
+        union = len(set1.union(set2))
+        return intersection / union if union > 0 else 0.0
+    
+    def _prune_cache(self) -> None:
+        """Remove oldest items from cache."""
+        items = list(self.cache.items())
+        items.sort(key=lambda x: len(x[1]))
+        for key, _ in items[:len(items)//2]:
+            del self.cache[key]
+
+def expand_query(query: str, context: Optional[str] = None) -> Dict[str, Any]:
+    """Utility function to expand a single query."""
+    expander = QueryExpander()
+    return asyncio.run(expander.expand_query(query, context))
+
+def get_flow_context(query: str) -> Dict[str, Any]:
+    """Extract flow-related context from query."""
+    flow_terms = {
+        "state": ["flow", "resting", "transition"],
+        "metrics": ["energy", "focus", "productivity"],
+        "patterns": ["work", "break", "cycle"]
+    }
+    
+    context = {category: [] for category in flow_terms}
+    
+    for word in query.lower().split():
+        for category, terms in flow_terms.items():
+            if word in terms:
+                context[category].append(word)
+                
+    return {
+        "query": query,
+        "flow_context": context,
+        "has_flow_terms": any(len(terms) > 0 for terms in context.values())
+    } 

@@ -1,1 +1,1 @@
-"""Data components for RAG Aether.""" 
+"Data components for RAG system."

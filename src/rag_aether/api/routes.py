@@ -1,100 +1,65 @@
-from fastapi import FastAPI, HTTPException, Depends
-from typing import Dict, Any, Optional, List
+"""FastAPI routes for RAG system."""
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from rag_aether.ai.rag import RAGSystem
-from rag_aether.core.health import SystemHealth
+from typing import List, Optional, Dict
+from rag_aether.ai.rag_system import RAGSystem
 import logging
 
-# Configure logging
+# Initialize logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Aether RAG API")
+# Initialize FastAPI app
+app = FastAPI(title="RAG API")
 
-# Dependency for RAG system
-async def get_rag_system():
-    try:
-        rag = RAGSystem()
-        await rag.initialize_from_firebase()
-        return rag
-    except Exception as e:
-        logger.error(f"Failed to initialize RAG system: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to initialize RAG system")
+# Initialize RAG system
+rag = RAGSystem(use_cache=True)
 
-class QueryRequest(BaseModel):
+class Document(BaseModel):
+    """Document for ingestion."""
+    text: str
+    metadata: Optional[Dict] = None
+
+class Query(BaseModel):
+    """Search query."""
+    text: str
+    top_k: Optional[int] = 3
+
+class SearchResponse(BaseModel):
+    """Search response."""
+    results: List[Dict]
     query: str
-    max_results: Optional[int] = 3
-    relevant_ids: Optional[List[str]] = None
 
-class RetrievalMetricsResponse(BaseModel):
-    mrr: float
-    ndcg: float
-    recall_at_k: Dict[int, float]
-    latency_ms: float
-    num_results: int
-
-class QueryMetricsResponse(BaseModel):
-    retrieval: RetrievalMetricsResponse
-    generation_time_ms: float
-    total_time_ms: float
-    num_tokens: int
-
-class QueryResponse(BaseModel):
-    answer: str
-    context: List[Dict[str, Any]]
-    model: str
-    metrics: Optional[QueryMetricsResponse] = None
-
-@app.post("/query")
-async def query(
-    request: QueryRequest,
-    rag: RAGSystem = Depends(get_rag_system)
-) -> QueryResponse:
+@app.post("/documents")
+async def add_documents(documents: List[Document]):
+    """Add documents to the RAG system."""
     try:
-        result = await rag.query(
-            request.query,
-            max_results=request.max_results,
-            relevant_ids=request.relevant_ids
-        )
-        return QueryResponse(**result)
+        texts = [doc.text for doc in documents]
+        metadata = [doc.metadata for doc in documents]
+        rag.add_documents(texts, metadata)
+        return {"status": "success", "count": len(documents)}
     except Exception as e:
-        logger.error(f"Query failed: {str(e)}")
+        logger.error(f"Failed to add documents: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/ingest")
-async def ingest_text(
-    text: str,
-    metadata: Optional[Dict[str, Any]] = None,
-    rag: RAGSystem = Depends(get_rag_system)
-) -> Dict[str, str]:
+@app.post("/search")
+async def search(query: Query) -> SearchResponse:
+    """Search for relevant documents."""
     try:
-        await rag.ingest_text(text, metadata)
-        return {"status": "success"}
+        results = rag.search(query.text, k=query.top_k)
+        return SearchResponse(
+            results=[{
+                "text": r.text,
+                "score": r.score,
+                "metadata": r.metadata
+            } for r in results],
+            query=query.text
+        )
     except Exception as e:
-        logger.error(f"Ingestion failed: {str(e)}")
+        logger.error(f"Search failed: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/health")
-async def health_check(
-    rag: RAGSystem = Depends(get_rag_system)
-) -> Dict[str, str]:
-    try:
-        health_status = await rag.health.full_check()
-        if health_status["status"] == "healthy":
-            return health_status
-        raise HTTPException(status_code=503, detail=health_status)
-    except Exception as e:
-        logger.error(f"Health check failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/metrics")
-async def get_metrics(
-    rag: RAGSystem = Depends(get_rag_system)
-) -> Dict[str, Any]:
-    try:
-        if not hasattr(rag, "metrics_tracker"):
-            raise HTTPException(status_code=404, detail="Metrics not available")
-        return rag.metrics_tracker.get_average_metrics()
-    except Exception as e:
-        logger.error(f"Failed to get metrics: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e)) 
+async def health_check():
+    """Simple health check endpoint."""
+    return {"status": "healthy"} 

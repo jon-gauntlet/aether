@@ -1,481 +1,277 @@
-from typing import List, Dict, Optional, Tuple, Union
-import numpy as np
-from sentence_transformers import SentenceTransformer, util
+"""Streamlined RAG system with hybrid search."""
+from typing import List, Dict, Optional, Union, Any
+from sentence_transformers import SentenceTransformer
 import faiss
-from datetime import datetime, timedelta
-import json
-import openai
-from openai import OpenAI
-import os
-from dotenv import load_dotenv
-from rag_aether.ai.rag import BaseRAG
-from rag_aether.core.quality import QualityScorer
-from rag_aether.core.cache import QueryCache, EmbeddingCache
-from rag_aether.core.metrics import MetricsTracker
-from rag_aether.core.logging import get_logger
+import numpy as np
+from dataclasses import dataclass
+from ..data.firebase_adapter import FirebaseAdapter, Document
+from fastapi import FastAPI, HTTPException
+import re
+from rank_bm25 import BM25Okapi
+from .query_expansion import expand_query, get_flow_context, QueryProcessor
+from ..core.errors import RAGError
+from ..core.performance import with_performance_monitoring, performance_section
+import logging
+from ..data.chat_message import ChatMessage
+from ..data.document_chunk import DocumentChunk
+from ..data.system_health import SystemHealth
+from ..data.metrics_tracker import MetricsTracker
+from ..data.quality_system import QualitySystem
+from ..data.query_cache import QueryCache
+from ..data.event_types import EVENT_INGESTION
 
-load_dotenv()
-logger = get_logger("rag_system")
+logger = logging.getLogger(__name__)
 
 class RAGSystem:
+    """RAG system with hybrid search."""
+    
     def __init__(
         self,
-        model_name: str = "BAAI/bge-large-en-v1.5",
-        use_production_features: bool = True
+        model_name: str = "all-mpnet-base-v2",
+        index_path: Optional[str] = None,
+        cache_dir: Optional[str] = None,
+        config: Optional[Dict[str, Any]] = None,
+        use_production_features: bool = False
     ):
-        """Initialize RAG system with production features
-        
-        Args:
-            model_name: Name of the embedding model to use
-            use_production_features: Whether to use production features like caching and quality scoring
-        """
-        # Initialize base RAG system with production features
-        self.base_rag = BaseRAG(
-            model_name=model_name,
-            use_query_expansion=True,
-            use_query_reformulation=True,
-            query_cache_size=1000,
-            embedding_cache_size=10000,
-            min_confidence_threshold=0.7,
-            min_relevance_threshold=0.6
-        ) if use_production_features else None
-        
-        # Initialize simple components if not using production features
-        if not use_production_features:
-            self.model = SentenceTransformer(model_name)
-            self.dimension = 384
-            self.index = faiss.IndexFlatL2(self.dimension)
-            
-        # Shared components
-        self.messages: List[Dict] = []
-        self.client = OpenAI()
+        self.model_name = model_name
+        self.index_path = index_path
+        self.cache_dir = cache_dir
+        self.config = config or {}
+        self.use_production = use_production_features
+        self.firebase = FirebaseAdapter(use_mock=not use_production_features)
+        self.health = SystemHealth()
         self.metrics = MetricsTracker()
-        
-        logger.info(
-            "Initialized RAG system",
-            extra={
-                "model": model_name,
-                "production_features": use_production_features
-            }
-        )
-        
-    def ingest_message(self, message: Dict) -> None:
-        """Ingest a new message into the system
-        
-        Args:
-            message: Dict containing:
-                - content: str
-                - channel: str
-                - user_id: str
-                - timestamp: float
-                - thread_id: Optional[str]
-        """
-        try:
-            with self.metrics.track_operation("ingest_message"):
-                if self.base_rag:
-                    # Use production features
-                    metadata = {
-                        "channel": message["channel"],
-                        "user_id": message["user_id"],
-                        "timestamp": message["timestamp"],
-                        "thread_id": message.get("thread_id"),
-                        "vector_id": len(self.messages)
-                    }
-                    
-                    # Ingest with production features
-                    self.base_rag.ingest_text(
-                        text=message["content"],
-                        metadata=metadata,
-                        doc_id=str(len(self.messages))
-                    )
-                else:
-                    # Use simple ingestion
-                    embedding = self.model.encode([message["content"]])[0]
-                    self.index.add(np.array([embedding], dtype=np.float32))
-                
-                # Store message with timestamp
-                self.messages.append({
-                    **message,
-                    "vector_id": len(self.messages),
-                    "ingested_at": datetime.now().isoformat()
-                })
-                
-                logger.info(
-                    "Message ingested successfully",
-                    extra={
-                        "channel": message["channel"],
-                        "thread_id": message.get("thread_id"),
-                        "vector_id": len(self.messages) - 1
-                    }
-                )
-                
-        except Exception as e:
-            logger.error(
-                f"Failed to ingest message: {str(e)}",
-                extra={
-                    "channel": message.get("channel"),
-                    "thread_id": message.get("thread_id")
-                }
-            )
-            raise
+        self.quality = QualitySystem()
+        self.cache = QueryCache(max_size=1000)
 
-    def search_context(
-        self, 
-        query: str, 
-        k: int = 5,
-        channel: Optional[str] = None,
-        thread_id: Optional[str] = None,
-        time_window_hours: Optional[float] = None
-    ) -> List[Dict]:
-        """Search for most relevant messages given a query and context
-        
-        Args:
-            query: Search query string
-            k: Number of results to return
-            channel: Optional channel to search within
-            thread_id: Optional thread to search within
-            time_window_hours: Optional time window to search within
-            
-        Returns:
-            List of k most relevant messages with scores
-        """
-        try:
-            with self.metrics.track_operation("search_context"):
-                if self.base_rag:
-                    # Use production features
-                    metadata_filter = {}
-                    if channel:
-                        metadata_filter["channel"] = channel
-                    if thread_id:
-                        metadata_filter["thread_id"] = thread_id
-                    if time_window_hours:
-                        now = datetime.now()
-                        metadata_filter["timestamp"] = {
-                            "gte": (now - timedelta(hours=time_window_hours)).timestamp()
-                        }
-                    
-                    # Search with production features
-                    results = self.base_rag.retrieve_with_fusion(
-                        query=query,
-                        k=k,
-                        metadata_filter=metadata_filter,
-                        use_query_processing=True,
-                        return_contexts=True
-                    )
-                    
-                    # Format results to match expected structure
-                    formatted_results = []
-                    for result in results:
-                        msg_id = int(result["metadata"]["doc_id"])
-                        if msg_id < len(self.messages):
-                            formatted_results.append({
-                                **self.messages[msg_id],
-                                "relevance_score": float(result["score"])
-                            })
-                    
-                    return formatted_results
-                    
-                else:
-                    # Use simple search
-                    query_embedding = self.model.encode([query])[0]
-                    scores, indices = self.index.search(
-                        np.array([query_embedding], dtype=np.float32), 
-                        min(k * 2, len(self.messages))
-                    )
-                    
-                    # Filter and rerank results
-                    results = []
-                    now = datetime.now()
-                    
-                    for score, idx in zip(scores[0], indices[0]):
-                        if idx >= len(self.messages):
-                            continue
-                            
-                        msg = self.messages[idx]
-                        
-                        # Apply filters
-                        if channel and msg["channel"] != channel:
-                            continue
-                        if thread_id and msg.get("thread_id") != thread_id:
-                            continue
-                        if time_window_hours:
-                            msg_time = datetime.fromisoformat(msg["timestamp"])
-                            hours_old = (now - msg_time).total_seconds() / 3600
-                            if hours_old > time_window_hours:
-                                continue
-                        
-                        # Add to results
-                        results.append({
-                            **msg,
-                            "relevance_score": float(score)
-                        })
-                        
-                        if len(results) >= k:
-                            break
-                    
-                    return results
-                    
-        except Exception as e:
-            logger.error(
-                f"Failed to search context: {str(e)}",
-                extra={
-                    "query": query,
-                    "channel": channel,
-                    "thread_id": thread_id
-                }
-            )
-            raise
-
-    def get_enhanced_context(
+    @with_error_handling
+    @with_health_check
+    @with_performance_monitoring
+    async def ingest_message(
         self,
-        query: str,
-        k: int = 5,
-        include_channels: bool = True,
-        include_threads: bool = True,
-        include_user_history: bool = True
-    ) -> Dict[str, List[Dict]]:
-        """Get comprehensive context for a query
+        message: ChatMessage,
+        context: Optional[Dict[str, Any]] = None
+    ) -> None:
+        """Ingest a chat message into the system.
         
         Args:
-            query: Search query string
-            k: Base number of results per context type
-            include_channels: Whether to include channel context
-            include_threads: Whether to include thread context
-            include_user_history: Whether to include user history
-            
-        Returns:
-            Dict containing different types of context
+            message: The chat message to ingest
+            context: Optional context about the message
         """
-        context = {
-            "semantic_matches": self.search_context(query, k=k)
+        # Extract text and metadata
+        text = message.content
+        metadata = {
+            "timestamp": message.timestamp,
+            "author": message.author,
+            "channel": message.channel_id,
+            "thread": message.thread_id,
+            "type": "chat_message"
         }
-        
-        if not context["semantic_matches"]:
-            return context
-            
-        # Get most relevant message
-        top_msg = context["semantic_matches"][0]
-        
-        # Add channel context
-        if include_channels and top_msg.get("channel"):
-            context["channel_context"] = self.get_channel_context(
-                top_msg["channel"],
-                limit=k
+        if context:
+            metadata.update(context)
+
+        # Process and index the message
+        doc = DocumentChunk(text=text, metadata=metadata)
+        await self.ingest_documents([doc])
+
+        # Track metrics
+        self.metrics.log_ingestion(len(text))
+
+        # Notify if using production features
+        if self.use_production:
+            await self._publish_event(
+                EVENT_INGESTION,
+                {"message_id": message.id, "status": "success"},
+                metadata
             )
-            
-        # Add thread context
-        if include_threads and top_msg.get("thread_id"):
-            context["thread_context"] = self.get_thread_context(
-                top_msg["thread_id"]
-            )
-            
-        # Add user history
-        if include_user_history and top_msg.get("user_id"):
-            context["user_history"] = self.get_user_context(
-                top_msg["user_id"],
-                limit=k
-            )
-            
-        return context
 
-    def get_channel_context(self, channel: str, limit: int = 10) -> List[Dict]:
-        """Get recent messages from a specific channel"""
-        channel_msgs = [
-            msg for msg in self.messages 
-            if msg["channel"] == channel
-        ]
-        return sorted(
-            channel_msgs,
-            key=lambda x: x["timestamp"],
-            reverse=True
-        )[:limit]
-
-    def get_thread_context(self, thread_id: str) -> List[Dict]:
-        """Get all messages in a thread"""
-        return sorted(
-            [msg for msg in self.messages if msg.get("thread_id") == thread_id],
-            key=lambda x: x["timestamp"]
-        )
-
-    def get_user_context(self, user_id: str, limit: int = 50) -> List[Dict]:
-        """Get recent messages from a specific user"""
-        user_msgs = [
-            msg for msg in self.messages
-            if msg["user_id"] == user_id
-        ]
-        return sorted(
-            user_msgs,
-            key=lambda x: x["timestamp"],
-            reverse=True
-        )[:limit] 
-
-    def generate_response(
-        self,
-        query: str,
-        max_context_messages: int = 5,
-        format: str = "text",
-        style: Optional[str] = None,
-        temperature: float = 0.7
-    ) -> Union[str, Dict]:
-        """Generate a natural response to a query using RAG
-        
-        Args:
-            query: User's question
-            max_context_messages: Max number of context messages to use
-            format: Response format ('text', 'markdown', or 'json')
-            style: Optional response style ('concise', 'detailed', or 'technical')
-            temperature: Controls response creativity (0.0-1.0)
-            
-        Returns:
-            Generated response in requested format
-        """
+    @with_performance_monitoring
+    def _load_conversations(self) -> None:
+        """Load conversations and prepare indices."""
         try:
-            with self.metrics.track_operation("generate_response"):
-                # Get enhanced context
-                context = self.get_enhanced_context(
-                    query=query,
-                    k=max_context_messages
-                )
+            with performance_section("load_conversations"):
+                docs = self.firebase.get_conversations()
+                self.add_documents(docs)
+                logger.info(f"Loaded {len(docs)} conversations")
                 
-                # Format context messages
-                context_text = self._format_context(context, style)
+                # Prepare BM25
+                self.tokenized_docs = [self._tokenize(doc.page_content) for doc in docs]
+                self.bm25 = BM25Okapi(self.tokenized_docs)
+        except Exception as e:
+            logger.error(f"Failed to load conversations: {e}")
+            raise RAGError(f"Failed to load conversations: {e}")
+    
+    def _tokenize(self, text: str) -> List[str]:
+        """Simple tokenization."""
+        return re.findall(r'\w+', text.lower())
+    
+    @with_performance_monitoring
+    def add_documents(self, docs: List[Document]) -> None:
+        """Add documents to both semantic and keyword indices."""
+        try:
+            with performance_section("add_documents"):
+                texts = [doc.page_content for doc in docs]
                 
-                # Prepare system message based on style
-                system_message = self._get_system_message(style)
+                # Create embeddings
+                embeddings = self.model.encode(texts, convert_to_tensor=True)
+                embeddings = embeddings.cpu().numpy()
                 
-                if self.base_rag:
-                    # Use production features for response generation
-                    response = self.base_rag.generate_response(
-                        query=query,
-                        context=context_text,
-                        system_message=system_message,
-                        temperature=temperature,
-                        format=format
-                    )
+                # Add to FAISS
+                self.index.add(embeddings)
+                
+                # Store documents
+                self.documents.extend(docs)
+                
+                # Update BM25
+                self.tokenized_docs.extend([self._tokenize(doc.page_content) for doc in docs])
+                self.bm25 = BM25Okapi(self.tokenized_docs)
+                
+                logger.info(f"Added {len(docs)} documents to indices")
+        except Exception as e:
+            logger.error(f"Failed to add documents: {e}")
+            raise RAGError(f"Failed to add documents: {e}")
+    
+    @with_performance_monitoring
+    def search(self, query: str, k: int = 3) -> List[Document]:
+        """Hybrid search combining semantic and keyword matching."""
+        try:
+            with performance_section("hybrid_search"):
+                # Check cache
+                cache_key = f"{query}:{k}"
+                if self.use_cache and cache_key in self._query_cache:
+                    logger.debug("Returning cached results")
+                    return self._query_cache[cache_key]
+                
+                # Process and expand query
+                expanded = self.query_processor.process(query)
+                flow_context = get_flow_context(query)
+                logger.debug(f"Expanded query: {expanded.expanded}")
                     
-                    # Add chat-specific metadata
-                    response["metadata"].update({
-                        "num_context_messages": len(context.get("semantic_matches", [])),
-                        "has_thread_context": "thread_context" in context,
-                        "has_channel_context": "channel_context" in context
-                    })
+                # Semantic search
+                with performance_section("semantic_search"):
+                    query_embedding = self.model.encode([expanded.expanded])[0]
+                    query_embedding = query_embedding.reshape(1, -1)
+                    semantic_scores, indices = self.index.search(query_embedding, k)
+                
+                # Keyword search with expanded query
+                with performance_section("keyword_search"):
+                    tokenized_query = self._tokenize(expanded.expanded)
+                    bm25_scores = self.bm25.get_scores(tokenized_query)
+                
+                # Combine scores with context boost
+                results = []
+                seen_indices = set()
+                
+                # Add semantic results
+                for score, idx in zip(semantic_scores[0], indices[0]):
+                    if idx < len(self.documents):
+                        doc = self.documents[idx]
+                        
+                        # Apply context-based boost
+                        boost = 1.0
+                        if doc.metadata.get('flow_state') and flow_context['flow_terms']:
+                            boost *= 1.2
+                        if 'performance' in doc.metadata.get('title', '').lower() and flow_context['performance_terms']:
+                            boost *= 1.1
+                        
+                        doc.metadata['semantic_score'] = float(score)
+                        doc.metadata['bm25_score'] = float(bm25_scores[idx])
+                        doc.metadata['search_score'] = float(score * boost)
+                        doc.metadata['context_boost'] = boost
+                        doc.metadata['query_expansion'] = expanded.metadata
+                        results.append(doc)
+                        seen_indices.add(idx)
+                
+                # Add high-scoring BM25 results not in semantic results
+                bm25_indices = np.argsort(bm25_scores)[::-1][:k]
+                for idx in bm25_indices:
+                    if idx not in seen_indices and len(results) < k * 2:
+                        doc = self.documents[idx]
+                        doc.metadata['semantic_score'] = None
+                        doc.metadata['bm25_score'] = float(bm25_scores[idx])
+                        doc.metadata['search_score'] = float(bm25_scores[idx])
+                        doc.metadata['context_boost'] = 1.0
+                        doc.metadata['query_expansion'] = expanded.metadata
+                        results.append(doc)
+                
+                # Sort by boosted score
+                results.sort(key=lambda x: x.metadata['search_score'])
+                
+                # Cache results
+                if self.use_cache:
+                    self._query_cache[cache_key] = results[:k]
                     
-                else:
-                    # Use simple response generation
-                    messages = [
-                        {"role": "system", "content": system_message},
-                        {"role": "user", "content": f"Context:\n{context_text}\n\nQuestion: {query}"}
-                    ]
+                return results[:k]
+                
+        except Exception as e:
+            logger.error(f"Search failed: {e}")
+            raise RAGError(f"Search operation failed: {e}")
+    
+    @with_performance_monitoring
+    def query(
+        self, 
+        question: str, 
+        k: int = 3,
+        include_metadata: bool = True
+    ) -> Union[str, Dict[str, any]]:
+        """Get answer using hybrid search."""
+        try:
+            with performance_section("query"):
+                # Get relevant documents
+                docs = self.search(question, k=k)
+                
+                if not include_metadata:
+                    # Simple string response
+                    contexts = [doc.page_content for doc in docs]
+                    return "\n\n".join(contexts)
                     
-                    chat_completion = self.client.chat.completions.create(
-                        model="gpt-3.5-turbo",
-                        messages=messages,
-                        temperature=temperature,
-                        max_tokens=1000
-                    )
-                    
-                    response = {
-                        "answer": chat_completion.choices[0].message.content,
-                        "context": context_text,
-                        "metadata": {
-                            "num_context_messages": len(context.get("semantic_matches", [])),
-                            "has_thread_context": "thread_context" in context,
-                            "has_channel_context": "channel_context" in context,
-                            "timestamp": datetime.now().isoformat(),
-                            "model": "gpt-3.5-turbo",
-                            "temperature": temperature
-                        }
+                # Process query for context
+                expanded = self.query_processor.process(question)
+                flow_context = get_flow_context(question)
+                
+                # Full response with metadata
+                response = {
+                    "query": question,
+                    "expanded_query": expanded.expanded,
+                    "flow_context": flow_context,
+                    "query_metadata": expanded.metadata,
+                    "results": []
+                }
+                
+                for doc in docs:
+                    result = {
+                        "content": doc.page_content,
+                        "metadata": doc.metadata,
+                        "title": doc.metadata.get('title', 'Untitled'),
+                        "participants": doc.metadata.get('participants', []),
+                        "flow_state": doc.metadata.get('flow_state', None),
+                        "search_score": doc.metadata.get('search_score', None),
+                        "semantic_score": doc.metadata.get('semantic_score', None),
+                        "bm25_score": doc.metadata.get('bm25_score', None),
+                        "context_boost": doc.metadata.get('context_boost', 1.0),
+                        "query_expansion": doc.metadata.get('query_expansion', None)
                     }
-                
-                logger.info(
-                    "Generated response successfully",
-                    extra={
-                        "query_length": len(query),
-                        "response_length": len(response["answer"]),
-                        "num_context_messages": response["metadata"]["num_context_messages"]
-                    }
-                )
-                
+                    response["results"].append(result)
+                    
                 return response
                 
         except Exception as e:
-            logger.error(
-                f"Failed to generate response: {str(e)}",
-                extra={
-                    "query": query,
-                    "style": style,
-                    "format": format
-                }
-            )
-            raise
+            logger.error(f"Query failed: {e}")
+            raise RAGError(f"Query operation failed: {e}")
 
-    def _format_context(self, context: Dict[str, List[Dict]], style: Optional[str]) -> str:
-        """Format context messages based on style
-        
-        Args:
-            context: Context dictionary from get_enhanced_context
-            style: Optional formatting style
-        """
-        parts = []
-        
-        # Add semantic matches
-        if context.get("semantic_matches"):
-            matches = context["semantic_matches"]
-            if style == "concise":
-                # Just use top match
-                parts.append(matches[0]["content"])
-            elif style == "technical":
-                # Add scores and metadata
-                for match in matches:
-                    parts.append(
-                        f"{match['content']} (score: {match['relevance_score']:.2f})"
-                    )
-            else:
-                # Default: all content
-                parts.extend(m["content"] for m in matches)
-                
-        # Add thread context if available
-        if context.get("thread_context"):
-            thread = context["thread_context"]
-            if style == "concise":
-                # Just thread summary
-                parts.append(f"From thread with {len(thread)} messages")
-            else:
-                # Full thread context
-                parts.append("\nThread context:")
-                parts.extend(f"- {m['content']}" for m in thread)
-                
-        return "\n".join(parts)
-        
-    def _format_markdown_response(self, response: Dict) -> str:
-        """Format response as markdown
-        
-        Args:
-            response: Response dictionary
-        """
-        parts = [
-            f"# Response\n{response['answer']}\n",
-            "## Context\n" + response["context"],
-            "\n---\n",
-            f"*Generated at {response['metadata']['timestamp']}*"
-        ]
-        return "\n".join(parts) 
+# FastAPI integration
+app = FastAPI()
 
-    def _get_system_message(self, style: Optional[str]) -> str:
-        """Get appropriate system message based on style
-        
-        Args:
-            style: Response style preference
-        """
-        base_prompt = (
-            "You are a helpful AI assistant with access to conversation history. "
-            "Use the provided context to answer questions accurately and naturally. "
-            "Only use information from the context, and say 'I don't have enough context to answer that' if needed."
-        )
-        
-        if style == "concise":
-            return base_prompt + " Provide brief, focused answers."
-        elif style == "technical":
-            return base_prompt + " Include technical details and cite relevance scores when available."
-        else:
-            return base_prompt + " Provide comprehensive but clear answers." 
+@app.post("/search")
+async def search_endpoint(query: str, k: int = 3):
+    """API endpoint for search."""
+    try:
+        rag = RAGSystem(use_mock=True)  # Configure as needed
+        results = rag.query(query, k=k, include_metadata=True)
+        return results
+    except RAGError as e:
+        logger.error(f"Search endpoint error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        logger.error(f"Unexpected error in search endpoint: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error") 

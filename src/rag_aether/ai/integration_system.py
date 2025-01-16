@@ -1,5 +1,5 @@
 """Integration system for RAG external service connections."""
-from typing import List, Dict, Any, Optional, Tuple, Set, Union, AsyncGenerator, Callable
+from typing import List, Dict, Any, Optional, Tuple, Set, Union, AsyncGenerator, Callable, AsyncIterator
 from dataclasses import dataclass
 import asyncio
 import aiohttp
@@ -153,71 +153,89 @@ class ServiceConnector:
                 await asyncio.sleep(self.config.retry_delay * (attempt + 1))
 
 class IntegrationSystem:
-    """System for managing external service integrations."""
-    
+    """System for integrating with external services."""
+
     def __init__(self):
-        """Initialize integration system."""
         self.services: Dict[str, ServiceConnector] = {}
-        self.logger = logging.getLogger("integration_system")
-        
+        self.health = SystemHealth()
+        self.metrics = MetricsTracker()
+
     async def register_service(
         self,
         config: ServiceConfig
     ) -> ServiceConnector:
-        """Register new service."""
-        if config.name in self.services:
-            raise ValueError(f"Service {config.name} already registered")
+        """Register a new service.
+        
+        Args:
+            config: Service configuration
+            
+        Returns:
+            ServiceConnector for the registered service
+        """
+        service_id = config.service_id
+        if service_id in self.services:
+            raise IntegrationError(f"Service {service_id} already registered")
             
         connector = ServiceConnector(config)
-        await connector.connect()
+        self.services[service_id] = connector
         
-        self.services[config.name] = connector
-        self.logger.info(f"Registered service: {config.name}")
-        
+        # Test connection
+        try:
+            await connector.test_connection()
+        except Exception as e:
+            del self.services[service_id]
+            raise IntegrationError(f"Failed to connect to {service_id}: {e}")
+            
         return connector
+
+    async def stream_response(
+        self,
+        service_id: str,
+        endpoint: str,
+        data: Dict[str, Any]
+    ) -> AsyncIterator[Dict[str, Any]]:
+        """Stream response from a service.
         
-    async def unregister_service(self, name: str):
-        """Unregister service."""
-        if name not in self.services:
-            raise ValueError(f"Service {name} not registered")
+        Args:
+            service_id: ID of the service to stream from
+            endpoint: Service endpoint
+            data: Request data
             
-        connector = self.services[name]
-        await connector.disconnect()
-        
-        del self.services[name]
-        self.logger.info(f"Unregistered service: {name}")
-        
-    def get_service(self, name: str) -> ServiceConnector:
-        """Get service connector by name."""
-        if name not in self.services:
-            raise ValueError(f"Service {name} not registered")
-        return self.services[name]
-        
-    async def health_check(self) -> Dict[str, bool]:
-        """Check health of all registered services."""
-        results = {}
-        
-        for name, connector in self.services.items():
-            try:
-                # Make simple request to check health
-                await connector.request("GET", "/health")
-                results[name] = True
-            except Exception as e:
-                self.logger.error(f"Health check failed for {name}: {str(e)}")
-                results[name] = False
-                
-        return results
-        
-    async def __aenter__(self):
-        """Enter async context."""
-        return self
-        
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """Exit async context."""
-        # Disconnect all services
-        for name in list(self.services.keys()):
-            await self.unregister_service(name)
+        Yields:
+            Response chunks from the service
+        """
+        if service_id not in self.services:
+            raise IntegrationError(f"Service {service_id} not registered")
             
+        connector = self.services[service_id]
+        async for chunk in connector.stream(endpoint, data):
+            yield chunk
+
+    @with_error_handling
+    async def request(
+        self,
+        service_id: str,
+        method: str,
+        endpoint: str,
+        data: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """Make a request to a service.
+        
+        Args:
+            service_id: ID of the service
+            method: HTTP method
+            endpoint: Service endpoint
+            data: Request data
+            
+        Returns:
+            Response from the service
+        """
+        if service_id not in self.services:
+            raise IntegrationError(f"Service {service_id} not registered")
+            
+        connector = self.services[service_id]
+        return await connector.request(method, endpoint, data)
+
 class APIConnector(ServiceConnector):
     """Connector for REST APIs."""
     

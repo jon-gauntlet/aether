@@ -116,6 +116,10 @@ class AlertError(RAGError):
     """Error raised when alert operations fail."""
     pass
 
+class QueryExpansionError(RAGError):
+    """Raised when there is an error expanding a query."""
+    pass
+
 def handle_rag_error(error: Exception, operation: str = "", component: str = "") -> Optional[Dict[str, Any]]:
     """Handle RAG system errors with appropriate logging and recovery actions."""
     if isinstance(error, RAGError):

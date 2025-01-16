@@ -1,4 +1,4 @@
-from src.rag_aether.ai.rag import RAGSystem
+from rag_aether.ai.rag import RAGSystem
 import os
 from dotenv import load_dotenv
 import time

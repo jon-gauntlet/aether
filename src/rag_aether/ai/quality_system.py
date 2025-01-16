@@ -3,6 +3,13 @@ from typing import Dict, Any, Optional, List
 from dataclasses import dataclass
 import logging
 from .performance_system import with_performance_monitoring, performance_section
+import numpy as np
+import torch
+from transformers import AutoTokenizer, AutoModel
+from sklearn.metrics.pairwise import cosine_similarity
+from nltk import sent_tokenize
+from transformers import AutoTokenizer, AutoModel
+from transformers import util
 
 logger = logging.getLogger(__name__)
 
@@ -25,92 +32,109 @@ class QualityFeedback:
     metadata: Optional[Dict[str, Any]] = None
 
 class QualitySystem:
-    """Manages quality scoring and feedback for RAG operations."""
-    
-    def __init__(self, min_relevance: float = 0.7,
-                 min_confidence: float = 0.8,
-                 min_coherence: float = 0.7):
-        self.min_relevance = min_relevance
-        self.min_confidence = min_confidence
-        self.min_coherence = min_coherence
-        self._feedback_history: List[QualityFeedback] = []
-    
+    """System for evaluating response quality."""
+
+    def __init__(self):
+        self.metrics = MetricsTracker()
+        self.min_relevance_threshold = 0.7
+        self.min_coherence_threshold = 0.6
+        self.min_factuality_threshold = 0.8
+        self.min_context_adherence = 0.7
+
     @with_performance_monitoring
-    def assess_content_quality(self, content: str,
-                             context: Optional[str] = None) -> QualityMetrics:
-        """Assess quality of content."""
-        with performance_section("content_quality_assessment"):
-            # Calculate scores
-            relevance = self._calculate_relevance(content, context)
-            confidence = self._calculate_confidence(content)
-            coherence = self._calculate_coherence(content)
-            
-            return QualityMetrics(
-                relevance_score=relevance,
-                confidence_score=confidence,
-                coherence_score=coherence
-            )
-    
-    @with_performance_monitoring
-    def assess_response_quality(self, response: str,
-                              query: str,
-                              context: Optional[str] = None) -> QualityMetrics:
-        """Assess quality of a response."""
-        with performance_section("response_quality_assessment"):
-            # Calculate scores
-            relevance = self._calculate_relevance(response, query)
-            confidence = self._calculate_confidence(response)
-            coherence = self._calculate_coherence(response)
-            factual = self._check_factual_accuracy(response, context)
-            
-            return QualityMetrics(
-                relevance_score=relevance,
-                confidence_score=confidence,
-                coherence_score=coherence,
-                factual_accuracy=factual
-            )
-    
-    def record_feedback(self, feedback: QualityFeedback):
-        """Record user feedback."""
-        self._feedback_history.append(feedback)
-        logger.info(f"Recorded quality feedback: {feedback}")
-    
-    def get_feedback_stats(self) -> Dict[str, Any]:
-        """Get statistics on recorded feedback."""
-        if not self._feedback_history:
-            return {}
+    def evaluate_response(
+        self,
+        query: str,
+        response: str,
+        context: Optional[str] = None
+    ) -> Dict[str, float]:
+        """Evaluate the quality of a response.
         
-        total = len(self._feedback_history)
-        helpful = sum(1 for f in self._feedback_history if f.is_helpful)
-        avg_rating = sum(f.rating or 0 for f in self._feedback_history) / total
+        Args:
+            query: The original query
+            response: The generated response
+            context: Optional context used to generate the response
+            
+        Returns:
+            Dict containing quality metrics
+        """
+        metrics = {}
         
-        return {
-            "total_feedback": total,
-            "helpful_ratio": helpful / total,
-            "average_rating": avg_rating
-        }
-    
-    def _calculate_relevance(self, content: str,
-                           reference: Optional[str] = None) -> float:
-        """Calculate relevance score."""
-        # TODO: Implement relevance calculation
-        return 0.8
-    
-    def _calculate_confidence(self, content: str) -> float:
-        """Calculate confidence score."""
-        # TODO: Implement confidence calculation
-        return 0.9
-    
-    def _calculate_coherence(self, content: str) -> float:
-        """Calculate coherence score."""
-        # TODO: Implement coherence calculation
-        return 0.85
-    
-    def _check_factual_accuracy(self, content: str,
-                              context: Optional[str] = None) -> float:
-        """Check factual accuracy."""
-        # TODO: Implement factual accuracy check
-        return 0.9 
+        # Core metrics
+        metrics["relevance"] = self._evaluate_relevance(query, response)
+        metrics["coherence"] = self._evaluate_coherence(response)
+        metrics["factuality"] = self._evaluate_factuality(response, context)
+        
+        if context:
+            metrics["context_adherence"] = self._evaluate_context_adherence(response, context)
+            
+        # Aggregate score
+        metrics["overall_quality"] = np.mean(list(metrics.values()))
+        
+        return metrics
+
+    def _evaluate_relevance(self, query: str, response: str) -> float:
+        """Evaluate how relevant the response is to the query."""
+        # Use semantic similarity between query and response
+        query_embedding = self.model.encode(query)
+        response_embedding = self.model.encode(response)
+        similarity = util.pytorch_cos_sim(query_embedding, response_embedding)[0][0]
+        return float(similarity)
+
+    def _evaluate_coherence(self, response: str) -> float:
+        """Evaluate the coherence and fluency of the response."""
+        # Split into sentences
+        sentences = sent_tokenize(response)
+        if len(sentences) <= 1:
+            return 1.0
+            
+        # Calculate coherence between adjacent sentences
+        coherence_scores = []
+        for i in range(len(sentences)-1):
+            s1_embed = self.model.encode(sentences[i])
+            s2_embed = self.model.encode(sentences[i+1])
+            score = util.pytorch_cos_sim(s1_embed, s2_embed)[0][0]
+            coherence_scores.append(float(score))
+            
+        return np.mean(coherence_scores)
+
+    def _evaluate_factuality(self, response: str, context: Optional[str]) -> float:
+        """Evaluate the factual accuracy of the response."""
+        if not context:
+            return 1.0  # No context to verify against
+            
+        # Compare response against context facts
+        response_facts = self._extract_facts(response)
+        context_facts = self._extract_facts(context)
+        
+        if not response_facts:
+            return 1.0
+            
+        # Check each response fact against context
+        factuality_scores = []
+        for r_fact in response_facts:
+            max_score = max(util.pytorch_cos_sim(
+                self.model.encode(r_fact),
+                self.model.encode(c_fact)
+            )[0][0] for c_fact in context_facts)
+            factuality_scores.append(float(max_score))
+            
+        return np.mean(factuality_scores)
+
+    def _evaluate_context_adherence(self, response: str, context: str) -> float:
+        """Evaluate how well the response adheres to the given context."""
+        # Encode response and context
+        response_embedding = self.model.encode(response)
+        context_embedding = self.model.encode(context)
+        
+        # Calculate semantic similarity
+        similarity = util.pytorch_cos_sim(response_embedding, context_embedding)[0][0]
+        return float(similarity)
+
+    def _extract_facts(self, text: str) -> List[str]:
+        """Extract factual statements from text."""
+        # Simple sentence-based extraction for now
+        return sent_tokenize(text)
 
 class QualityMonitor:
     """Monitors and evaluates quality of RAG operations."""

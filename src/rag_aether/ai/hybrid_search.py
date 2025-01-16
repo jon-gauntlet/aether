@@ -6,6 +6,8 @@ from rank_bm25 import BM25Okapi
 import numpy as np
 import logging
 from dataclasses import dataclass
+import faiss
+from transformers import AutoTokenizer
 
 from rag_aether.core.errors import SearchError
 from rag_aether.core.performance import with_performance_monitoring, performance_section
@@ -20,116 +22,129 @@ class SearchResult:
     metadata: Optional[Dict[str, Any]] = None
 
 class HybridRetriever:
-    """Hybrid retriever combining dense and sparse retrieval methods."""
+    """Hybrid search system combining dense and sparse retrieval."""
 
     def __init__(
         self,
-        encoder_model: str = "BAAI/bge-large-en-v1.5",
-        sparse_weight: float = 0.3,
-        k_dense: int = 10,
-        k_sparse: int = 10,
-        nlist: int = 100,
-        nprobe: int = 10,
+        model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
+        dense_weight: float = 0.7,
+        use_gpu: bool = False
     ):
-        """Initialize the hybrid retriever.
+        if not 0 <= dense_weight <= 1:
+            raise ValueError("dense_weight must be between 0 and 1")
+            
+        self.model = SentenceTransformer(model_name)
+        self.dense_weight = dense_weight
+        self.sparse_weight = 1 - dense_weight
         
-        Args:
-            encoder_model: Name of the sentence transformer model to use
-            sparse_weight: Weight given to sparse (BM25) results vs dense results
-            k_dense: Number of results to retrieve from dense search
-            k_sparse: Number of results to retrieve from sparse search
-            nlist: Number of clusters for FAISS index
-            nprobe: Number of clusters to probe during search
-        """
-        self.encoder = SentenceTransformer(encoder_model)
-        self.sparse_weight = sparse_weight
-        self.k_dense = k_dense 
-        self.k_sparse = k_sparse
-        self.nlist = nlist
-        self.nprobe = nprobe
+        # Initialize indices
+        self.index = faiss.IndexFlatL2(self.model.get_sentence_embedding_dimension())
+        self.documents: List[Document] = []
+        self.doc_embeddings = None
         
-        self.documents = []
-        self.embeddings = None
+        # BM25 for sparse search
+        self.tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
         self.bm25 = None
-        self.index = None
+        self.tokenized_docs = []
 
     @with_performance_monitoring
-    def index_documents(self, documents: List[str]) -> None:
-        """Index a list of documents for search.
+    def index_documents(self, documents: List[Document]) -> None:
+        """Index a list of documents.
         
         Args:
-            documents: List of document texts to index
+            documents: List of Document objects to index
         """
-        with performance_section("encode_documents"):
-            embeddings = self.encoder.encode(documents, convert_to_tensor=True)
-            self.embeddings = embeddings.cpu().numpy()
+        if not documents:
+            return
             
-        with performance_section("create_bm25"):
-            tokenized_docs = [doc.split() for doc in documents]
-            self.bm25 = BM25Okapi(tokenized_docs)
+        # Extract text and tokenize
+        texts = [doc.text for doc in documents]
+        tokenized = [self.tokenizer.tokenize(text) for text in texts]
+        
+        # Update BM25
+        self.tokenized_docs.extend(tokenized)
+        self.bm25 = BM25Okapi(self.tokenized_docs)
+        
+        # Get dense embeddings
+        embeddings = self.model.encode(texts)
+        
+        if self.doc_embeddings is None:
+            self.doc_embeddings = embeddings
+        else:
+            self.doc_embeddings = np.vstack([self.doc_embeddings, embeddings])
             
-        self.documents = documents
+        # Add to FAISS index
+        self.index.add(embeddings)
+        self.documents.extend(documents)
 
     @with_performance_monitoring
-    def search(self, query: str, k: int = 10) -> List[SearchResult]:
+    def search(
+        self,
+        query: str,
+        k: int = 5,
+        min_score: float = 0.5
+    ) -> List[Tuple[Document, float]]:
         """Search for documents matching the query.
         
         Args:
-            query: Query text to search for
+            query: Search query
             k: Number of results to return
+            min_score: Minimum score threshold
             
         Returns:
-            List of SearchResult objects
+            List of (document, score) tuples
         """
         if not self.documents:
             raise SearchError("No documents have been indexed")
             
-        dense_results = self._dense_search(query, k=self.k_dense)
-        sparse_results = self._sparse_search(query, k=self.k_sparse)
-        
-        # Combine and normalize scores
-        combined_scores = {}
-        max_dense = max(r[1] for r in dense_results) if dense_results else 1
-        max_sparse = max(r[1] for r in sparse_results) if sparse_results else 1
-        
-        for idx, score in dense_results:
-            combined_scores[idx] = (1 - self.sparse_weight) * (score / max_dense)
+        if k < 1:
+            raise ValueError("k must be >= 1")
             
-        for idx, score in sparse_results:
-            idx_score = self.sparse_weight * (score / max_sparse)
-            if idx in combined_scores:
-                combined_scores[idx] += idx_score
-            else:
-                combined_scores[idx] = idx_score
+        # Get dense scores
+        query_embedding = self.model.encode([query])[0]
+        dense_scores, dense_indices = self.index.search(
+            query_embedding.reshape(1, -1),
+            k
+        )
+        dense_scores = dense_scores[0]
+        dense_indices = dense_indices[0]
+        
+        # Get sparse scores
+        query_tokens = self.tokenizer.tokenize(query)
+        sparse_scores = self.bm25.get_scores(query_tokens)
+        
+        # Normalize scores
+        dense_scores = self._normalize_scores(dense_scores)
+        sparse_scores = self._normalize_scores(sparse_scores)
+        
+        # Combine scores
+        final_scores = {}
+        for idx, (dense_score, sparse_score) in enumerate(zip(dense_scores, sparse_scores)):
+            score = (self.dense_weight * dense_score +
+                    self.sparse_weight * sparse_score)
+            if score >= min_score:
+                final_scores[idx] = score
                 
-        # Sort by score and convert to SearchResults
+        # Sort and return top k
+        sorted_indices = sorted(final_scores.items(),
+                              key=lambda x: x[1],
+                              reverse=True)[:k]
+                              
         results = []
-        for idx, score in sorted(combined_scores.items(), key=lambda x: x[1], reverse=True)[:k]:
-            results.append(SearchResult(
-                text=self.documents[idx],
-                score=score
-            ))
+        for idx, score in sorted_indices:
+            results.append((self.documents[idx], score))
             
         return results
 
-    def _dense_search(self, query: str, k: int) -> List[Tuple[int, float]]:
-        """Perform dense retrieval using sentence embeddings."""
-        query_embedding = self.encoder.encode(query, convert_to_tensor=True)
-        query_embedding = query_embedding.cpu().numpy()
-        
-        # Calculate cosine similarities
-        similarities = np.dot(self.embeddings, query_embedding)
-        indices = np.argsort(similarities)[-k:][::-1]
-        
-        return [(idx, similarities[idx]) for idx in indices]
-
-    def _sparse_search(self, query: str, k: int) -> List[Tuple[int, float]]:
-        """Perform sparse retrieval using BM25."""
-        tokenized_query = query.split()
-        scores = self.bm25.get_scores(tokenized_query)
-        indices = np.argsort(scores)[-k:][::-1]
-        
-        return [(idx, scores[idx]) for idx in indices] 
+    def _normalize_scores(self, scores: np.ndarray) -> np.ndarray:
+        """Normalize scores to [0,1] range."""
+        if len(scores) == 0:
+            return scores
+        min_score = np.min(scores)
+        max_score = np.max(scores)
+        if max_score == min_score:
+            return np.ones_like(scores)
+        return (scores - min_score) / (max_score - min_score)
 
 class HybridSearcher:
     """Hybrid search combining dense and sparse retrieval."""

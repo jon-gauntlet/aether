@@ -3,7 +3,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 
 import asyncio
-from src.rag_aether.ai.rag import RAGSystem
+from rag_aether.ai.rag import RAGSystem
 import json
 
 async def main():
