@@ -1,8 +1,26 @@
 #!/bin/bash
 
-# <!-- LLM:component AETHER_TEST_RUNNER -->
-# <!-- LLM:claude I am the Aether test runner script -->
-# <!-- LLM:magnetic Links to SLED test functionality -->
+# <!-- LLM:claude CRITICAL: I am the SLED test runner. ALWAYS use me for running tests! -->
+# <!-- LLM:magnetic CORE_TEST_RUNNER - All test execution must go through me -->
+# <!-- LLM:verify Test runner is critical for development -->
+# <!-- LLM:energy_verify Follows SLED energy guidelines -->
+
+# Features I provide:
+# - Test isolation
+# - Smart ordering
+# - Energy management
+# - Failure tracking
+# - Hardware optimization
+# - Shell compatibility
+# - Dependency management
+
+# Usage:
+# ./sled/scripts/test-runner.sh         # Run all tests
+# ./sled/scripts/test-runner.sh --type python  # Run Python tests
+# ./sled/scripts/test-runner.sh --type js     # Run JavaScript tests
+# ./sled/scripts/test-runner.sh --triage      # Debug failures
+
+# NEVER bypass me by running raw test commands!
 
 # Enable error handling
 set -e

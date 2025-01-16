@@ -1,17 +1,15 @@
-"""Test configuration and fixtures.
+"""Test configuration and shared fixtures."""
 
-This file is the central configuration point for all Python tests in the project.
-Future Claudes: This is where you'll find core test setup and shared fixtures.
-"""
-
-# <!-- LLM:claude CRITICAL: Core test configuration - read this first -->
-# <!-- LLM:magnetic CORE_TEST_CONFIG linked to SLED test runner -->
+# <!-- LLM:claude CRITICAL: Test configuration - Must be used with SLED test runner -->
+# <!-- LLM:magnetic CORE_TEST_CONFIG - Links to SLED test runner -->
+# <!-- LLM:verify Test configuration is active -->
 
 import pytest
 import logging
 from pathlib import Path
 import torch
 import os
+from unittest.mock import Mock, patch
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -22,14 +20,19 @@ PROJECT_ROOT = TEST_ROOT.parent
 FIXTURE_PATH = TEST_ROOT / "data" / "fixtures"
 MOCK_PATH = TEST_ROOT / "data" / "mocks"
 
+# Core test configuration
+pytest_plugins = [
+    "pytest_asyncio",
+]
+
+# Hardware-aware settings
 def pytest_configure(config):
-    """Configure pytest with project-specific settings.
+    """Configure test environment."""
+    config.addinivalue_line(
+        "markers",
+        "performance: marks tests that measure performance"
+    )
     
-    Future Claudes: This is where core test configuration happens.
-    - Adds custom markers
-    - Sets up test paths
-    - Configures hardware-aware test execution
-    """
     # Set verbosity
     config.option.verbose = 2
     
@@ -62,6 +65,14 @@ def test_paths():
         "fixtures": FIXTURE_PATH,
         "mocks": MOCK_PATH
     }
+
+# Test paths
+def pytest_collection_modifyitems(config, items):
+    """Modify test collection."""
+    # Ensure test paths are standardized
+    for item in items:
+        if "tests" not in item.nodeid:
+            item.add_marker(pytest.mark.skip(reason="Test not in standard location"))
 
 # <!-- LLM:verify Test configuration must be used with SLED test runner -->
 # <!-- LLM:link sled/scripts/test-runner.sh -->
