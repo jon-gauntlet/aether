@@ -1,65 +1,105 @@
-# RAG Aether MVP
+# Natural Structure Chat Application
 
-A streamlined Retrieval-Augmented Generation system with React frontend.
+A chat application built using natural flow patterns and simple, maintainable structures.
 
-## Setup
+## Natural Structure
 
-### Backend
-```bash
-# Install dependencies
-pip install -e ".[dev]"
+The application follows a natural structure pattern:
 
-# Run the FastAPI server
-uvicorn rag_aether.api.routes:app --reload
+```
+/src
+  /chat          # Chat feature
+    /components  # UI components
+    /hooks       # Logic and state
+    /api         # External communication
+    /tests       # Feature tests
+    
+  /search        # Search feature
+    /components  # UI components
+    /hooks       # Logic and state
+    /api         # External communication
+    /tests       # Feature tests
+    
+  /shared        # Shared components
+    /components  # Reusable UI elements
 ```
 
-### Frontend
-```bash
-# Install dependencies
-npm install
+## Natural Flows
 
-# Run the development server
-npm run dev
+### Chat Flow
+```
+Message → Process → Response
+- User inputs message
+- Message processed
+- Response displayed
 ```
 
-## Features
+### Search Flow
+```
+Query → Search → Results
+- User enters query
+- Search executed
+- Results displayed
+```
 
-- Document ingestion with metadata support
-- Vector search using FAISS
-- Basic query caching
-- React UI with TypeScript
-- Tailwind styling
+### Error Flow
+```
+Error → Capture → Display
+- Error occurs
+- ErrorBoundary captures
+- User-friendly display
+```
+
+## Components
+
+### Chat Components
+- `Chat`: Main chat interface
+- `Message`: Individual message display
+- `Input`: Message input field
+
+### Search Components
+- `Search`: Search interface
+- `SearchResult`: Individual result display
+
+### Shared Components
+- `Button`: Reusable button with variants
+- `Input`: Reusable input field
+- `ErrorBoundary`: Error handling wrapper
+
+## Testing
+
+Each component follows a natural testing flow:
+```
+Setup → Action → Verify
+```
+
+Example:
+```javascript
+describe('Component', () => {
+  it('handles action', () => {
+    // Setup
+    render(<Component />)
+    
+    // Action
+    fireEvent.click(...)
+    
+    // Verify
+    expect(...).toBeInTheDocument()
+  })
+})
+```
 
 ## Development
 
-### Backend Tests
-```bash
-pytest
-```
+1. Clone repository
+2. Install dependencies: `npm install`
+3. Run tests: `npm test`
+4. Start development: `npm start`
 
-### Frontend Development
-```bash
-# Lint
-npm run lint
+## Natural Patterns
 
-# Format
-npm run format
-
-# Build
-npm run build
-```
-
-## API Endpoints
-
-- `POST /documents` - Add documents
-- `POST /search` - Search documents
-- `GET /health` - Health check
-
-## Environment Variables
-
-Create a `.env` file:
-
-```
-MODEL_NAME=BAAI/bge-small-en
-USE_CACHE=true
-``` 
+- Each feature is self-contained
+- Components follow single responsibility
+- State flows naturally down
+- Errors bubble up naturally
+- Tests mirror natural use 

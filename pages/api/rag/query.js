@@ -1,44 +1,51 @@
-import { NextApiRequest, NextApiResponse } from 'next';
-import Anthropic from '@anthropic-ai/sdk';
+import { RAGSystem } from '../../../rag_aether/ai/rag_system';
+import { performance } from 'perf_hooks';
 
-// Initialize Anthropic client
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
+// Initialize RAG system
+const ragSystem = new RAGSystem({
+  useCache: true,
+  maxResults: 5,
+  minConfidence: 0.7
 });
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  const startTime = performance.now();
+
   try {
-    const { query } = req.body;
+    const { query, maxResults = 5 } = req.body;
 
-    // For MVP, we'll just use Claude to answer the query
-    // In a full implementation, you would:
-    // 1. Create embedding for the query
-    // 2. Search vector database for relevant chunks
-    // 3. Use chunks as context for Claude response
+    // Validate query
+    if (!query || typeof query !== 'string') {
+      return res.status(400).json({ error: 'Invalid query' });
+    }
 
-    const message = await anthropic.messages.create({
-      model: "claude-3-sonnet-20240229",
-      max_tokens: 1024,
-      messages: [
-        {
-          role: "user",
-          content: query
-        }
-      ],
-    });
+    // Search using RAG system
+    const results = await ragSystem.search(query, maxResults);
 
-    return res.status(200).json({ 
-      response: message.content[0].text
-    });
+    // Format response
+    const response = {
+      results: results.map(doc => ({
+        text: doc.text,
+        metadata: doc.metadata,
+        score: doc.metadata.search_score
+      })),
+      metrics: {
+        latency_ms: Math.round(performance.now() - startTime),
+        result_count: results.length
+      }
+    };
+
+    return res.status(200).json(response);
+
   } catch (error) {
     console.error('RAG query error:', error);
-    return res.status(500).json({ error: 'Failed to process query' });
+    return res.status(500).json({ 
+      error: 'Failed to process query',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 } 

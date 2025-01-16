@@ -1,4 +1,4 @@
-"""Hybrid search implementation combining dense and sparse retrieval."""
+"""Hybrid search module combining semantic and lexical search."""
 
 from typing import List, Dict, Any, Optional, Tuple
 from sentence_transformers import SentenceTransformer
@@ -8,6 +8,7 @@ import logging
 from dataclasses import dataclass
 import faiss
 from transformers import AutoTokenizer
+from ..data.document import Document
 
 from rag_aether.core.errors import SearchError
 from rag_aether.core.performance import with_performance_monitoring, performance_section

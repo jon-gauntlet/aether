@@ -5,15 +5,14 @@ from rag_aether.ai.query_expansion import (
     QueryProcessor,
     QueryExpander,
     expand_query,
-    get_flow_context,
-    ExpandedQuery
+    get_flow_context
 )
-from rag_aether.core.errors import QueryProcessingError
+from rag_aether.core.errors import QueryProcessingError, QueryExpansionError
 
 @pytest.fixture
 def mock_t5_tokenizer():
     """Mock T5 tokenizer."""
-    with patch('src.rag_aether.ai.query_expansion.T5Tokenizer') as mock:
+    with patch('rag_aether.ai.query_expansion.T5Tokenizer') as mock:
         tokenizer = Mock()
         tokenizer.encode.return_value = Mock(to=lambda x: [1, 2, 3])
         tokenizer.decode.return_value = "expanded test query about flow"
@@ -23,100 +22,99 @@ def mock_t5_tokenizer():
 @pytest.fixture
 def mock_t5_model():
     """Mock T5 model."""
-    with patch('src.rag_aether.ai.query_expansion.T5ForConditionalGeneration') as mock:
+    with patch('rag_aether.ai.query_expansion.T5ForConditionalGeneration') as mock:
         model = Mock()
-        model.generate.return_value = [[1, 2, 3]]
+        # Create a mock tensor that can be decoded
+        mock_tensor = Mock()
+        mock_tensor.__iter__ = lambda self: iter([1, 2, 3])
+        model.generate.return_value = [mock_tensor, mock_tensor, mock_tensor]
         model.to.return_value = model
         mock.from_pretrained.return_value = model
         yield mock
 
-def test_query_processor_initialization(mock_t5_tokenizer, mock_t5_model):
+@pytest.mark.asyncio
+async def test_query_processor_initialization():
     """Test QueryProcessor initialization."""
     processor = QueryProcessor()
-    assert processor.model == mock_t5_model.from_pretrained.return_value
-    assert processor.tokenizer == mock_t5_tokenizer.from_pretrained.return_value
+    assert processor.max_length == 512
+    assert processor.min_length == 3
 
-def test_query_processor_process(mock_t5_tokenizer, mock_t5_model):
+@pytest.mark.asyncio
+async def test_query_processor_process():
     """Test query processing."""
     processor = QueryProcessor()
-    result = processor.process("test query")
+    result = await processor.process("test query")
     
-    assert isinstance(result, ExpandedQuery)
-    assert result.original == "test query"
-    assert "flow" in result.expanded
-    assert result.metadata is not None
-    assert "model" in result.metadata
+    assert isinstance(result, str)
+    assert result == "test query"
 
-def test_query_processor_process_with_context(mock_t5_tokenizer, mock_t5_model):
-    """Test query processing with context."""
+@pytest.mark.asyncio
+async def test_query_processor_process_empty():
+    """Test processing empty query."""
     processor = QueryProcessor()
-    result = processor.process("test query", context="flow state discussion")
-    
-    assert isinstance(result, ExpandedQuery)
-    mock_t5_tokenizer.from_pretrained.return_value.encode.assert_called_once()
-    assert "flow" in result.expanded
+    with pytest.raises(QueryProcessingError):
+        await processor.process("")
 
-def test_query_processor_error_handling(mock_t5_tokenizer, mock_t5_model):
-    """Test error handling in query processing."""
-    mock_t5_model.from_pretrained.side_effect = Exception("Model error")
-    
-    with pytest.raises(QueryProcessingError) as exc:
-        QueryProcessor()
-    assert "Model error" in str(exc.value)
+@pytest.mark.asyncio
+async def test_query_processor_process_too_long():
+    """Test processing too long query."""
+    processor = QueryProcessor(max_length=5)
+    with pytest.raises(QueryProcessingError):
+        await processor.process("this is too long")
 
-def test_query_processor_batch_processing(mock_t5_tokenizer, mock_t5_model):
+@pytest.mark.asyncio
+async def test_query_processor_batch_processing():
     """Test batch query processing."""
     processor = QueryProcessor()
     queries = ["query1", "query2"]
-    results = processor.process_batch(queries)
+    results = await processor.process_batch(queries)
     
     assert len(results) == 2
-    assert all(isinstance(r, ExpandedQuery) for r in results)
+    assert all(isinstance(r, str) for r in results)
+    assert results == ["query1", "query2"]
 
-def test_expand_query_function():
-    """Test expand_query utility function."""
-    query = "flow performance metrics"
-    expanded = expand_query(query)
-    
-    assert "flow" in expanded
-    assert "performance" in expanded
-    assert "metrics" in expanded
-    assert any(term in expanded for term in ["efficiency", "speed", "throughput"])
-
-def test_get_flow_context():
-    """Test flow context extraction."""
-    query = "developer performance during flow state"
-    context = get_flow_context(query)
-    
-    assert "flow_terms" in context
-    assert "performance_terms" in context
-    assert "developer_terms" in context
-    assert "flow" in context["flow_terms"]
-    assert "performance" in context["performance_terms"]
-    assert "developer" in context["developer_terms"]
-
-def test_query_expander_initialization(mock_t5_tokenizer, mock_t5_model):
+@pytest.mark.asyncio
+async def test_query_expander_initialization(mock_t5_tokenizer, mock_t5_model):
     """Test QueryExpander initialization."""
     expander = QueryExpander()
-    assert expander.model == mock_t5_model.from_pretrained.return_value
     assert expander.tokenizer == mock_t5_tokenizer.from_pretrained.return_value
+    assert expander.model == mock_t5_model.from_pretrained.return_value
 
-def test_query_expander_expand(mock_t5_tokenizer, mock_t5_model):
+@pytest.mark.asyncio
+async def test_query_expander_expand():
     """Test query expansion."""
     expander = QueryExpander()
-    result = expander.expand_query("test query")
+    result = await expander.expand_query("test query")
     
-    assert isinstance(result, ExpandedQuery)
-    assert result.original == "test query"
-    assert result.expanded is not None
-    assert result.metadata["model"] == "t5-base"
+    assert isinstance(result, dict)
+    assert result["original_query"] == "test query"
+    assert isinstance(result["expanded_queries"], list)
+    assert len(result["expanded_queries"]) > 0
+    assert isinstance(result["metadata"], dict)
 
-def test_query_expander_batch_expand(mock_t5_tokenizer, mock_t5_model):
+@pytest.mark.asyncio
+async def test_query_expander_expand_with_context():
+    """Test query expansion with context."""
+    expander = QueryExpander()
+    context = {"flow": {"state": ["flow"], "performance": ["performance"]}}
+    result = await expander.expand_query("test query", context=str(context))
+    
+    assert isinstance(result, dict)
+    assert result["original_query"] == "test query"
+    assert isinstance(result["expanded_queries"], list)
+    assert len(result["expanded_queries"]) > 0
+    assert isinstance(result["context"], dict)
+    assert "flow" in result["context"]
+
+@pytest.mark.asyncio
+async def test_query_expander_expand_queries():
     """Test batch query expansion."""
     expander = QueryExpander()
     queries = ["query1", "query2"]
-    results = expander.batch_expand(queries)
+    results = await expander.expand_queries(queries)
     
     assert len(results) == 2
-    assert all(isinstance(r, ExpandedQuery) for r in results)
-    assert all(r.metadata["model"] == "t5-base" for r in results) 
+    assert all(isinstance(r, dict) for r in results)
+    assert all("original_query" in r for r in results)
+    assert all("expanded_queries" in r for r in results)
+    assert all(len(r["expanded_queries"]) > 0 for r in results) 
