@@ -4,6 +4,26 @@
 # <!-- LLM:magnetic CORE_TEST_CONFIG - Links to SLED test runner -->
 # <!-- LLM:verify Test configuration is active -->
 
+# <!-- LLM:claude AUTONOMOUS DEBUG PROTOCOL
+#      1. On test failure:
+#         - Capture full stack trace and variables
+#         - Check test dependencies and fixtures
+#         - Analyze code paths and data flow
+#      2. Fix strategy:
+#         - Start with lowest level failures
+#         - Fix one component at a time
+#         - Verify fixes with regression tests
+#      3. Performance optimization:
+#         - Profile slow tests
+#         - Optimize test order
+#         - Parallelize when safe
+#      4. Error prevention:
+#         - Add assertions and type hints
+#         - Improve error messages
+#         - Document fixes and patterns
+#      NO QUESTIONS - EXECUTE AND FIX
+# -->
+
 import pytest
 import logging
 from pathlib import Path

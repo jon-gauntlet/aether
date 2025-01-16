@@ -1,6 +1,27 @@
 #!/bin/bash
 
-# <!-- LLM:claude CRITICAL: I am the SLED test runner. ALWAYS use me for running tests! -->
+# <!-- LLM:claude AUTONOMOUS TEST EXECUTION PROTOCOL
+#      1. Run tests in triage mode first: ./sled/scripts/test-runner.sh --triage
+#      2. Group failures by:
+#         - Import/dependency errors
+#         - Type errors
+#         - Assertion failures
+#         - Integration failures
+#      3. Fix in order:
+#         - Environment/dependency issues
+#         - Type/interface mismatches
+#         - Logic/assertion failures
+#         - Integration issues
+#      4. After each fix:
+#         - Run affected tests in isolation
+#         - Run dependent tests
+#         - Check for regressions
+#      5. Track progress:
+#         - Log fixed vs remaining issues
+#         - Monitor test coverage
+#         - Report final results
+#      NO USER INTERACTION REQUIRED
+# -->
 # <!-- LLM:magnetic CORE_TEST_RUNNER - All test execution must go through me -->
 # <!-- LLM:verify Test runner is critical for development -->
 # <!-- LLM:energy_verify Follows SLED energy guidelines -->
