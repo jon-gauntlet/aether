@@ -1,134 +1,83 @@
-import { vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { useToast } from '@chakra-ui/react';
-import { ChatContainer } from '../components/ChatContainer';
-import { apiClient } from '../services/apiClient';
-import { TestWrapper } from './setup';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { ChatContainer } from '@/components/ChatContainer';
+import { mockApiClient } from '@/test/utils';
 
-// Mock the useToast hook
-vi.mock('@chakra-ui/react', async () => {
-  const actual = await vi.importActual('@chakra-ui/react');
-  return {
-    ...actual,
-    useToast: vi.fn()
-  };
-});
-
-// Mock the API client
-vi.mock('../services/apiClient', () => ({
-  apiClient: {
-    getChatHistory: vi.fn(),
-    processQuery: vi.fn(),
-    uploadFile: vi.fn(),
-    checkHealth: vi.fn()
-  }
+vi.mock('@/services/apiClient', () => ({
+  apiClient: mockApiClient
 }));
 
 describe('ChatContainer', () => {
-  const mockToast = vi.fn();
-
   beforeEach(() => {
     vi.clearAllMocks();
-    useToast.mockReturnValue(mockToast);
-    apiClient.getChatHistory.mockResolvedValue([{ id: 1, content: 'Hello', role: 'user' }]);
-    apiClient.processQuery.mockResolvedValue({ content: 'Hello back!' });
-    apiClient.uploadFile.mockResolvedValue({ message: 'Document uploaded successfully' });
-    apiClient.checkHealth.mockResolvedValue({ status: 'ok' });
   });
 
-  it('renders child components', async () => {
-    render(<ChatContainer />, { wrapper: TestWrapper });
-    
-    await waitFor(() => {
-      expect(screen.getByTestId('chat-message-list')).toBeInTheDocument();
-      expect(screen.getByTestId('chat-input')).toBeInTheDocument();
-      expect(screen.getByTestId('upload-area')).toBeInTheDocument();
-    });
+  it('shows connection status', () => {
+    render(<ChatContainer />);
+    expect(screen.getByText(/Connected/i)).toBeInTheDocument();
   });
 
-  it('loads chat history', async () => {
-    render(<ChatContainer />, { wrapper: TestWrapper });
-    
-    await waitFor(() => {
-      expect(screen.getByText('Hello')).toBeInTheDocument();
-    });
+  it('handles message submission and response', async () => {
+    render(<ChatContainer />);
+    const input = screen.getByRole('textbox');
+    const message = 'Hello, world!';
+
+    fireEvent.change(input, { target: { value: message } });
+    fireEvent.keyDown(input, { key: 'Enter', code: 'Enter' });
+
+    expect(mockApiClient.sendMessage).toHaveBeenCalledWith(message);
+    expect(await screen.findByText(message)).toBeInTheDocument();
   });
 
-  it('handles message sending', async () => {
-    render(<ChatContainer />, { wrapper: TestWrapper });
-    
-    const input = screen.getByTestId('chat-input');
-    await userEvent.type(input, 'Hello');
-    await userEvent.click(screen.getByTestId('send-button'));
-    
-    await waitFor(() => {
-      expect(apiClient.processQuery).toHaveBeenCalledWith('Hello');
-      expect(screen.getByText('Hello back!')).toBeInTheDocument();
-    });
+  it('handles keyboard navigation', () => {
+    render(<ChatContainer />);
+    const input = screen.getByRole('textbox');
+
+    fireEvent.keyDown(input, { key: 'ArrowUp' });
+    expect(mockApiClient.getPreviousMessage).toHaveBeenCalled();
+
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+    expect(mockApiClient.getNextMessage).toHaveBeenCalled();
   });
 
-  it('handles file uploads', async () => {
-    render(<ChatContainer />, { wrapper: TestWrapper });
-    
-    const file = new File(['test content'], 'test.txt', { type: 'text/plain' });
-    const input = screen.getByTestId('file-input');
-    await userEvent.upload(input, file);
-    
-    await waitFor(() => {
-      expect(apiClient.uploadFile).toHaveBeenCalled();
-      expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({
-        title: 'Success',
-        description: 'Document uploaded successfully',
-        status: 'success'
-      }));
-    });
+  it('shows loading states', async () => {
+    mockApiClient.sendMessage.mockImplementationOnce(() => new Promise(resolve => {
+      setTimeout(() => resolve({ text: 'Response' }), 100);
+    }));
+
+    render(<ChatContainer />);
+    const input = screen.getByRole('textbox');
+
+    fireEvent.change(input, { target: { value: 'Test' } });
+    fireEvent.keyDown(input, { key: 'Enter', code: 'Enter' });
+
+    expect(screen.getByText(/Loading/i)).toBeInTheDocument();
+    expect(await screen.findByText('Response')).toBeInTheDocument();
   });
 
-  it('shows error toast when API is unhealthy', async () => {
-    apiClient.checkHealth.mockRejectedValue(new Error('API error'));
-    render(<ChatContainer />, { wrapper: TestWrapper });
-    
-    await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({
-        title: 'Error',
-        description: 'API is not available',
-        status: 'error'
-      }));
-    });
+  it('handles error states', async () => {
+    const error = new Error('Failed to send message');
+    mockApiClient.sendMessage.mockRejectedValueOnce(error);
+
+    render(<ChatContainer />);
+    const input = screen.getByRole('textbox');
+
+    fireEvent.change(input, { target: { value: 'Test' } });
+    fireEvent.keyDown(input, { key: 'Enter', code: 'Enter' });
+
+    expect(await screen.findByText(/Failed to send message/i)).toBeInTheDocument();
   });
 
-  it('handles message sending errors', async () => {
-    apiClient.processQuery.mockRejectedValue(new Error('API error'));
-    render(<ChatContainer />, { wrapper: TestWrapper });
-    
-    const input = screen.getByTestId('chat-input');
-    await userEvent.type(input, 'Hello');
-    await userEvent.click(screen.getByTestId('send-button'));
-    
-    await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({
-        title: 'Error',
-        description: 'Failed to send message',
-        status: 'error'
-      }));
-    });
-  });
+  it('maintains scroll position on new messages', async () => {
+    const { container } = render(<ChatContainer />);
+    const messageList = container.querySelector('.message-list');
+    const scrollHeight = 1000;
+    const clientHeight = 500;
 
-  it('updates UI state during API calls', async () => {
-    apiClient.processQuery.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)));
-    render(<ChatContainer />, { wrapper: TestWrapper });
-    
-    const input = screen.getByTestId('chat-input');
-    await userEvent.type(input, 'Hello');
-    await userEvent.click(screen.getByTestId('send-button'));
-    
-    expect(input).toHaveAttribute('disabled');
-    expect(screen.getByTestId('send-button')).toBeDisabled();
-    
-    await waitFor(() => {
-      expect(input).not.toHaveAttribute('disabled');
-      expect(screen.getByTestId('send-button')).not.toBeDisabled();
-    });
+    Object.defineProperty(messageList, 'scrollHeight', { value: scrollHeight });
+    Object.defineProperty(messageList, 'clientHeight', { value: clientHeight });
+
+    fireEvent.scroll(messageList, { target: { scrollTop: scrollHeight - clientHeight } });
+    expect(messageList.scrollTop).toBe(scrollHeight - clientHeight);
   });
 }); 

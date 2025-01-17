@@ -1,68 +1,99 @@
-import { vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { ErrorBoundary } from '../components/ErrorBoundary';
-import { TestWrapper } from './setup';
+import { render, screen } from '@testing-library/react';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
-const ThrowError = () => {
-  throw new Error('Test error');
+const ThrowError = ({ shouldThrow }) => {
+  if (shouldThrow) {
+    throw new Error('Test error');
+  }
+  return <div>No error</div>;
 };
-
-const SafeComponent = () => <div>Safe content</div>;
 
 describe('ErrorBoundary', () => {
   beforeEach(() => {
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.clearAllMocks();
   });
 
-  afterEach(() => {
-    console.error.mockRestore();
-  });
-
-  it('renders children when no error occurs', () => {
+  it('renders children when no error', () => {
     render(
       <ErrorBoundary>
-        <SafeComponent />
-      </ErrorBoundary>,
-      { wrapper: TestWrapper }
+        <ThrowError shouldThrow={false} />
+      </ErrorBoundary>
     );
 
-    expect(screen.getByText('Safe content')).toBeInTheDocument();
+    expect(screen.getByText('No error')).toBeInTheDocument();
   });
 
-  it('renders error UI when an error occurs', () => {
+  it('renders error message when error occurs', () => {
     render(
       <ErrorBoundary>
-        <ThrowError />
-      </ErrorBoundary>,
-      { wrapper: TestWrapper }
+        <ThrowError shouldThrow={true} />
+      </ErrorBoundary>
     );
 
-    expect(screen.getByText(/something went wrong/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument();
+    expect(screen.getByText(/Test error/i)).toBeInTheDocument();
+    expect(screen.getByText(/Something went wrong/i)).toBeInTheDocument();
   });
 
-  it('resets error state when try again is clicked', () => {
-    const onReset = vi.fn();
+  it('shows error details in development', () => {
+    const originalEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'development';
+
     render(
-      <ErrorBoundary onReset={onReset}>
-        <ThrowError />
-      </ErrorBoundary>,
-      { wrapper: TestWrapper }
+      <ErrorBoundary>
+        <ThrowError shouldThrow={true} />
+      </ErrorBoundary>
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /try again/i }));
-    expect(onReset).toHaveBeenCalled();
+    expect(screen.getByText(/Test error/i)).toBeInTheDocument();
+    expect(screen.getByText(/Error Stack/i)).toBeInTheDocument();
+
+    process.env.NODE_ENV = originalEnv;
   });
 
-  it('calls onError prop when an error occurs', () => {
-    const onError = vi.fn();
+  it('uses custom fallback component', () => {
+    const CustomFallback = ({ error }) => <div>Custom error: {error.message}</div>;
+
     render(
-      <ErrorBoundary onError={onError}>
-        <ThrowError />
-      </ErrorBoundary>,
-      { wrapper: TestWrapper }
+      <ErrorBoundary FallbackComponent={CustomFallback}>
+        <ThrowError shouldThrow={true} />
+      </ErrorBoundary>
     );
 
-    expect(onError).toHaveBeenCalledWith(expect.any(Error));
+    expect(screen.getByText(/Custom error: Test error/i)).toBeInTheDocument();
+  });
+
+  it('resets error state when children change', () => {
+    const { rerender } = render(
+      <ErrorBoundary>
+        <ThrowError shouldThrow={true} />
+      </ErrorBoundary>
+    );
+
+    expect(screen.getByText(/Test error/i)).toBeInTheDocument();
+
+    rerender(
+      <ErrorBoundary>
+        <ThrowError shouldThrow={false} />
+      </ErrorBoundary>
+    );
+
+    expect(screen.getByText('No error')).toBeInTheDocument();
+  });
+
+  it('provides development-specific error details', () => {
+    const originalEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'development';
+
+    render(
+      <ErrorBoundary>
+        <ThrowError shouldThrow={true} />
+      </ErrorBoundary>
+    );
+
+    expect(screen.getByText(/Component Stack/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Try Again/i })).toBeInTheDocument();
+
+    process.env.NODE_ENV = originalEnv;
   });
 }); 

@@ -1,79 +1,91 @@
-import { vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { useColorMode } from '@chakra-ui/react';
-import { ThemeToggle } from '../components/ThemeToggle';
-import { TestWrapper } from './setup';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { useTheme } from '@/hooks/useTheme';
 
-// Mock useColorMode hook
-vi.mock('@chakra-ui/react', async () => {
-  const actual = await vi.importActual('@chakra-ui/react');
-  return {
-    ...actual,
-    useColorMode: vi.fn()
-  };
-});
+vi.mock('@/hooks/useTheme', () => ({
+  useTheme: vi.fn()
+}));
 
 describe('ThemeToggle', () => {
-  const mockToggleColorMode = vi.fn();
-
   beforeEach(() => {
     vi.clearAllMocks();
-    useColorMode.mockReturnValue({
-      colorMode: 'light',
-      toggleColorMode: mockToggleColorMode
-    });
   });
 
-  it('renders toggle button', () => {
-    render(<ThemeToggle />, { wrapper: TestWrapper });
-    expect(screen.getByRole('button')).toBeInTheDocument();
-  });
-
-  it('toggles theme on click', () => {
-    render(<ThemeToggle />, { wrapper: TestWrapper });
-    fireEvent.click(screen.getByRole('button'));
-    expect(mockToggleColorMode).toHaveBeenCalled();
-  });
-
-  it('shows correct icon based on theme', () => {
-    useColorMode.mockReturnValueOnce({
-      colorMode: 'dark',
-      toggleColorMode: mockToggleColorMode
+  it('renders toggle button with current theme', () => {
+    useTheme.mockReturnValue({
+      theme: 'light',
+      toggleTheme: vi.fn()
     });
 
-    const { rerender } = render(<ThemeToggle />, { wrapper: TestWrapper });
-    expect(screen.getByLabelText(/switch to light mode/i)).toBeInTheDocument();
-
-    useColorMode.mockReturnValueOnce({
-      colorMode: 'light',
-      toggleColorMode: mockToggleColorMode
-    });
-
-    rerender(<ThemeToggle />);
-    expect(screen.getByLabelText(/switch to dark mode/i)).toBeInTheDocument();
-  });
-
-  it('persists theme preference', () => {
-    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
-    render(<ThemeToggle />, { wrapper: TestWrapper });
-    
-    fireEvent.click(screen.getByRole('button'));
-    
-    expect(setItemSpy).toHaveBeenCalledWith('chakra-ui-color-mode', 'dark');
-    setItemSpy.mockRestore();
-  });
-
-  it('applies theme-specific styles', () => {
-    useColorMode.mockReturnValue({
-      colorMode: 'dark',
-      toggleColorMode: mockToggleColorMode
-    });
-
-    render(<ThemeToggle />, { wrapper: TestWrapper });
+    render(<ThemeToggle />);
     const button = screen.getByRole('button');
-    
-    expect(button).toHaveStyle({
-      backgroundColor: 'var(--chakra-colors-gray-700)'
+
+    expect(button).toBeInTheDocument();
+    expect(button).toHaveAttribute('aria-label', 'Toggle dark mode');
+  });
+
+  it('toggles theme when clicked', () => {
+    const toggleTheme = vi.fn();
+    useTheme.mockReturnValue({
+      theme: 'light',
+      toggleTheme
     });
+
+    render(<ThemeToggle />);
+    const button = screen.getByRole('button');
+
+    fireEvent.click(button);
+    expect(toggleTheme).toHaveBeenCalled();
+  });
+
+  it('shows correct icon for light theme', () => {
+    useTheme.mockReturnValue({
+      theme: 'light',
+      toggleTheme: vi.fn()
+    });
+
+    render(<ThemeToggle />);
+    expect(screen.getByLabelText('Toggle dark mode')).toBeInTheDocument();
+  });
+
+  it('shows correct icon for dark theme', () => {
+    useTheme.mockReturnValue({
+      theme: 'dark',
+      toggleTheme: vi.fn()
+    });
+
+    render(<ThemeToggle />);
+    expect(screen.getByLabelText('Toggle light mode')).toBeInTheDocument();
+  });
+
+  it('applies custom className', () => {
+    useTheme.mockReturnValue({
+      theme: 'light',
+      toggleTheme: vi.fn()
+    });
+
+    render(<ThemeToggle className="custom-class" />);
+    const button = screen.getByRole('button');
+    expect(button).toHaveClass('custom-class');
+  });
+
+  it('handles keyboard interaction', () => {
+    const toggleTheme = vi.fn();
+    useTheme.mockReturnValue({
+      theme: 'light',
+      toggleTheme
+    });
+
+    render(<ThemeToggle />);
+    const button = screen.getByRole('button');
+
+    fireEvent.keyDown(button, { key: 'Enter' });
+    expect(toggleTheme).toHaveBeenCalled();
+
+    toggleTheme.mockClear();
+
+    fireEvent.keyDown(button, { key: ' ' });
+    expect(toggleTheme).toHaveBeenCalled();
   });
 }); 

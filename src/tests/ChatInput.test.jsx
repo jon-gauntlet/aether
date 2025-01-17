@@ -1,72 +1,84 @@
-import { vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { ChatInput } from '../components/ChatInput';
-import { TestWrapper } from './setup';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { ChatInput } from '@/components/ChatInput';
 
 describe('ChatInput', () => {
   const defaultProps = {
-    onSendMessage: vi.fn(),
-    isLoading: false
+    onSubmit: vi.fn(),
+    onKeyCommand: vi.fn(),
+    isDisabled: false,
+    placeholder: 'Type a message...',
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('renders input and send button', () => {
-    render(<ChatInput {...defaultProps} />, { wrapper: TestWrapper });
-    expect(screen.getByTestId('chat-input')).toBeInTheDocument();
-    expect(screen.getByTestId('send-button')).toBeInTheDocument();
+  it('renders with default props', () => {
+    render(<ChatInput {...defaultProps} />);
+    const input = screen.getByRole('textbox');
+    expect(input).toBeInTheDocument();
+    expect(input).toHaveAttribute('placeholder', 'Type a message...');
+    expect(input).not.toBeDisabled();
   });
 
-  it('trims whitespace before sending message', async () => {
-    render(<ChatInput {...defaultProps} />, { wrapper: TestWrapper });
-    const input = screen.getByTestId('chat-input');
-    
-    await userEvent.type(input, '   Hello   ');
-    await userEvent.click(screen.getByTestId('send-button'));
-    
-    expect(defaultProps.onSendMessage).toHaveBeenCalledWith('Hello');
+  it('handles text input', () => {
+    render(<ChatInput {...defaultProps} />);
+    const input = screen.getByRole('textbox');
+    const testValue = 'Hello, world!';
+
+    fireEvent.change(input, { target: { value: testValue } });
+    expect(input.value).toBe(testValue);
   });
 
-  it('shows character count when near limit', async () => {
-    render(<ChatInput {...defaultProps} />, { wrapper: TestWrapper });
-    const input = screen.getByTestId('chat-input');
-    
-    const longString = 'a'.repeat(950);
-    await userEvent.type(input, longString);
-    
-    expect(screen.getByText(`${longString.length}/1000`)).toBeInTheDocument();
+  it('submits on Enter', () => {
+    render(<ChatInput {...defaultProps} />);
+    const input = screen.getByRole('textbox');
+    const testValue = 'Hello, world!';
+
+    fireEvent.change(input, { target: { value: testValue } });
+    fireEvent.keyDown(input, { key: 'Enter', code: 'Enter' });
+
+    expect(defaultProps.onSubmit).toHaveBeenCalledWith(testValue);
+    expect(input.value).toBe('');
   });
 
-  it('handles Shift+Enter for new line', async () => {
-    render(<ChatInput {...defaultProps} />, { wrapper: TestWrapper });
-    const input = screen.getByTestId('chat-input');
-    
-    await userEvent.type(input, 'Hello{Shift>}{Enter}{/Shift}');
-    
-    expect(defaultProps.onSendMessage).not.toHaveBeenCalled();
-    expect(input.value).toContain('Hello\n');
+  it('does not submit empty messages', () => {
+    render(<ChatInput {...defaultProps} />);
+    const input = screen.getByRole('textbox');
+
+    fireEvent.keyDown(input, { key: 'Enter', code: 'Enter' });
+    expect(defaultProps.onSubmit).not.toHaveBeenCalled();
   });
 
-  it('disables input and button while loading', () => {
-    render(<ChatInput {...defaultProps} isLoading={true} />, { wrapper: TestWrapper });
-    
-    expect(screen.getByTestId('chat-input')).toBeDisabled();
-    expect(screen.getByTestId('send-button')).toBeDisabled();
+  it('handles key commands', () => {
+    render(<ChatInput {...defaultProps} />);
+    const input = screen.getByRole('textbox');
+
+    fireEvent.keyDown(input, { key: 'ArrowUp' });
+    expect(defaultProps.onKeyCommand).toHaveBeenCalledWith('ArrowUp');
+
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+    expect(defaultProps.onKeyCommand).toHaveBeenCalledWith('ArrowDown');
   });
 
-  it('disables send button when input is empty', async () => {
-    render(<ChatInput {...defaultProps} />, { wrapper: TestWrapper });
-    const button = screen.getByTestId('send-button');
+  it('respects disabled state', () => {
+    render(<ChatInput {...defaultProps} isDisabled={true} />);
+    const input = screen.getByRole('textbox');
     
-    expect(button).toBeDisabled();
+    expect(input).toBeDisabled();
     
-    await userEvent.type(screen.getByTestId('chat-input'), 'Hello');
-    expect(button).not.toBeDisabled();
+    fireEvent.change(input, { target: { value: 'test' } });
+    fireEvent.keyDown(input, { key: 'Enter', code: 'Enter' });
     
-    await userEvent.clear(screen.getByTestId('chat-input'));
-    expect(button).toBeDisabled();
+    expect(defaultProps.onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('shows custom placeholder', () => {
+    const customPlaceholder = 'Custom placeholder...';
+    render(<ChatInput {...defaultProps} placeholder={customPlaceholder} />);
+    const input = screen.getByRole('textbox');
+    
+    expect(input).toHaveAttribute('placeholder', customPlaceholder);
   });
 }); 
