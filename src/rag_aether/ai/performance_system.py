@@ -3,8 +3,10 @@
 import time
 import logging
 import psutil
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Callable
 from collections import deque
+from functools import wraps
+from contextlib import contextmanager
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +20,14 @@ except (ImportError, Exception):
 
 class PerformanceMonitor:
     """Monitors performance metrics for RAG system."""
+    
+    _instance = None
+    
+    @classmethod
+    def get_instance(cls):
+        if cls._instance is None:
+            cls._instance = cls()
+        return cls._instance
     
     def __init__(self, window_size: int = 100):
         """Initialize performance monitor.
@@ -44,7 +54,8 @@ class PerformanceMonitor:
                 "total_time": 0.0,
                 "min_time": float("inf"),
                 "max_time": 0.0,
-                "success_count": 0
+                "success_count": 0,
+                "avg_time": 0.0
             }
             
         stats = self.operation_stats[operation]
@@ -52,6 +63,7 @@ class PerformanceMonitor:
         stats["total_time"] += duration
         stats["min_time"] = min(stats["min_time"], duration)
         stats["max_time"] = max(stats["max_time"], duration)
+        stats["avg_time"] = stats["total_time"] / stats["count"]
         if success:
             stats["success_count"] += 1
             
@@ -124,4 +136,34 @@ class PerformanceMonitor:
     def reset(self):
         """Reset metrics."""
         self.metrics_window.clear()
-        self.operation_stats.clear() 
+        self.operation_stats.clear()
+
+def with_performance_monitoring(operation_name: Optional[str] = None):
+    """Decorator to monitor performance of a function."""
+    def decorator(func: Callable):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            monitor = PerformanceMonitor.get_instance()
+            start_time = time.time()
+            try:
+                result = func(*args, **kwargs)
+                duration = time.time() - start_time
+                monitor.record_operation(operation_name or func.__name__, duration)
+                return result
+            except Exception as e:
+                duration = time.time() - start_time
+                monitor.record_operation(operation_name or func.__name__, duration, success=False)
+                raise
+        return wrapper
+    return decorator
+
+@contextmanager
+def performance_section(name: str):
+    """Context manager for monitoring performance of a code section."""
+    monitor = PerformanceMonitor.get_instance()
+    start_time = time.time()
+    try:
+        yield
+    finally:
+        duration = time.time() - start_time
+        monitor.record_operation(name, duration) 

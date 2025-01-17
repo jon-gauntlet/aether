@@ -1,80 +1,162 @@
-# RAG System with Claude
+# RAG System API Documentation
 
-A Retrieval Augmented Generation system built with FastAPI and Claude.
+## Overview
+This is a Retrieval Augmented Generation (RAG) system that uses Anthropic's Claude API to provide context-aware responses based on your documents.
 
-## Features
+## Quick Start
 
-- Document ingestion and storage
-- Semantic search using sentence transformers
-- Document retrieval API
-- RAG-powered question answering using Claude
-- Built-in CORS support
-- Simple text file upload
+1. Set up environment:
+   ```bash
+   # Copy example env file
+   cp .env.example .env
+   
+   # Add your Anthropic API key
+   echo "ANTHROPIC_API_KEY=your_key_here" >> .env
+   
+   # Install dependencies
+   poetry install
+   ```
 
-## Setup
+2. Run the server:
+   ```bash
+   poetry run python run.py
+   ```
 
-1. Create a virtual environment:
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-2. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
-
-3. Create a `.env` file:
-```bash
-cp .env.example .env
-```
-
-4. Edit the `.env` file and add your Anthropic API key.
-
-## Running the Server
-
-```bash
-python run.py
-```
-
-The server will start at `http://localhost:8000`. You can access the API documentation at `http://localhost:8000/docs`.
+The server will start at `http://localhost:8100`.
 
 ## API Endpoints
 
-- `POST /api/documents/upload`: Upload a text document
-- `GET /api/documents`: List all documents
-- `POST /api/documents/search`: Search documents using semantic similarity
-- `POST /api/rag/query`: Query the system using RAG with Claude
-- `GET /health`: Health check endpoint
-
-## Usage Example
-
-1. Upload a document:
-```bash
-curl -X POST "http://localhost:8000/api/documents/upload" \
-  -H "accept: application/json" \
-  -H "Content-Type: multipart/form-data" \
-  -F "file=@document.txt" \
-  -F "title=Example Document"
+### Health Check
+```http
+GET /api/v1/health
 ```
 
-2. Search documents:
-```bash
-curl -X POST "http://localhost:8000/api/documents/search" \
-  -H "accept: application/json" \
-  -H "Content-Type: application/json" \
-  -d '{"query": "your search query", "top_k": 5}'
+Checks if the system is running and properly initialized.
+
+**Response**
+```json
+{
+    "status": "healthy",
+    "rag_system_ready": true,
+    "message": null
+}
 ```
 
-3. Query using RAG:
-```bash
-curl -X POST "http://localhost:8000/api/rag/query" \
-  -H "accept: application/json" \
-  -H "Content-Type: application/json" \
-  -d '{"query": "your question here", "top_k": 3}'
+### Add Document
+```http
+POST /api/v1/documents/{doc_id}
 ```
 
-The RAG query endpoint will:
-1. Find the most relevant documents for your query
-2. Use Claude to generate a response based on those documents
-3. Return both the response and the source documents used 
+Adds a document to the RAG system's knowledge base.
+
+**Parameters**
+- `doc_id` (path): Unique identifier for the document
+
+**Request Body**
+```json
+{
+    "content": "Document text content",
+    "metadata": {
+        "type": "article",
+        "source": "example.com",
+        // ... any additional metadata
+    }
+}
+```
+
+**Response**
+```json
+{
+    "status": "success",
+    "message": "Document doc_id added successfully"
+}
+```
+
+### Query
+```http
+POST /api/v1/query
+```
+
+Queries the RAG system with a question.
+
+**Request Body**
+```json
+{
+    "question": "What is the capital of France?"
+}
+```
+
+**Response**
+```json
+{
+    "answer": "Based on the context, Paris is the capital of France.",
+    "context": [
+        "The capital of France is Paris.",
+        // ... other relevant document contents
+    ]
+}
+```
+
+## Error Handling
+
+The API uses standard HTTP status codes:
+
+- `200`: Success
+- `400`: Bad Request (empty content/question)
+- `500`: Internal Server Error (Anthropic API issues)
+- `503`: Service Unavailable (RAG system not initialized)
+
+Error responses include a detail message:
+```json
+{
+    "detail": "Error message here"
+}
+```
+
+## Development
+
+### Running Tests
+```bash
+poetry run pytest tests/test_rag.py -v
+```
+
+### Environment Variables
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| ANTHROPIC_API_KEY | Your Anthropic API key | Yes |
+| PORT | Server port (default: 8100) | No |
+| HOST | Server host (default: 0.0.0.0) | No |
+
+## Frontend Integration Example
+
+```typescript
+// Example using fetch API
+const API_BASE = 'http://localhost:8100/api/v1';
+
+// Add a document
+async function addDocument(docId: string, content: string, metadata = {}) {
+    const response = await fetch(`${API_BASE}/documents/${docId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content, metadata })
+    });
+    return response.json();
+}
+
+// Query the system
+async function queryRAG(question: string) {
+    const response = await fetch(`${API_BASE}/query`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question })
+    });
+    return response.json();
+}
+
+// Check system health
+async function checkHealth() {
+    const response = await fetch(`${API_BASE}/health`);
+    return response.json();
+}
+``` 
