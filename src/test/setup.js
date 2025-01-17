@@ -1,69 +1,73 @@
-import { vi, beforeAll, afterEach, afterAll } from 'vitest';
+import { vi, beforeAll, afterAll, afterEach } from 'vitest';
 import '@testing-library/jest-dom';
-import { cleanup } from '@testing-library/react';
+import { cleanup, render } from '@testing-library/react';
+import { mockMatchMedia, mockLocalStorage } from '@/test/utils';
+import { TestWrapper, renderWithProviders } from './TestWrapper';
 
-// Performance optimization: Use a single timer mock for all tests
-const timerConfig = {
-  shouldAdvanceTime: true,
-  advanceTimeDelta: 10,
-};
+// Export test utilities
+export { TestWrapper, renderWithProviders };
 
-// Setup phase
-beforeAll(() => {
-  vi.useFakeTimers(timerConfig);
-  
-  // Batch mock setup for better performance
-  const mockImplementations = {
-    matchMedia: vi.fn().mockImplementation(query => ({
-      matches: false,
-      media: query,
-      onchange: null,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    })),
-    ResizeObserver: vi.fn().mockImplementation(() => ({
-      observe: vi.fn(),
-      unobserve: vi.fn(),
-      disconnect: vi.fn(),
-    })),
-    IntersectionObserver: vi.fn().mockImplementation(() => ({
-      observe: vi.fn(),
-      unobserve: vi.fn(),
-      disconnect: vi.fn(),
-    })),
-    requestAnimationFrame: vi.fn(cb => setTimeout(cb, 0)),
-    cancelAnimationFrame: vi.fn(id => clearTimeout(id)),
-  };
+// Mock window.matchMedia
+window.matchMedia = mockMatchMedia;
 
-  // Apply all mocks in one batch
-  Object.entries(mockImplementations).forEach(([key, implementation]) => {
-    Object.defineProperty(window, key, {
-      writable: true,
-      configurable: true,
-      value: implementation,
-    });
-  });
+// Mock localStorage
+Object.defineProperty(window, 'localStorage', {
+  value: mockLocalStorage,
+  writable: true
 });
 
-// Cleanup phase
+// Mock ResizeObserver
+window.ResizeObserver = class ResizeObserver {
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+};
+
+// Mock IntersectionObserver
+window.IntersectionObserver = class IntersectionObserver {
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+};
+
+// Store original console methods
+const originalConsole = {
+  error: console.error,
+  warn: console.warn
+};
+
+// Override console methods to suppress specific warnings
+console.error = (...args) => {
+  if (
+    args[0]?.includes('Warning:') ||
+    args[0]?.includes('defaultProps')
+  ) {
+    return;
+  }
+  originalConsole.error(...args);
+};
+
+console.warn = (...args) => {
+  if (
+    args[0]?.includes('Warning:') ||
+    args[0]?.includes('defaultProps')
+  ) {
+    return;
+  }
+  originalConsole.warn(...args);
+};
+
+// Mock fetch globally
+global.fetch = vi.fn();
+
+// Clean up after each test
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
-  vi.clearAllTimers();
 });
 
+// Restore original console methods after all tests
 afterAll(() => {
-  vi.useRealTimers();
-});
-
-// Optimized React 18 mock
-vi.mock('react-dom/client', () => {
-  const root = {
-    render: vi.fn(),
-    unmount: vi.fn(),
-  };
-  return {
-    createRoot: vi.fn(() => root),
-  };
+  console.error = originalConsole.error;
+  console.warn = originalConsole.warn;
 }); 
