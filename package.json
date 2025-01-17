@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Aether RAG System",
   "scripts": {
-    "dev": "vite --port 3000",
+    "dev": "vite --port 3001",
     "build": "vite build",
     "preview": "vite preview",
     "test:unit": "vitest",
@@ -28,6 +28,7 @@
     "npm": "9.6.7"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.47.16",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
