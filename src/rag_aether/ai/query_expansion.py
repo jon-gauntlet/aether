@@ -90,92 +90,127 @@ class QueryExpander:
     """Query expansion using T5 model with GPU acceleration."""
     
     def __init__(self, model_name: str = "t5-small"):
+        """Initialize the query expander with specified model.
+        
+        Args:
+            model_name: Name of the T5 model to use for query expansion
+        """
+        self.model_name = model_name
+        self.tokenizer = T5Tokenizer.from_pretrained(model_name)
+        
+        # Try CUDA first, fall back to CPU if OOM
         try:
-            self.model_name = model_name
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-            
-            if model_name == "mock-model":
-                self.tokenizer = MockT5Tokenizer()
-                self.model = MockT5Model()
-                logger.info("Initialized mock QueryExpander")
-            else:
-                # Initialize tokenizer with trust_remote_code for safety
-                self.tokenizer = T5Tokenizer.from_pretrained(
-                    model_name,
-                    trust_remote_code=True,
-                    local_files_only=False
+            self.model = (
+                T5ForConditionalGeneration
+                .from_pretrained(model_name)
+                .to(self.device)
+            )
+        except RuntimeError as e:
+            if "out of memory" in str(e):
+                logger.warning(f"CUDA out of memory, falling back to CPU for {model_name}")
+                self.device = torch.device("cpu")
+                self.model = (
+                    T5ForConditionalGeneration
+                    .from_pretrained(model_name)
+                    .to(self.device)
                 )
-                
-                # Initialize model with proper configuration
-                self.model = T5ForConditionalGeneration.from_pretrained(
-                    model_name,
-                    trust_remote_code=True,
-                    local_files_only=False
-                ).to(self.device)
-                
-                # Optimize for RTX 4090 if available
-                if self.device.type == "cuda":
-                    self.model = self.model.half()  # Use FP16 for faster inference
-                    torch.cuda.empty_cache()
-                    
-                logger.info(f"Initialized QueryExpander with model {model_name} on {self.device}")
-        except Exception as e:
-            logger.error(f"Failed to initialize query expander: {str(e)}")
-            raise QueryExpansionError(f"Failed to initialize query expander: {str(e)}")
+            else:
+                raise QueryExpansionError(f"Failed to initialize query expander: {str(e)}")
+
+    def expand(self, query: str, max_length: int = 128) -> str:
+        """Expand a query using the T5 model.
+        
+        Args:
+            query: The query to expand
+            max_length: Maximum length of generated expansion
             
-    async def expand_query(self, query: str, context: Optional[Dict] = None) -> Dict[str, Any]:
-        """Expand a query using T5 with GPU acceleration."""
+        Returns:
+            The expanded query
+        """
         try:
-            if self.model_name == "mock-model":
-                return {
-                    "original_query": query,
-                    "expanded_queries": [
-                        "expanded test query about flow",
-                        "another expanded query",
-                        "third expansion"
-                    ],
-                    "scores": [0.9, 0.8, 0.7],
-                    "context": context or {}
-                }
-                
-            # Real model implementation
-            input_ids = self.tokenizer.encode(
+            inputs = self.tokenizer(
                 f"expand query: {query}",
-                return_tensors="pt"
+                return_tensors="pt",
+                max_length=max_length,
+                truncation=True
             ).to(self.device)
             
             outputs = self.model.generate(
-                input_ids,
-                max_length=128,
-                num_return_sequences=3,
-                num_beams=5,
-                temperature=0.7
+                **inputs,
+                max_length=max_length,
+                num_beams=4,
+                temperature=0.7,
+                no_repeat_ngram_size=2
             )
             
-            expanded = [
-                self.tokenizer.decode(output, skip_special_tokens=True)
-                for output in outputs
-            ]
+            expanded = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+            return expanded
+            
+        except Exception as e:
+            raise QueryExpansionError(f"Failed to expand query: {str(e)}")
+            
+    async def expand_query(self, query: str, context: Optional[Dict] = None) -> Dict[str, Any]:
+        """Expand a query using the T5 model.
+        
+        Args:
+            query: The query to expand
+            context: Optional context to help with expansion
+            
+        Returns:
+            Dict containing expanded query and metadata
+        """
+        try:
+            # Prepare input
+            input_text = f"expand query: {query}"
+            if context:
+                input_text = f"{input_text} context: {context}"
+                
+            inputs = self.tokenizer(
+                input_text,
+                return_tensors="pt",
+                max_length=512,
+                truncation=True
+            ).to(self.device)
+            
+            # Generate expansion
+            outputs = self.model.generate(
+                **inputs,
+                max_length=128,
+                num_beams=4,
+                temperature=0.7,
+                no_repeat_ngram_size=2
+            )
+            
+            expanded = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
             
             return {
                 "original_query": query,
-                "expanded_queries": expanded,
-                "scores": [0.9, 0.8, 0.7],  # Mock scores for now
-                "context": context or {}
+                "expanded_query": expanded,
+                "model_name": self.model_name,
+                "device": self.device.type if hasattr(self.device, "type") else str(self.device),
+                "context_used": bool(context)
             }
+            
         except Exception as e:
-            logger.error(f"Query expansion failed: {str(e)}")
-            raise QueryExpansionError(f"Query expansion failed: {str(e)}")
+            raise QueryExpansionError(f"Failed to expand query: {str(e)}")
             
     async def expand_queries(self, queries: List[str], context: Optional[Dict] = None) -> List[Dict[str, Any]]:
-        """Expand queries in parallel using GPU."""
+        """Expand multiple queries in batch.
+        
+        Args:
+            queries: List of queries to expand
+            context: Optional shared context
+            
+        Returns:
+            List of expansion results
+        """
         try:
             results = []
-            # Process in parallel on GPU for maximum throughput
-            for query in queries:  # In real impl, would use torch.nn.DataParallel
+            for query in queries:
                 result = await self.expand_query(query, context)
                 results.append(result)
             return results
+            
         except Exception as e:
-            logger.error(f"Failed to expand queries in batch: {str(e)}")
             raise QueryExpansionError(f"Failed to expand queries in batch: {str(e)}") 

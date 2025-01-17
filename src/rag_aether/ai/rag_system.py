@@ -1,6 +1,11 @@
 """RAG system implementation."""
 
-from typing import Dict, Any, List, Optional
+from typing import List, Dict, Any, Optional
+import numpy as np
+from sentence_transformers import SentenceTransformer, util
+from .cache_manager import CacheManager
+from .vector_search import OptimizedVectorSearch
+import torch
 import logging
 from dataclasses import dataclass
 import numpy as np
@@ -11,130 +16,125 @@ from ..core.errors import RAGError
 
 logger = logging.getLogger(__name__)
 
-@dataclass
-class Message:
-    """Message data structure."""
-    content: str
-    metadata: Optional[Dict[str, Any]] = None
-    channel_id: Optional[str] = None
-    thread_id: Optional[str] = None
-    user_id: Optional[str] = None
-
-@dataclass
-class Document:
-    """Document data structure."""
-    content: str
-    metadata: Optional[Dict[str, Any]] = None
-    embedding: Optional[np.ndarray] = None
-
-class RAGSystem:
-    """Retrieval-Augmented Generation system."""
+class BaseRAG:
+    """Base class for RAG systems."""
     
-    def __init__(self, model_name: str = "t5-small", use_production_features: bool = False,
-                 use_mock: bool = False, use_cache: bool = False):
+    def __init__(self, model_name: str = "BAAI/bge-small-en"):
+        """Initialize base RAG system.
+        
+        Args:
+            model_name: Name of the embedding model to use
+        """
+        self.model_name = model_name
+        try:
+            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            self.model = SentenceTransformer(model_name).to(self.device)
+        except RuntimeError as e:
+            if "out of memory" in str(e):
+                logger.warning(f"CUDA out of memory, falling back to CPU for {model_name}")
+                self.device = torch.device("cpu") 
+                self.model = SentenceTransformer(model_name).to(self.device)
+            else:
+                raise RAGError(f"Failed to initialize RAG system: {str(e)}")
+                
+    def encode(self, texts: List[str]) -> torch.Tensor:
+        """Encode texts to embeddings.
+        
+        Args:
+            texts: List of texts to encode
+            
+        Returns:
+            Tensor of embeddings
+        """
+        try:
+            return self.model.encode(
+                texts,
+                convert_to_tensor=True,
+                device=self.device
+            )
+        except Exception as e:
+            raise RAGError(f"Failed to encode texts: {str(e)}")
+
+class RAGSystem(BaseRAG):
+    """RAG system implementation."""
+    
+    def __init__(self, model_name: str = "BAAI/bge-small-en"):
         """Initialize RAG system.
         
         Args:
-            model_name: Name of the model to use for query expansion
-            use_production_features: Whether to enable production features
-            use_mock: Whether to use mock components for testing
-            use_cache: Whether to enable caching
+            model_name: Name of the embedding model to use
+        """
+        super().__init__(model_name)
+        self.documents: List[Dict[str, Any]] = []
+        self.document_embeddings: Optional[torch.Tensor] = None
+        self.query_expander = QueryExpander()
+        
+    def add_documents(self, documents: List[Dict[str, Any]]) -> None:
+        """Add documents to the RAG system.
+        
+        Args:
+            documents: List of documents to add
         """
         self.model_name = model_name
         self.use_production = use_production_features
         self.use_mock = use_mock
         
         try:
-            self.query_expander = QueryExpander(model_name=model_name, use_mock=use_mock)
-            if use_cache:
-                self.cache = Cache(max_size=1000, ttl=3600)
+            self.documents.extend(documents)
+            texts = [doc["text"] for doc in documents]
+            embeddings = self.encode(texts)
+            
+            if self.document_embeddings is None:
+                self.document_embeddings = embeddings
             else:
-                self.cache = None
+                self.document_embeddings = torch.cat([
+                    self.document_embeddings, 
+                    embeddings
+                ])
                 
-            if use_production_features:
-                self._init_production_features()
+        except Exception as e:
+            raise RAGError(f"Failed to add documents: {str(e)}")
+            
+    async def search(self, query: str, k: int = 3) -> List[Dict[str, Any]]:
+        """Search for relevant documents.
+        
+        Args:
+            query: Query to search for
+            k: Number of results to return
+            
+        Returns:
+            List of relevant documents with scores
+        """
+        try:
+            if not self.documents:
+                return []
                 
-            logger.info(f"Initialized RAG system (mock={use_mock}, production={use_production_features}, cache={bool(self.cache)})")
+            # Expand query
+            expanded = await self.query_expander.expand_query(query)
+            query_text = expanded["expanded_query"]
+            
+            # Get embeddings
+            query_embedding = self.encode([query_text])
+            
+            # Calculate similarities
+            similarities = util.pytorch_cos_sim(
+                query_embedding, 
+                self.document_embeddings
+            )[0]
+            
+            # Get top k
+            top_k = torch.topk(similarities, min(k, len(self.documents)))
+            
+            results = []
+            for score, idx in zip(top_k.values, top_k.indices):
+                doc = self.documents[idx]
+                results.append({
+                    "document": doc,
+                    "score": float(score),
+                    "expanded_query": query_text
+                })
+                
+            return results
             
         except Exception as e:
-            logger.error(f"Failed to initialize RAG system: {e}")
-            raise RAGError(f"Failed to initialize RAG system: {e}")
-            
-        self.documents: List[Document] = []
-        self.messages: List[Message] = []
-            
-    def _init_production_features(self) -> None:
-        """Initialize production features."""
-        # TODO: Implement production features
-        pass
-        
-    async def ingest_message(self, message: Message) -> None:
-        """Ingest a message into the system.
-        
-        Args:
-            message: Message to ingest
-        """
-        self.messages.append(message)
-        await self.ingest_document(Document(content=message.content, metadata=message.metadata))
-        
-    async def ingest_document(self, document: Document) -> None:
-        """Ingest a document into the system.
-        
-        Args:
-            document: Document to ingest
-        """
-        if document.embedding is None:
-            # Compute embedding if not provided
-            document.embedding = await self.query_expander.encode_text(document.content)
-            
-        self.documents.append(document)
-        
-    async def retrieve(self, query: str, k: int = 3) -> List[Document]:
-        """Retrieve relevant documents for a query.
-        
-        Args:
-            query: Query string
-            k: Number of documents to retrieve
-            
-        Returns:
-            List of relevant documents
-        """
-        if not self.documents:
-            return []
-            
-        # Get query embedding
-        query_embedding = await self.query_expander.encode_text(query)
-        
-        # Compute similarities
-        similarities = []
-        for doc in self.documents:
-            if doc.embedding is not None:
-                sim = np.dot(query_embedding, doc.embedding)
-                similarities.append((sim, doc))
-                
-        # Sort by similarity
-        similarities.sort(key=lambda x: x[0], reverse=True)
-        
-        # Return top k
-        return [doc for _, doc in similarities[:k]]
-        
-    async def generate_response(self, query: str, context: Optional[List[Document]] = None,
-                              format: str = "default", temperature: float = 0.7) -> str:
-        """Generate a response for a query.
-        
-        Args:
-            query: Query string
-            context: Optional context documents
-            format: Response format (default, concise, detailed, technical)
-            temperature: Temperature for response generation
-            
-        Returns:
-            Generated response
-        """
-        if context is None:
-            context = await self.retrieve(query)
-            
-        # TODO: Implement response generation with LLM
-        # For now return mock response
-        context_str = "\n".join(doc.content for doc in context)
-        return f"Response to '{query}' based on context: {context_str}" 
+            raise RAGError(f"Failed to search: {str(e)}") 

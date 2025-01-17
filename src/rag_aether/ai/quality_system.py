@@ -9,6 +9,7 @@ from transformers import AutoTokenizer, AutoModel
 import torch
 import numpy as np
 from ..core.performance import track_operation
+from sentence_transformers import SentenceTransformer, util
 
 @dataclass
 class QualityMetrics:
@@ -115,17 +116,146 @@ class QualityMonitor:
 class QualitySystem:
     """System for monitoring and improving RAG quality."""
     
-    def __init__(self, model_name: str = "sentence-transformers/all-mpnet-base-v2"):
-        """Initialize quality system."""
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self.model = AutoModel.from_pretrained(model_name)
-        self.metrics_history: List[QualityMetrics] = []
-        self.feedback_history: List[QualityFeedback] = []
-        self.thresholds = {
-            'relevance': 0.7,
-            'coherence': 0.6,
-            'factual_accuracy': 0.8
+    def __init__(self, model_name: str = "BAAI/bge-small-en"):
+        """Initialize quality evaluation system
+        
+        Args:
+            model_name: Name of the embedding model to use
+        """
+        self.model = SentenceTransformer(model_name)
+        
+    def evaluate_response(self, 
+                         query: str, 
+                         response: str, 
+                         context: Optional[str] = None) -> Dict[str, float]:
+        """Evaluate response quality
+        
+        Args:
+            query: Original query
+            response: Generated response
+            context: Optional context used for generation
+            
+        Returns:
+            Dictionary of quality metrics
+        """
+        metrics = {
+            "relevance": self._evaluate_relevance(query, response),
+            "coherence": self._evaluate_coherence(response),
+            "factuality": self._evaluate_factuality(response, context) if context else 1.0,
+            "context_adherence": self._evaluate_context_adherence(response, context) if context else 1.0
         }
+        
+        # Overall quality score
+        metrics["overall_quality"] = np.mean(list(metrics.values()))
+        
+        return metrics
+        
+    def _evaluate_relevance(self, query: str, response: str) -> float:
+        """Evaluate response relevance to query
+        
+        Args:
+            query: Original query
+            response: Generated response
+            
+        Returns:
+            Relevance score between 0 and 1
+        """
+        # Encode query and response
+        query_embedding = self.model.encode(query)
+        response_embedding = self.model.encode(response)
+        
+        # Compute cosine similarity
+        similarity = util.cos_sim(query_embedding, response_embedding)
+        
+        return float(similarity[0][0])
+        
+    def _evaluate_coherence(self, response: str) -> float:
+        """Evaluate response coherence
+        
+        Args:
+            response: Generated response
+            
+        Returns:
+            Coherence score between 0 and 1
+        """
+        # Split into sentences
+        sentences = response.split(". ")
+        if len(sentences) < 2:
+            return 1.0
+            
+        # Encode sentences
+        embeddings = self.model.encode(sentences)
+        
+        # Compute pairwise similarities
+        similarities = []
+        for i in range(len(sentences)-1):
+            sim = util.cos_sim(embeddings[i], embeddings[i+1])
+            similarities.append(float(sim[0][0]))
+            
+        return np.mean(similarities)
+        
+    def _evaluate_factuality(self, response: str, context: str) -> float:
+        """Evaluate response factual accuracy against context
+        
+        Args:
+            response: Generated response
+            context: Context used for generation
+            
+        Returns:
+            Factuality score between 0 and 1
+        """
+        # Encode response and context
+        response_embedding = self.model.encode(response)
+        context_embedding = self.model.encode(context)
+        
+        # Compute semantic similarity
+        similarity = util.cos_sim(response_embedding, context_embedding)
+        
+        return float(similarity[0][0])
+        
+    def _evaluate_context_adherence(self, response: str, context: str) -> float:
+        """Evaluate how well response adheres to given context
+        
+        Args:
+            response: Generated response
+            context: Context used for generation
+            
+        Returns:
+            Context adherence score between 0 and 1
+        """
+        # Encode response and context
+        response_embedding = self.model.encode(response)
+        context_embedding = self.model.encode(context)
+        
+        # Compute semantic similarity with focus on context coverage
+        similarity = util.cos_sim(response_embedding, context_embedding)
+        
+        return float(similarity[0][0])
+        
+    def get_improvement_suggestions(self, metrics: Dict[str, float]) -> List[str]:
+        """Get suggestions for improving response quality
+        
+        Args:
+            metrics: Quality metrics from evaluate_response
+            
+        Returns:
+            List of improvement suggestions
+        """
+        suggestions = []
+        
+        if metrics["relevance"] < 0.7:
+            suggestions.append("Response could be more relevant to the query")
+            
+        if metrics["coherence"] < 0.7:
+            suggestions.append("Response could be more coherent and better structured")
+            
+        if metrics.get("factuality", 1.0) < 0.7:
+            suggestions.append("Response could better align with provided context")
+            
+        if metrics.get("context_adherence", 1.0) < 0.7:
+            suggestions.append("Response could make better use of context information")
+            
+        return suggestions
         
     def compute_metrics(self, query: str, response: str, context: str) -> QualityMetrics:
         """Compute quality metrics for a response."""
