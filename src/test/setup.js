@@ -1,68 +1,69 @@
 import { vi, beforeAll, afterEach, afterAll } from 'vitest';
 import '@testing-library/jest-dom';
 import { cleanup } from '@testing-library/react';
-import { act } from 'react';
 
-// Mock timers
+// Performance optimization: Use a single timer mock for all tests
+const timerConfig = {
+  shouldAdvanceTime: true,
+  advanceTimeDelta: 10,
+};
+
+// Setup phase
 beforeAll(() => {
-  vi.useFakeTimers();
+  vi.useFakeTimers(timerConfig);
+  
+  // Batch mock setup for better performance
+  const mockImplementations = {
+    matchMedia: vi.fn().mockImplementation(query => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+    ResizeObserver: vi.fn().mockImplementation(() => ({
+      observe: vi.fn(),
+      unobserve: vi.fn(),
+      disconnect: vi.fn(),
+    })),
+    IntersectionObserver: vi.fn().mockImplementation(() => ({
+      observe: vi.fn(),
+      unobserve: vi.fn(),
+      disconnect: vi.fn(),
+    })),
+    requestAnimationFrame: vi.fn(cb => setTimeout(cb, 0)),
+    cancelAnimationFrame: vi.fn(id => clearTimeout(id)),
+  };
+
+  // Apply all mocks in one batch
+  Object.entries(mockImplementations).forEach(([key, implementation]) => {
+    Object.defineProperty(window, key, {
+      writable: true,
+      configurable: true,
+      value: implementation,
+    });
+  });
 });
 
-afterAll(() => {
-  vi.useRealTimers();
-});
-
-// Clean up after each test
+// Cleanup phase
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
   vi.clearAllTimers();
 });
 
-// Mock window.matchMedia
-Object.defineProperty(window, 'matchMedia', {
-  writable: true,
-  value: vi.fn().mockImplementation(query => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    dispatchEvent: vi.fn(),
-  })),
+afterAll(() => {
+  vi.useRealTimers();
 });
 
-// Mock ResizeObserver
-window.ResizeObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-}));
-
-// Mock IntersectionObserver
-window.IntersectionObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-}));
-
-// Mock createRoot for React 18
+// Optimized React 18 mock
 vi.mock('react-dom/client', () => {
-  const actual = vi.importActual('react-dom/client');
-  return {
-    ...actual,
-    createRoot: vi.fn((container) => ({
-      render: vi.fn(),
-      unmount: vi.fn(),
-    })),
+  const root = {
+    render: vi.fn(),
+    unmount: vi.fn(),
   };
-});
-
-// Mock requestAnimationFrame
-window.requestAnimationFrame = vi.fn((callback) => {
-  return setTimeout(callback, 0);
-});
-
-window.cancelAnimationFrame = vi.fn((id) => {
-  clearTimeout(id);
+  return {
+    createRoot: vi.fn(() => root),
+  };
 }); 

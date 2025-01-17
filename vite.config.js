@@ -2,6 +2,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { createDebugger } from './src/utils/debug';
+import { resolve } from 'path';
 
 const debug = createDebugger('ViteBuild');
 
@@ -123,5 +124,44 @@ export default defineConfig({
     hmr: true,
     // Add error overlay
     overlay: true
-  }
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.js'],
+    threads: true,
+    maxThreads: 4,
+    minThreads: 1,
+    isolate: true,
+    cache: {
+      dir: '.vitest/cache'
+    },
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json-summary'],
+      exclude: [
+        'node_modules/',
+        'src/test/',
+        '**/*.d.ts',
+        '**/*.test.{js,jsx}',
+        '**/__tests__/'
+      ]
+    },
+    pool: 'threads',
+    poolOptions: {
+      threads: {
+        singleThread: false,
+        isolate: true
+      }
+    },
+    sequence: {
+      shuffle: false
+    },
+    testTimeout: 10000,
+  },
+  resolve: {
+    alias: {
+      '@': resolve(__dirname, './src'),
+    },
+  },
 }); 

@@ -1,159 +1,100 @@
-import { render, fireEvent, screen } from '@testing-library/react';
-import { AutonomicDevelopment } from '../AutonomicDevelopment';
-import { useAutonomic } from '../../core/autonomic/useAutonomic';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import React from 'react';
+import { render, screen } from '@testing-library/react';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { ThemeProvider } from 'styled-components';
-import { theme } from '../../styles/theme';
+import AutonomicDevelopment from '../AutonomicDevelopment';
 
-vi.mock('../../core/autonomic/useAutonomic');
-
-// Mock canvas context
-const mockContext = {
-  clearRect: vi.fn(),
-  fillRect: vi.fn(),
-  beginPath: vi.fn(),
-  arc: vi.fn(),
-  fill: vi.fn(),
-  moveTo: vi.fn(),
-  lineTo: vi.fn(),
-  stroke: vi.fn(),
+const theme = {
+  colors: {
+    primary: '#6366F1',
+    secondary: '#8B5CF6',
+    surface: '#1F2937',
+    background: '#111827',
+    text: '#F9FAFB',
+    textAlt: '#9CA3AF'
+  },
+  space: {
+    md: '1rem',
+    lg: '1.5rem'
+  },
+  borderRadius: {
+    medium: '0.5rem',
+    large: '1rem'
+  },
+  transitions: {
+    normal: '0.2s'
+  },
+  fontSizes: {
+    lg: '1.125rem',
+    xl: '1.25rem'
+  }
 };
 
-// Mock canvas element
-HTMLCanvasElement.prototype.getContext = vi.fn(() => mockContext);
-
-/**
- * @typedef {Object} Resonance
- * @property {number} frequency
- * @property {number} amplitude
- * @property {number} phase
- * @property {number[]} harmonics
- */
-
-/**
- * @typedef {Object} Protection
- * @property {number} shields
- * @property {number} recovery
- * @property {number} resilience
- * @property {number} adaptability
- */
-
-/**
- * @typedef {Object} FlowMetrics
- * @property {number} velocity
- * @property {number} momentum
- * @property {number} resistance
- * @property {number} conductivity
- */
-
-/**
- * @typedef {Object} NaturalFlow
- * @property {number} direction
- * @property {number} intensity
- * @property {number} stability
- * @property {number} sustainability
- */
-
-/**
- * @typedef {Object} Field
- * @property {string} id
- * @property {string} name
- * @property {number} strength
- * @property {Resonance} resonance
- * @property {Protection} protection
- * @property {FlowMetrics} flowMetrics
- * @property {NaturalFlow} naturalFlow
- */
-
 describe('AutonomicDevelopment', () => {
-  /** @type {Field} */
-  const mockField = {
-    id: '1',
-    name: 'Test Field',
-    strength: 0.8,
-    resonance: {
-      frequency: 1.0,
-      amplitude: 0.7,
-      phase: 0,
-      harmonics: [1.0, 2.0]
-    },
-    protection: {
-      shields: 0.9,
-      recovery: 0.8,
-      resilience: 0.7,
-      adaptability: 0.6
-    },
-    flowMetrics: {
-      velocity: 0.8,
-      momentum: 0.7,
-      resistance: 0.2,
-      conductivity: 0.9
-    },
-    naturalFlow: {
-      direction: 1,
-      intensity: 0.8,
-      stability: 0.7,
-      sustainability: 0.9
-    }
-  };
-
-  /** @type {Object} */
-  const mockConsciousness = {
-    currentState: 'FLOW',
-    fields: [mockField],
-    flowSpace: {
-      dimensions: 3,
-      capacity: 100,
-      utilization: 0.5,
-      stability: 0.8,
-      fields: [mockField],
-      boundaries: []
-    },
-    lastTransition: Date.now(),
-    metrics: {
-      focus: 0.8,
-      clarity: 0.7,
-      presence: 0.9
-    }
-  };
-
-  /** @type {Array<{metrics: FlowMetrics}>} */
   const mockFlowStates = [
-    {
-      metrics: {
-        velocity: 0.8,
-        momentum: 0.7,
-        resistance: 0.2,
-        conductivity: 0.9
-      }
-    }
+    { metrics: { velocity: 0.5, momentum: 0.6, resistance: 0.3, conductivity: 0.7 } },
+    { metrics: { velocity: 0.7, momentum: 0.8, resistance: 0.2, conductivity: 0.9 } },
+    { metrics: { velocity: 0.6, momentum: 0.7, resistance: 0.4, conductivity: 0.8 } }
   ];
 
   beforeEach(() => {
-    vi.mocked(useAutonomic).mockReturnValue({
-      consciousness: mockConsciousness,
-      flowStates: mockFlowStates
-    });
+    // Mock canvas context
+    const mockCtx = {
+      fillStyle: '',
+      strokeStyle: '',
+      lineWidth: 0,
+      beginPath: vi.fn(),
+      moveTo: vi.fn(),
+      lineTo: vi.fn(),
+      stroke: vi.fn(),
+      fillRect: vi.fn(),
+      arc: vi.fn(),
+      fill: vi.fn(),
+      clearRect: vi.fn()
+    };
+
+    // Mock canvas element
+    HTMLCanvasElement.prototype.getContext = vi.fn(() => mockCtx);
   });
 
-  it('renders without crashing', () => {
-    render(
+  const renderWithTheme = (ui) => {
+    return render(
       <ThemeProvider theme={theme}>
-        <AutonomicDevelopment flowStates={mockFlowStates} isActive={true} />
+        {ui}
       </ThemeProvider>
     );
-    expect(screen.getByText('Autonomic Development')).toBeInTheDocument();
-  });
+  };
 
-  it('displays correct metrics', () => {
-    render(
-      <ThemeProvider theme={theme}>
-        <AutonomicDevelopment flowStates={mockFlowStates} isActive={true} />
-      </ThemeProvider>
-    );
+  it('renders metrics grid with correct values', () => {
+    renderWithTheme(<AutonomicDevelopment flowStates={mockFlowStates} isActive={true} />);
+    
     expect(screen.getByText(/Velocity:/)).toBeInTheDocument();
     expect(screen.getByText(/Momentum:/)).toBeInTheDocument();
     expect(screen.getByText(/Resistance:/)).toBeInTheDocument();
     expect(screen.getByText(/Conductivity:/)).toBeInTheDocument();
+    
+    expect(screen.getByText(/60%/)).toBeInTheDocument(); // Average velocity
+    expect(screen.getByText(/70%/)).toBeInTheDocument(); // Average momentum
+    expect(screen.getByText(/30%/)).toBeInTheDocument(); // Average resistance
+    expect(screen.getByText(/80%/)).toBeInTheDocument(); // Average conductivity
+  });
+
+  it('displays active status when isActive is true', () => {
+    renderWithTheme(<AutonomicDevelopment flowStates={mockFlowStates} isActive={true} />);
+    expect(screen.getByText(/Active Flow States: 3/)).toBeInTheDocument();
+  });
+
+  it('displays inactive status when isActive is false', () => {
+    renderWithTheme(<AutonomicDevelopment flowStates={mockFlowStates} isActive={false} />);
+    expect(screen.getByText(/Active Flow States: 3/)).toBeInTheDocument();
+  });
+
+  it('initializes canvas with correct dimensions', () => {
+    const { container } = renderWithTheme(<AutonomicDevelopment flowStates={mockFlowStates} isActive={true} />);
+    const canvas = container.querySelector('canvas');
+    
+    expect(canvas).toBeInTheDocument();
+    expect(canvas.getAttribute('width')).toBe('800');
+    expect(canvas.getAttribute('height')).toBe('200');
   });
 }); 

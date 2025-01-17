@@ -84,12 +84,16 @@ const Title = styled.h2`
   color: ${({ theme }) => theme.colors.text};
 `;
 
-export const AutonomicDevelopment = ({ flowStates, isActive }) => {
+export const AutonomicDevelopment = ({ flowStates = [], isActive = false }) => {
   const canvasRef = useRef(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
+    // Set canvas dimensions
+    canvas.width = 800;
+    canvas.height = 200;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
@@ -192,4 +196,6 @@ export const AutonomicDevelopment = ({ flowStates, isActive }) => {
       </MetricsGrid>
     </ContainerComponent>
   );
-}; 
+};
+
+export default AutonomicDevelopment; 
