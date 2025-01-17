@@ -9,12 +9,21 @@ import torch
 import logging
 from dataclasses import dataclass
 import numpy as np
+import os
+from anthropic import Anthropic
 
 from .query_expansion import QueryExpander
 from ..core.caching import Cache
 from ..core.errors import RAGError
 
 logger = logging.getLogger(__name__)
+
+@dataclass
+class RAGResponse:
+    """Response from RAG system."""
+    answer: str
+    context: List[Dict[str, Any]]
+    expanded_query: Optional[str] = None
 
 class BaseRAG:
     """Base class for RAG systems."""
@@ -56,7 +65,7 @@ class BaseRAG:
             raise RAGError(f"Failed to encode texts: {str(e)}")
 
 class RAGSystem(BaseRAG):
-    """RAG system implementation."""
+    """RAG system implementation with Claude integration."""
     
     def __init__(self, model_name: str = "BAAI/bge-small-en"):
         """Initialize RAG system.
@@ -68,6 +77,14 @@ class RAGSystem(BaseRAG):
         self.documents: List[Dict[str, Any]] = []
         self.document_embeddings: Optional[torch.Tensor] = None
         self.query_expander = QueryExpander()
+        
+        # Initialize Claude client
+        api_key = os.getenv("ANTHROPIC_API_KEY")
+        if not api_key:
+            logger.warning("ANTHROPIC_API_KEY not set - Claude integration disabled")
+            self.anthropic = None
+        else:
+            self.anthropic = Anthropic(api_key=api_key)
         
     def add_documents(self, documents: List[Dict[str, Any]]) -> None:
         """Add documents to the RAG system.
@@ -137,4 +154,63 @@ class RAGSystem(BaseRAG):
             return results
             
         except Exception as e:
-            raise RAGError(f"Failed to search: {str(e)}") 
+            raise RAGError(f"Failed to search: {str(e)}")
+            
+    async def query(self, question: str, k: int = 3) -> RAGResponse:
+        """Query the RAG system using Claude.
+        
+        Args:
+            question: Question to answer
+            k: Number of documents to retrieve
+            
+        Returns:
+            RAGResponse with answer and context
+        """
+        try:
+            # Get relevant documents
+            results = await self.search(question, k=k)
+            
+            if not results:
+                return RAGResponse(
+                    answer="No relevant documents found to answer the question.",
+                    context=[],
+                    expanded_query=question
+                )
+                
+            if not self.anthropic:
+                return RAGResponse(
+                    answer="Claude integration is not available - ANTHROPIC_API_KEY not set.",
+                    context=results,
+                    expanded_query=results[0]["expanded_query"]
+                )
+                
+            # Prepare context from retrieved documents
+            context = "\n\n".join([
+                f"Document {i+1}:\n{doc['document']['text']}"
+                for i, doc in enumerate(results)
+            ])
+            
+            # Create system prompt
+            system_prompt = f"""You are a helpful AI assistant. Use the following context to answer the question.
+            If you cannot answer based on the context, say so.
+            
+            Context:
+            {context}
+            """
+            
+            # Query Claude
+            message = await self.anthropic.messages.create(
+                model="claude-3-sonnet-20240229",
+                max_tokens=1000,
+                system=system_prompt,
+                messages=[{"role": "user", "content": question}]
+            )
+            
+            return RAGResponse(
+                answer=message.content[0].text,
+                context=results,
+                expanded_query=results[0]["expanded_query"]
+            )
+            
+        except Exception as e:
+            raise RAGError(f"Failed to query RAG system: {str(e)}") 

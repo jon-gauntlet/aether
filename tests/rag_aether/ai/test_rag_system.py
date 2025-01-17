@@ -304,3 +304,86 @@ def test_llm_context_integration(rag_system, sample_messages, mock_openai):
     assert response["context"] is not None
     assert len(response["context"]) > 0
     assert response["metadata"]["num_context_messages"] <= 3 
+
+"""Tests for RAG system with Claude integration."""
+
+import pytest
+from unittest.mock import Mock, AsyncMock, patch
+import os
+from rag_aether.ai.rag_system import RAGSystem, RAGResponse, RAGError
+
+@pytest.fixture
+def mock_anthropic():
+    """Mock Anthropic client."""
+    mock = Mock()
+    mock.messages = AsyncMock()
+    mock.messages.create.return_value = Mock(
+        content=[Mock(text="Test response")]
+    )
+    return mock
+
+@pytest.fixture
+async def rag_system(mock_anthropic):
+    """Create RAG system with mocked Anthropic client."""
+    with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test_key"}):
+        with patch("anthropic.Anthropic", return_value=mock_anthropic):
+            system = RAGSystem()
+            # Add test documents
+            await system.add_documents([
+                {"text": "Document 1 about testing", "metadata": {"id": "1"}},
+                {"text": "Document 2 about mocking", "metadata": {"id": "2"}}
+            ])
+            return system
+
+@pytest.mark.asyncio
+async def test_query_no_documents():
+    """Test querying with no documents."""
+    system = RAGSystem()
+    response = await system.query("test query")
+    assert "No relevant documents found" in response.answer
+    assert not response.context
+
+@pytest.mark.asyncio
+async def test_query_no_api_key():
+    """Test querying without Anthropic API key."""
+    with patch.dict(os.environ, {"ANTHROPIC_API_KEY": ""}):
+        system = RAGSystem()
+        await system.add_documents([{"text": "test doc", "metadata": {}}])
+        response = await system.query("test query")
+        assert "Claude integration is not available" in response.answer
+        assert response.context
+
+@pytest.mark.asyncio
+async def test_successful_query(rag_system, mock_anthropic):
+    """Test successful query with Claude."""
+    response = await rag_system.query("What is testing?")
+    
+    assert isinstance(response, RAGResponse)
+    assert response.answer == "Test response"
+    assert len(response.context) > 0
+    assert response.expanded_query
+    
+    # Verify Claude was called correctly
+    mock_anthropic.messages.create.assert_called_once()
+    call_args = mock_anthropic.messages.create.call_args[1]
+    assert call_args["model"] == "claude-3-sonnet-20240229"
+    assert "Context" in call_args["system"]
+    assert "Document 1" in call_args["system"]
+    assert call_args["messages"][0]["content"] == "What is testing?"
+
+@pytest.mark.asyncio
+async def test_query_error_handling(rag_system, mock_anthropic):
+    """Test error handling in query."""
+    mock_anthropic.messages.create.side_effect = Exception("API error")
+    
+    with pytest.raises(RAGError) as exc_info:
+        await rag_system.query("test query")
+    
+    assert "Failed to query RAG system" in str(exc_info.value)
+
+@pytest.mark.asyncio
+async def test_query_with_expanded_query(rag_system):
+    """Test query with query expansion."""
+    response = await rag_system.query("test query")
+    assert response.expanded_query
+    assert response.expanded_query != "test query" 
