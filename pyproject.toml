@@ -3,10 +3,13 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
-name = "aether-infrastructure"
+name = "rag-aether"
 version = "0.1.0"
-description = "Infrastructure for Aether project"
+description = "RAG system for Aether project"
 authors = ["Your Name <your.email@example.com>"]
+packages = [
+    { include = "rag_aether" }
+]
 
 [tool.poetry.dependencies]
 python = "^3.12"
@@ -21,6 +24,8 @@ uvicorn = "^0.27.1"
 pydantic = "^2.6.3"
 python-dotenv = "^1.0.1"
 httpx = "^0.27.0"
+aioredis = "^2.0.1"
+python-multipart = "^0.0.9"
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.3.0"
