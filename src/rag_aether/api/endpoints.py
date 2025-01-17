@@ -7,8 +7,8 @@ from pydantic import BaseModel
 from ..ai.rag_system import RAGSystem
 from ..core.monitor import SystemMonitor
 
-app = FastAPI()
-rag = RAGSystem(use_mock=False)  # Using real model for production
+app = FastAPI(title="RAG Aether API")
+rag_system = RAGSystem()
 monitor = SystemMonitor()
 
 class QueryRequest(BaseModel):
@@ -19,11 +19,17 @@ class IndexRequest(BaseModel):
     """Document indexing request model."""
     documents: List[str]
 
+class Query(BaseModel):
+    text: str
+
 @app.post("/query")
-async def query(request: QueryRequest) -> Dict[str, Any]:
-    """Process a query through the RAG system."""
+async def process_query(query: Query) -> Dict[str, Any]:
+    """
+    Process a query through the RAG system
+    """
     try:
-        return await rag.process_query(request.query)
+        result = rag_system.process_query(query.text)
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -31,7 +37,7 @@ async def query(request: QueryRequest) -> Dict[str, Any]:
 async def index(request: IndexRequest) -> Dict[str, Any]:
     """Index documents for retrieval."""
     try:
-        await rag.index_documents(request.documents)
+        await rag_system.index_documents(request.documents)
         return {
             "status": "success",
             "indexed_count": len(request.documents)

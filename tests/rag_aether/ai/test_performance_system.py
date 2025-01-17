@@ -1,247 +1,138 @@
 """Tests for RAG performance optimization system."""
 import pytest
-import asyncio
-import time
-from unittest.mock import Mock, patch
 import numpy as np
-
+from unittest.mock import patch, MagicMock
+import time
+import threading
 from rag_aether.ai.performance_system import (
     PerformanceMonitor,
+    with_performance_monitoring,
+    performance_section
+)
+from rag_aether.ai.performance_optimizer import (
     PerformanceOptimizer,
     PerformanceMetrics,
-    ResourceUsage,
-    with_performance_monitoring
+    ResourceUsage
 )
 
-@pytest.fixture
-def performance_monitor():
-    """Fixture for performance monitor."""
-    return PerformanceMonitor(
-        window_size=10,
-        log_interval=1.0,
-        enable_gpu=False
-    )
+def test_performance_monitoring():
+    monitor = PerformanceMonitor()
+    
+    # Record some operations
+    monitor.record_operation("test_op", 0.1)
+    monitor.record_operation("test_op", 0.2)
+    
+    # Get metrics
+    metrics = monitor.get_metrics()
+    
+    assert "operations" in metrics
+    assert "test_op" in metrics["operations"]
+    assert metrics["operations"]["test_op"]["count"] == 2
+    assert metrics["operations"]["test_op"]["avg_time"] > 0
 
-@pytest.fixture
-def performance_optimizer(performance_monitor):
-    """Fixture for performance optimizer."""
-    return PerformanceOptimizer(
-        monitor=performance_monitor,
-        target_latency=0.1,
-        target_memory=70.0,
-        optimization_interval=1.0
-    )
-
-def test_performance_context(performance_monitor):
-    """Test performance measurement context."""
-    with performance_monitor.measure("test_op") as perf:
-        # Simulate work
+def test_performance_decorator():
+    monitor = PerformanceMonitor()
+    
+    @with_performance_monitoring
+    def test_func():
         time.sleep(0.1)
-        perf.set_batch_size(5)
-        perf.add_metadata(test_key="test_value")
+        return "test"
         
-    # Check recorded metrics
-    metrics = performance_monitor.get_metrics("test_op")
-    assert len(metrics) == 1
+    result = test_func()
+    assert result == "test"
     
-    metric = metrics[0]
-    assert metric.operation == "test_op"
-    assert metric.batch_size == 5
-    assert metric.latency >= 0.1
-    assert metric.metadata["test_key"] == "test_value"
+    metrics = monitor.get_metrics()
+    assert "test_func" in metrics["operations"]
+    assert metrics["operations"]["test_func"]["count"] == 1
 
-def test_resource_monitoring(performance_monitor):
-    """Test system resource monitoring."""
-    usage = performance_monitor.get_resource_usage()
+def test_performance_context():
+    monitor = PerformanceMonitor()
     
-    assert 0 <= usage.cpu_percent <= 100
-    assert 0 <= usage.memory_percent <= 100
-    assert isinstance(usage.disk_io, dict)
-    assert isinstance(usage.network_io, dict)
-
-def test_metrics_statistics(performance_monitor):
-    """Test metrics statistical calculations."""
-    # Add sample metrics
-    for i in range(5):
-        metrics = PerformanceMetrics(
-            latency=0.1 * (i + 1),
-            throughput=10.0 / (i + 1),
-            memory_usage=50.0 + i,
-            cpu_usage=30.0 + i,
-            gpu_usage=None,
-            batch_size=1,
-            timestamp="2024-01-15T10:00:00",
-            operation="test_op",
-            metadata={}
-        )
-        performance_monitor.record_metrics(metrics, "test_op")
+    with performance_section("test_section"):
+        time.sleep(0.1)
         
-    # Get statistics
-    stats = performance_monitor.get_statistics("test_op")
-    
-    # Check statistics structure
-    for field in ["latency", "throughput", "memory_usage", "cpu_usage"]:
-        assert field in stats
-        field_stats = stats[field]
-        assert "mean" in field_stats
-        assert "std" in field_stats
-        assert "min" in field_stats
-        assert "max" in field_stats
-        assert "p95" in field_stats
-        
-    # Verify some specific values
-    assert 0.1 <= stats["latency"]["mean"] <= 0.5
-    assert stats["memory_usage"]["min"] >= 50.0
-    assert stats["cpu_usage"]["max"] <= 35.0
+    metrics = monitor.get_metrics()
+    assert "test_section" in metrics["operations"]
+    assert metrics["operations"]["test_section"]["count"] == 1
 
-@pytest.mark.asyncio
-async def test_performance_optimization(performance_optimizer):
-    """Test performance optimization process."""
-    # Add metrics indicating high latency
+def test_concurrent_monitoring():
+    monitor = PerformanceMonitor()
+    results = []
+    
+    def worker():
+        with performance_section("worker_op"):
+            time.sleep(0.1)
+            results.append("done")
+            
+    threads = [threading.Thread(target=worker) for _ in range(3)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+        
+    metrics = monitor.get_metrics()
+    assert "worker_op" in metrics["operations"]
+    assert metrics["operations"]["worker_op"]["count"] == 3
+    assert len(results) == 3
+
+def test_performance_error_handling():
+    monitor = PerformanceMonitor()
+    
+    @with_performance_monitoring
+    def error_func():
+        time.sleep(0.1)
+        raise ValueError("Test error")
+        
+    with pytest.raises(ValueError):
+        error_func()
+        
+    metrics = monitor.get_metrics()
+    assert "error_func" in metrics["operations"]
+    assert metrics["operations"]["error_func"]["count"] == 1
+
+def test_optimizer_initialization():
+    optimizer = PerformanceOptimizer()
+    assert optimizer.min_batch_size == 32
+    assert optimizer.max_batch_size == 256
+    assert optimizer.target_latency_ms == 100.0
+    assert optimizer.min_success_rate == 0.95
+
+def test_embedding_optimization():
+    optimizer = PerformanceOptimizer()
+    embeddings = np.random.rand(10, 768)
+    
+    optimized = optimizer.optimize_embeddings(embeddings)
+    assert optimized.dtype == np.float16
+    assert optimized.shape == embeddings.shape
+
+def test_query_optimization():
+    optimizer = PerformanceOptimizer()
+    query = "  TEST Query  "
+    
+    optimized, metadata = optimizer.optimize_query(query)
+    assert optimized == "test query"
+    assert metadata["original_length"] == len(query)
+    assert metadata["optimized_length"] == len(optimized)
+
+def test_metrics_update():
+    optimizer = PerformanceOptimizer()
     metrics = PerformanceMetrics(
-        latency=1.0,  # High latency
-        throughput=1.0,
-        memory_usage=90.0,  # High memory usage
-        cpu_usage=50.0,
-        gpu_usage=None,
-        batch_size=10,
-        timestamp="2024-01-15T10:00:00",
-        operation="test_op",
-        metadata={}
+        operation_name="test",
+        duration_ms=50.0,
+        memory_mb=100.0,
+        success=True
     )
-    performance_optimizer.monitor.record_metrics(metrics, "test_op")
     
-    # Run optimization
-    await performance_optimizer.optimize("test_op")
-    
-    # Check optimization results
-    assert performance_optimizer.get_batch_size("test_op") < 10  # Should reduce batch size
-    assert performance_optimizer.get_cache_size("test_op") < 1000  # Should reduce cache size
+    optimizer.update_metrics(metrics)
+    assert len(optimizer.metrics) == 1
+    assert optimizer.get_batch_size() == optimizer.min_batch_size
 
-@pytest.mark.asyncio
-async def test_optimization_thresholds(performance_optimizer):
-    """Test optimization threshold behavior."""
-    # Add metrics within acceptable thresholds
-    metrics = PerformanceMetrics(
-        latency=0.05,  # Below target
-        throughput=20.0,
-        memory_usage=60.0,  # Below target
-        cpu_usage=30.0,
-        gpu_usage=None,
-        batch_size=1,
-        timestamp="2024-01-15T10:00:00",
-        operation="test_op",
-        metadata={}
-    )
-    performance_optimizer.monitor.record_metrics(metrics, "test_op")
-    
-    # Initial values
-    initial_batch_size = performance_optimizer.get_batch_size("test_op")
-    initial_cache_size = performance_optimizer.get_cache_size("test_op")
-    
-    # Run optimization
-    await performance_optimizer.optimize("test_op")
-    
-    # Check that values increased or stayed same
-    assert performance_optimizer.get_batch_size("test_op") >= initial_batch_size
-    assert performance_optimizer.get_cache_size("test_op") >= initial_cache_size
-
-@pytest.mark.asyncio
-async def test_optimization_interval(performance_optimizer):
-    """Test optimization interval enforcement."""
-    # First optimization
-    await performance_optimizer.optimize("test_op")
-    first_time = performance_optimizer.last_optimization
-    
-    # Immediate second attempt
-    await performance_optimizer.optimize("test_op")
-    second_time = performance_optimizer.last_optimization
-    
-    # Should not have optimized again
-    assert first_time == second_time
-
-class TestClass:
-    """Test class for performance monitoring decorator."""
-    
-    def __init__(self):
-        self.performance_monitor = PerformanceMonitor(
-            window_size=10,
-            log_interval=1.0,
-            enable_gpu=False
-        )
-        
-    @with_performance_monitoring("test_operation")
-    async def test_method(self, arg1, arg2, kwarg1=None):
-        """Test method with performance monitoring."""
-        await asyncio.sleep(0.1)
-        return arg1 + arg2
-
-@pytest.mark.asyncio
-async def test_performance_decorator():
-    """Test performance monitoring decorator."""
-    test_obj = TestClass()
-    
-    # Call monitored method
-    result = await test_obj.test_method(1, 2, kwarg1="test")
-    assert result == 3
-    
-    # Check recorded metrics
-    metrics = test_obj.performance_monitor.get_metrics("test_operation")
-    assert len(metrics) == 1
-    
-    metric = metrics[0]
-    assert metric.operation == "test_operation"
-    assert metric.latency >= 0.1
-    assert metric.metadata["function"] == "test_method"
-    assert metric.metadata["args_length"] == 2
-    assert "kwarg1" in metric.metadata["kwargs_keys"]
-
-def test_gpu_monitoring():
-    """Test GPU monitoring initialization."""
-    with patch("torch.cuda.is_available", return_value=True):
-        with patch("pynvml.nvmlInit"), \
-             patch("pynvml.nvmlDeviceGetHandleByIndex"), \
-             patch("pynvml.nvmlDeviceGetUtilizationRates") as mock_gpu:
-            
-            # Mock GPU utilization
-            mock_gpu.return_value = Mock(gpu=50)
-            
-            monitor = PerformanceMonitor(enable_gpu=True)
-            usage = monitor.get_resource_usage()
-            
-            assert usage.gpu_percent == 50
-
-def test_metrics_window(performance_monitor):
-    """Test metrics window behavior."""
-    # Add more metrics than window size
-    window_size = performance_monitor.window_size
-    
-    for i in range(window_size + 5):
-        metrics = PerformanceMetrics(
-            latency=0.1,
-            throughput=10.0,
-            memory_usage=50.0,
-            cpu_usage=30.0,
-            gpu_usage=None,
-            batch_size=1,
-            timestamp="2024-01-15T10:00:00",
-            operation="test_op",
-            metadata={}
-        )
-        performance_monitor.record_metrics(metrics, "test_op")
-        
-    # Check window size enforcement
-    metrics = performance_monitor.get_metrics("test_op")
-    assert len(metrics) == window_size
-
-def test_error_handling(performance_monitor):
-    """Test error handling in performance context."""
-    try:
-        with performance_monitor.measure("test_op"):
-            raise ValueError("Test error")
-    except ValueError:
-        pass
-        
-    # Should not have recorded metrics for failed operation
-    metrics = performance_monitor.get_metrics("test_op")
-    assert len(metrics) == 0 
+def test_resource_usage():
+    usage = ResourceUsage.capture()
+    assert usage.cpu_percent >= 0
+    assert usage.memory_mb > 0
+    assert usage.disk_io_read >= 0
+    assert usage.disk_io_write >= 0
+    assert usage.network_io_sent >= 0
+    assert usage.network_io_recv >= 0
+    assert usage.timestamp > 0 

@@ -1,226 +1,146 @@
 """Hybrid search module combining semantic and lexical search."""
 
-from typing import List, Dict, Any, Optional, Tuple
-from sentence_transformers import SentenceTransformer
-from rank_bm25 import BM25Okapi
+from typing import List, Dict, Any, Optional
 import numpy as np
+from sentence_transformers import SentenceTransformer
+import torch
 import logging
-from dataclasses import dataclass
-import faiss
-from transformers import AutoTokenizer
-from ..data.document import Document
-
-from rag_aether.core.errors import SearchError
-from rag_aether.core.performance import with_performance_monitoring, performance_section
+from ..core.errors import SearchError
 
 logger = logging.getLogger(__name__)
 
-@dataclass
-class SearchResult:
-    """A search result with metadata."""
-    text: str
-    score: float
-    metadata: Optional[Dict[str, Any]] = None
-
 class HybridRetriever:
-    """Hybrid search system combining dense and sparse retrieval."""
-
-    def __init__(
-        self,
-        model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
-        dense_weight: float = 0.7,
-        use_gpu: bool = False
-    ):
-        if not 0 <= dense_weight <= 1:
-            raise ValueError("dense_weight must be between 0 and 1")
-            
-        self.model = SentenceTransformer(model_name)
-        self.dense_weight = dense_weight
-        self.sparse_weight = 1 - dense_weight
-        
-        # Initialize indices
-        self.index = faiss.IndexFlatL2(self.model.get_sentence_embedding_dimension())
-        self.documents: List[Document] = []
-        self.doc_embeddings = None
-        
-        # BM25 for sparse search
-        self.tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
-        self.bm25 = None
-        self.tokenized_docs = []
-
-    @with_performance_monitoring
-    def index_documents(self, documents: List[Document]) -> None:
-        """Index a list of documents.
+    def __init__(self, 
+                 model_name: str = "BAAI/bge-small-en",
+                 sparse_weight: float = 0.5,
+                 use_gpu: bool = True):
+        """Initialize hybrid retriever.
         
         Args:
-            documents: List of Document objects to index
+            model_name: Name of the embedding model
+            sparse_weight: Weight for sparse retrieval (0-1)
+            use_gpu: Whether to use GPU for embeddings
         """
-        if not documents:
-            return
+        if not 0 <= sparse_weight <= 1:
+            raise ValueError("sparse_weight must be between 0 and 1")
             
-        # Extract text and tokenize
-        texts = [doc.text for doc in documents]
-        tokenized = [self.tokenizer.tokenize(text) for text in texts]
+        self.sparse_weight = sparse_weight
+        self.dense_weight = 1 - sparse_weight
         
-        # Update BM25
-        self.tokenized_docs.extend(tokenized)
-        self.bm25 = BM25Okapi(self.tokenized_docs)
+        # Initialize embedding model
+        try:
+            device = "cuda" if use_gpu and torch.cuda.is_available() else "cpu"
+            self.encoder = SentenceTransformer(model_name).to(device)
+        except RuntimeError as e:
+            if "out of memory" in str(e):
+                logger.warning(f"CUDA out of memory, falling back to CPU for {model_name}")
+                self.encoder = SentenceTransformer(model_name).to("cpu")
+            else:
+                raise SearchError(f"Failed to initialize encoder: {str(e)}")
+                
+        self.documents = []
+        self.document_embeddings = []
         
-        # Get dense embeddings
-        embeddings = self.model.encode(texts)
+    def add_documents(self, documents: List[Dict[str, Any]]):
+        """Add documents to the retriever.
         
-        if self.doc_embeddings is None:
-            self.doc_embeddings = embeddings
-        else:
-            self.doc_embeddings = np.vstack([self.doc_embeddings, embeddings])
+        Args:
+            documents: List of documents to add
+        """
+        try:
+            if not documents:
+                return
+                
+            # Extract text content
+            texts = [doc.get("content", "") for doc in documents]
             
-        # Add to FAISS index
-        self.index.add(embeddings)
-        self.documents.extend(documents)
-
-    @with_performance_monitoring
-    def search(
-        self,
-        query: str,
-        k: int = 5,
-        min_score: float = 0.5
-    ) -> List[Tuple[Document, float]]:
-        """Search for documents matching the query.
+            # Generate embeddings
+            embeddings = self.encoder.encode(
+                texts,
+                convert_to_tensor=True,
+                show_progress_bar=False
+            )
+            
+            self.documents.extend(documents)
+            self.document_embeddings.extend(embeddings)
+            
+        except Exception as e:
+            raise SearchError(f"Failed to add documents: {str(e)}")
+            
+    def search(self, query: str, k: int = 3) -> List[Dict[str, Any]]:
+        """Search for relevant documents.
         
         Args:
             query: Search query
             k: Number of results to return
-            min_score: Minimum score threshold
             
         Returns:
-            List of (document, score) tuples
+            List of relevant documents with scores
         """
-        if not self.documents:
-            raise SearchError("No documents have been indexed")
-            
-        if k < 1:
-            raise ValueError("k must be >= 1")
-            
-        # Get dense scores
-        query_embedding = self.model.encode([query])[0]
-        dense_scores, dense_indices = self.index.search(
-            query_embedding.reshape(1, -1),
-            k
-        )
-        dense_scores = dense_scores[0]
-        dense_indices = dense_indices[0]
-        
-        # Get sparse scores
-        query_tokens = self.tokenizer.tokenize(query)
-        sparse_scores = self.bm25.get_scores(query_tokens)
-        
-        # Normalize scores
-        dense_scores = self._normalize_scores(dense_scores)
-        sparse_scores = self._normalize_scores(sparse_scores)
-        
-        # Combine scores
-        final_scores = {}
-        for idx, (dense_score, sparse_score) in enumerate(zip(dense_scores, sparse_scores)):
-            score = (self.dense_weight * dense_score +
-                    self.sparse_weight * sparse_score)
-            if score >= min_score:
-                final_scores[idx] = score
-                
-        # Sort and return top k
-        sorted_indices = sorted(final_scores.items(),
-                              key=lambda x: x[1],
-                              reverse=True)[:k]
-                              
-        results = []
-        for idx, score in sorted_indices:
-            results.append((self.documents[idx], score))
-            
-        return results
-
-    def _normalize_scores(self, scores: np.ndarray) -> np.ndarray:
-        """Normalize scores to [0,1] range."""
-        if len(scores) == 0:
-            return scores
-        min_score = np.min(scores)
-        max_score = np.max(scores)
-        if max_score == min_score:
-            return np.ones_like(scores)
-        return (scores - min_score) / (max_score - min_score)
-
-class HybridSearcher:
-    """Hybrid search combining dense and sparse retrieval."""
-    def __init__(self, model_name: str = "sentence-transformers/all-mpnet-base-v2"):
-        self.model = SentenceTransformer(model_name)
-        self.bm25: Optional[BM25Okapi] = None
-        self.documents: List[str] = []
-        self.dense_embeddings: Optional[np.ndarray] = None
-
-    @with_performance_monitoring
-    def index_documents(self, documents: List[str]) -> None:
-        """Index documents for both dense and sparse retrieval."""
         try:
-            with performance_section("document_indexing"):
-                # BM25 indexing
-                tokenized_docs = [doc.lower().split() for doc in documents]
-                self.bm25 = BM25Okapi(tokenized_docs)
+            if not self.documents:
+                return []
                 
-                # Dense embedding indexing
-                self.dense_embeddings = self.model.encode(
-                    documents,
-                    convert_to_tensor=True,
-                    show_progress_bar=False
-                ).cpu().numpy()
+            # Generate query embedding
+            query_embedding = self.encoder.encode(
+                query,
+                convert_to_tensor=True,
+                show_progress_bar=False
+            )
+            
+            # Dense search
+            dense_scores = torch.nn.functional.cosine_similarity(
+                query_embedding.unsqueeze(0),
+                torch.stack(self.document_embeddings),
+                dim=1
+            )
+            
+            # Sparse search (TF-IDF like)
+            sparse_scores = self._sparse_search(query)
+            
+            # Combine scores
+            combined_scores = (
+                self.dense_weight * dense_scores +
+                self.sparse_weight * torch.tensor(sparse_scores)
+            )
+            
+            # Get top k results
+            top_k = torch.topk(combined_scores, min(k, len(combined_scores)))
+            
+            results = []
+            for score, idx in zip(top_k.values, top_k.indices):
+                doc = self.documents[idx]
+                results.append({
+                    "document": doc,
+                    "score": score.item()
+                })
                 
-                self.documents = documents
-                
-                logger.info(f"Indexed {len(documents)} documents")
+            return results
+            
         except Exception as e:
-            logger.error(f"Error indexing documents: {e}")
-            raise SearchError(f"Failed to index documents: {e}")
-
-    @with_performance_monitoring
-    def search(self, query: str, k: int = 5, alpha: float = 0.5) -> List[SearchResult]:
-        """Perform hybrid search combining dense and sparse scores."""
-        try:
-            with performance_section("hybrid_search"):
-                if not self.bm25 or self.dense_embeddings is None:
-                    raise SearchError("No documents indexed")
-                
-                # BM25 scoring
-                tokenized_query = query.lower().split()
-                sparse_scores = np.array(self.bm25.get_scores(tokenized_query))
-                
-                # Dense scoring
-                query_embedding = self.model.encode(
-                    query,
-                    convert_to_tensor=True,
-                    show_progress_bar=False
-                ).cpu().numpy()
-                
-                dense_scores = np.dot(self.dense_embeddings, query_embedding)
-                
-                # Normalize scores
-                sparse_scores = (sparse_scores - sparse_scores.min()) / (sparse_scores.max() - sparse_scores.min() + 1e-6)
-                dense_scores = (dense_scores - dense_scores.min()) / (dense_scores.max() - dense_scores.min() + 1e-6)
-                
-                # Combine scores
-                hybrid_scores = alpha * sparse_scores + (1 - alpha) * dense_scores
-                
-                # Get top k results
-                top_k_indices = np.argsort(hybrid_scores)[-k:][::-1]
-                
-                results = []
-                for idx in top_k_indices:
-                    results.append(SearchResult(
-                        text=self.documents[idx],
-                        score=float(hybrid_scores[idx]),
-                        metadata={
-                            "sparse_score": float(sparse_scores[idx]),
-                            "dense_score": float(dense_scores[idx])
-                        }
-                    ))
-                
-                return results
-        except Exception as e:
-            logger.error(f"Error performing hybrid search: {e}")
-            raise SearchError(f"Failed to perform search: {e}") 
+            raise SearchError(f"Failed to search: {str(e)}")
+            
+    def _sparse_search(self, query: str) -> np.ndarray:
+        """Perform sparse search using simple term matching.
+        
+        Args:
+            query: Search query
+            
+        Returns:
+            Array of sparse scores
+        """
+        query_terms = set(query.lower().split())
+        scores = []
+        
+        for doc in self.documents:
+            content = doc.get("content", "").lower()
+            doc_terms = set(content.split())
+            
+            # Simple term overlap score
+            overlap = len(query_terms & doc_terms)
+            max_terms = max(len(query_terms), len(doc_terms))
+            score = overlap / max_terms if max_terms > 0 else 0
+            
+            scores.append(score)
+            
+        return np.array(scores) 

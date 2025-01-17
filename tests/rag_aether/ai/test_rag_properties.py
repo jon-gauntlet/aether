@@ -5,7 +5,8 @@ from hypothesis import given, settings, strategies as st
 from hypothesis.stateful import Bundle, RuleBasedStateMachine, rule, invariant
 import numpy as np
 from datetime import datetime, timedelta
-from rag_aether.ai.rag_system import RAGSystem
+from rag_aether.ai.rag_system import BaseRAG, RAGSystem
+import torch
 
 from tests.rag_aether.test_utils import (
     MockEmbeddingModel,
@@ -270,3 +271,61 @@ def test_thread_context_properties(messages, thread_id):
 # Run the state machine
 TestRAGStateMachine.TestCase.settings = settings(max_examples=100)
 test_rag_state = TestRAGStateMachine.TestCase 
+
+@pytest.fixture
+def base_rag():
+    return BaseRAG()
+    
+@pytest.fixture
+def rag_system():
+    return RAGSystem()
+    
+@pytest.fixture
+def sample_documents():
+    return [
+        {"text": "This is a test document about AI", "id": 1},
+        {"text": "Another document about machine learning", "id": 2},
+        {"text": "Document about natural language processing", "id": 3}
+    ]
+
+def test_base_rag_initialization(base_rag):
+    assert isinstance(base_rag, BaseRAG)
+    assert base_rag.model_name == "BAAI/bge-small-en"
+    assert isinstance(base_rag.device, torch.device)
+    assert base_rag.model is not None
+    
+def test_rag_system_initialization(rag_system):
+    assert isinstance(rag_system, RAGSystem)
+    assert isinstance(rag_system, BaseRAG)
+    assert rag_system.documents == []
+    assert rag_system.document_embeddings is None
+    assert rag_system.query_expander is not None
+    
+def test_add_documents(rag_system, sample_documents):
+    rag_system.add_documents(sample_documents)
+    assert len(rag_system.documents) == 3
+    assert rag_system.document_embeddings is not None
+    assert rag_system.document_embeddings.shape[0] == 3
+    
+@pytest.mark.asyncio
+async def test_search_empty_system(rag_system):
+    results = await rag_system.search("test query")
+    assert results == []
+    
+@pytest.mark.asyncio
+async def test_search_with_documents(rag_system, sample_documents):
+    rag_system.add_documents(sample_documents)
+    results = await rag_system.search("AI and machine learning", k=2)
+    
+    assert len(results) == 2
+    assert all(isinstance(r["score"], float) for r in results)
+    assert all(0 <= r["score"] <= 1 for r in results)
+    assert all("expanded_query" in r for r in results)
+    
+def test_encode_texts(base_rag):
+    texts = ["Test text one", "Test text two"]
+    embeddings = base_rag.encode(texts)
+    
+    assert isinstance(embeddings, torch.Tensor)
+    assert embeddings.shape[0] == 2
+    assert embeddings.device == base_rag.device 

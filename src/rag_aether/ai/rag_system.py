@@ -1,86 +1,132 @@
 """RAG system implementation."""
 
-from typing import Dict, Any, List, Optional
+from typing import List, Dict, Any, Optional
+import numpy as np
+from sentence_transformers import SentenceTransformer, util
+from .cache_manager import CacheManager
+from .vector_search import OptimizedVectorSearch
+import torch
 import logging
 from .query_expansion import QueryExpander
 from ..core.errors import RAGError
 
 logger = logging.getLogger(__name__)
 
-class RAGSystem:
-    """RAG system with query expansion and retrieval."""
+class BaseRAG:
+    """Base class for RAG systems."""
     
-    def __init__(self, use_mock: bool = True):
+    def __init__(self, model_name: str = "BAAI/bge-small-en"):
+        """Initialize base RAG system.
+        
+        Args:
+            model_name: Name of the embedding model to use
+        """
+        self.model_name = model_name
+        try:
+            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            self.model = SentenceTransformer(model_name).to(self.device)
+        except RuntimeError as e:
+            if "out of memory" in str(e):
+                logger.warning(f"CUDA out of memory, falling back to CPU for {model_name}")
+                self.device = torch.device("cpu") 
+                self.model = SentenceTransformer(model_name).to(self.device)
+            else:
+                raise RAGError(f"Failed to initialize RAG system: {str(e)}")
+                
+    def encode(self, texts: List[str]) -> torch.Tensor:
+        """Encode texts to embeddings.
+        
+        Args:
+            texts: List of texts to encode
+            
+        Returns:
+            Tensor of embeddings
+        """
+        try:
+            return self.model.encode(
+                texts,
+                convert_to_tensor=True,
+                device=self.device
+            )
+        except Exception as e:
+            raise RAGError(f"Failed to encode texts: {str(e)}")
+
+class RAGSystem(BaseRAG):
+    """RAG system implementation."""
+    
+    def __init__(self, model_name: str = "BAAI/bge-small-en"):
         """Initialize RAG system.
         
         Args:
-            use_mock: Whether to use mock components for testing
+            model_name: Name of the embedding model to use
+        """
+        super().__init__(model_name)
+        self.documents: List[Dict[str, Any]] = []
+        self.document_embeddings: Optional[torch.Tensor] = None
+        self.query_expander = QueryExpander()
+        
+    def add_documents(self, documents: List[Dict[str, Any]]) -> None:
+        """Add documents to the RAG system.
+        
+        Args:
+            documents: List of documents to add
         """
         try:
-            # Initialize components with mock awareness
-            self.use_mock = use_mock
-            self.query_expander = QueryExpander("t5-small" if not use_mock else "mock-model")
-            self.retriever = MockRetriever() if use_mock else None  # TODO: Implement real retriever
-            self.reranker = MockReranker() if use_mock else None   # TODO: Implement real reranker
+            self.documents.extend(documents)
+            texts = [doc["text"] for doc in documents]
+            embeddings = self.encode(texts)
             
-            logger.info(f"Initialized RAG system (mock={use_mock})")
+            if self.document_embeddings is None:
+                self.document_embeddings = embeddings
+            else:
+                self.document_embeddings = torch.cat([
+                    self.document_embeddings, 
+                    embeddings
+                ])
+                
         except Exception as e:
-            logger.error(f"Failed to initialize RAG system: {str(e)}")
-            raise RAGError(f"Failed to initialize RAG system: {str(e)}")
-    
-    async def process_query(self, query: str, context: Optional[Dict] = None) -> Dict[str, Any]:
-        """Process a query through the RAG pipeline."""
+            raise RAGError(f"Failed to add documents: {str(e)}")
+            
+    async def search(self, query: str, k: int = 3) -> List[Dict[str, Any]]:
+        """Search for relevant documents.
+        
+        Args:
+            query: Query to search for
+            k: Number of results to return
+            
+        Returns:
+            List of relevant documents with scores
+        """
         try:
+            if not self.documents:
+                return []
+                
             # Expand query
-            expanded = await self.query_expander.expand_query(query, context)
+            expanded = await self.query_expander.expand_query(query)
+            query_text = expanded["expanded_query"]
             
-            # For testing, return mock results
-            if self.use_mock:
-                return {
-                    "query": query,
-                    "results": [
-                        {"text": "Mock result 1", "score": 0.95},
-                        {"text": "Mock result 2", "score": 0.85},
-                        {"text": "Mock result 3", "score": 0.75}
-                    ],
-                    "metadata": {
-                        "expanded_queries": expanded["expanded_queries"],
-                        "retrieval_time": 0.1,
-                        "rerank_time": 0.05
-                    }
-                }
+            # Get embeddings
+            query_embedding = self.encode([query_text])
             
-            # TODO: Implement real retrieval and reranking
-            return {"error": "Real retrieval not implemented yet"}
+            # Calculate similarities
+            similarities = util.pytorch_cos_sim(
+                query_embedding, 
+                self.document_embeddings
+            )[0]
             
-        except Exception as e:
-            logger.error(f"Failed to process query: {str(e)}")
-            raise RAGError(f"Failed to process query: {str(e)}")
-    
-    async def process_batch(self, queries: List[str], context: Optional[Dict] = None) -> List[Dict[str, Any]]:
-        """Process multiple queries in parallel."""
-        try:
+            # Get top k
+            top_k = torch.topk(similarities, min(k, len(self.documents)))
+            
             results = []
-            for query in queries:
-                result = await self.process_query(query, context)
-                results.append(result)
+            for score, idx in zip(top_k.values, top_k.indices):
+                doc = self.documents[idx]
+                results.append({
+                    "document": doc,
+                    "score": float(score),
+                    "expanded_query": query_text
+                })
+                
             return results
+            
         except Exception as e:
-            logger.error(f"Failed to process query batch: {str(e)}")
-            raise RAGError(f"Failed to process query batch: {str(e)}")
-
-class MockRetriever:
-    """Mock retriever for testing."""
-    async def retrieve(self, query: str) -> List[Dict[str, Any]]:
-        return [
-            {"text": "Mock document 1", "score": 0.9},
-            {"text": "Mock document 2", "score": 0.8}
-        ]
-
-class MockReranker:
-    """Mock reranker for testing."""
-    async def rerank(self, query: str, documents: List[Dict]) -> List[Dict[str, Any]]:
-        return [
-            {"text": doc["text"], "score": doc["score"] * 0.95}
-            for doc in documents
-        ] 
+            raise RAGError(f"Failed to search: {str(e)}") 
