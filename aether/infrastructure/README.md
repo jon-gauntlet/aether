@@ -1,0 +1,1 @@
+# Infrastructure Domain (Claude 3)\n\nCore Features:\n- Container management\n- Redis configuration\n- Nginx setup\n- Health checks\n- Deployment scripts\n\nKey Files:\n- docker/: Container configurations\n- nginx/: Web server setup\n- scripts/: Deployment automation\n- config/: Environment configs
