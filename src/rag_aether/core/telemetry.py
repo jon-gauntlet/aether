@@ -1,16 +1,19 @@
 """Telemetry implementation for RAG system."""
-from typing import Dict, Any, List, Optional, Union, Set
+from typing import Dict, Any, List, Optional, Union, Set, Callable
 import time
 import asyncio
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from collections import defaultdict
 import numpy as np
+from functools import wraps
 from rag_aether.core.logging import get_logger
 from rag_aether.core.errors import TelemetryError
 from rag_aether.core.performance import with_performance_monitoring
+import functools
+import logging
 
-logger = get_logger("telemetry")
+logger = logging.getLogger(__name__)
 
 @dataclass
 class MetricPoint:
@@ -184,7 +187,12 @@ class TelemetryManager:
     ) -> None:
         """Record metric value."""
         if metric_name not in self.stores:
-            raise ValueError(f"Metric not found: {metric_name}")
+            # Auto-register metric if it doesn't exist
+            self.register_metric(
+                name=metric_name,
+                description=f"Auto-registered metric: {metric_name}",
+                unit="unknown"
+            )
             
         store = self.stores[metric_name]
         store.add_point(value, labels=labels)
@@ -257,4 +265,65 @@ class TelemetryManager:
                 await self._task
             except asyncio.CancelledError:
                 pass
-            self._task = None 
+            self._task = None
+
+def track_operation(operation: str, component: Optional[str] = None):
+    """Track operation metrics.
+    
+    Args:
+        operation: Name of the operation
+        component: Optional component name
+    """
+    def decorator(func: Callable) -> Callable:
+        @functools.wraps(func)
+        async def async_wrapper(*args, **kwargs) -> Any:
+            start_time = time.time()
+            success = True
+            error = None
+            
+            try:
+                result = await func(*args, **kwargs)
+                return result
+            except Exception as e:
+                success = False
+                error = str(e)
+                raise
+            finally:
+                duration = time.time() - start_time
+                logger.info(
+                    f"Operation: {operation}, "
+                    f"Component: {component or 'unknown'}, "
+                    f"Duration: {duration:.3f}s, "
+                    f"Success: {success}, "
+                    f"Error: {error or 'none'}"
+                )
+                
+        @functools.wraps(func)
+        def sync_wrapper(*args, **kwargs) -> Any:
+            start_time = time.time()
+            success = True
+            error = None
+            
+            try:
+                result = func(*args, **kwargs)
+                return result
+            except Exception as e:
+                success = False
+                error = str(e)
+                raise
+            finally:
+                duration = time.time() - start_time
+                logger.info(
+                    f"Operation: {operation}, "
+                    f"Component: {component or 'unknown'}, "
+                    f"Duration: {duration:.3f}s, "
+                    f"Success: {success}, "
+                    f"Error: {error or 'none'}"
+                )
+        
+        return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
+    
+    return decorator
+
+# Create global telemetry collector
+collector = TelemetryManager() 
