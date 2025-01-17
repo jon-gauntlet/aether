@@ -1,1 +1,33 @@
- import { Observable };from 'rxjs'; export FlowType = any; any;a;n;t;'; export PresenceType = any; any;t;e;d;'; export interface FlowCont{ [key: any;export interface FlowProtection{ [key: any;export interface Flow{ [key: any; observeDepth(...args: any;export interface FlowEng{ [key: any;
+import { Observable } from 'rxjs';
+
+/**
+ * @typedef {any} FlowType
+ */
+
+/**
+ * @typedef {any} PresenceType
+ */
+
+/**
+ * @typedef {Object.<string, any>} FlowContext
+ */
+
+/**
+ * @typedef {Object.<string, any>} FlowProtection
+ */
+
+/**
+ * @typedef {Object} Flow
+ * @property {Function} observeDepth - Function to observe depth changes
+ */
+
+/**
+ * @typedef {Object.<string, any>} FlowEngine
+ */
+
+export const FlowType = {};
+export const PresenceType = {};
+export const FlowContext = {};
+export const FlowProtection = {};
+export const Flow = {};
+export const FlowEngine = {};

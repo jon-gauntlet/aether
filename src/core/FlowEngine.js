@@ -1,84 +1,57 @@
-import { 
-  FlowState, 
-  FlowStats, 
-  EnergyMetrics, 
-  Pattern 
-} from './types/base';
+/**
+ * @typedef {Object} FlowState
+ * @property {number} depth - The current flow depth
+ * @property {boolean} active - Whether flow is active
+ * @property {boolean} protected - Whether flow is protected
+ */
 
-export class FlowEngine {
-  private state: FlowState;
-  private energy: EnergyMetrics;
-  private metrics: FlowStats;
-  private patterns: Pattern[] = [];
-
-  updateState(newState: FlowState): void {
-    if (this.state?.protection > 0) {
-      return; // Prevent state changes during protected flow
-    }
-    this.state = { ...newState };
-    this.recordPattern();
-  }
-
-  getState(): FlowState {
-    return { ...this.state };
-  }
-
-  getEnergy(): EnergyMetrics {
-    return { ...this.energy };
-  }
-
-  getMetrics(): FlowStats {
-    return { ...this.metrics };
-  }
-
-  updateEnergy(metrics: EnergyMetrics): void {
-    this.energy = { ...metrics };
-    this.adjustProtection();
-  }
-
-  updateMetrics(metrics: FlowStats): void {
-    this.metrics = { ...metrics };
-  }
-
-  private adjustProtection(): void {
-    if (this.energy.current < this.energy.max * 0.2) {
-      this.state.protection = 1;
-    } else {
-      this.state.protection = 0;
-    }
-  }
-
-  private recordPattern(): void {
-    const pattern: Pattern = {
-      id: `${Date.now()}`,
-      type: 'flow',
-      frequency: 1,
-      success: this.metrics.focus > 80 ? 1 : 0
+/**
+ * Manages flow state and transitions
+ */
+class FlowEngine {
+  constructor() {
+    this.state = {
+      depth: 0,
+      active: false,
+      protected: false
     };
-    this.patterns.push(pattern);
-    this.prunePatterns();
   }
 
-  private prunePatterns(): void {
-    // Keep only last 100 patterns
-    if (this.patterns.length > 100) {
-      this.patterns = this.patterns.slice(-100);
-    }
+  /**
+   * Check if currently in flow
+   * @returns {boolean} Whether in flow state
+   */
+  isInFlow() {
+    return this.state.active;
   }
 
-  getPatterns(): Pattern[] {
-    return [...this.patterns];
+  /**
+   * Enter flow state
+   * @param {number} depth - The flow depth to enter
+   * @param {boolean} isProtected - Whether to protect the flow
+   * @returns {Promise<void>}
+   */
+  async enterFlow(depth, isProtected) {
+    this.state = {
+      depth,
+      active: true,
+      protected: isProtected
+    };
   }
 
-  isInFlow(): boolean {
-    return this.metrics?.focus > 80;
-  }
-
-  async enterFlow(depth: number, isProtected: boolean): Promise<void> {
-    this.state.protection = isProtected ? 1 : 0;
-  }
-
-  async exitFlow(active: boolean, isProtected: boolean): Promise<void> {
-    this.state.protection = isProtected ? 1 : 0;
+  /**
+   * Exit flow state
+   * @param {boolean} active - Whether to remain partially active
+   * @param {boolean} isProtected - Whether to maintain protection
+   * @returns {Promise<void>}
+   */
+  async exitFlow(active, isProtected) {
+    this.state = {
+      depth: active ? this.state.depth / 2 : 0,
+      active,
+      protected: isProtected
+    };
   }
 }
+
+export { FlowEngine };

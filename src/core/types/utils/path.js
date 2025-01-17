@@ -1,1 +1,5 @@
-export interface Pat{ [key: any;
+/**
+ * @typedef {Object.<string, any>} Path
+ */
+
+export const Path = {};

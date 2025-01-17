@@ -1,1 +1,12 @@
- import { };from 'rxjs'; export interface FlowPattern{ [key: any;export interface NaturalFlow{ [key: any;
+import { Observable } from 'rxjs';
+
+/**
+ * @typedef {Object.<string, any>} FlowPattern
+ */
+
+/**
+ * @typedef {Object.<string, any>} NaturalFlow
+ */
+
+export const FlowPattern = {};
+export const NaturalFlow = {};

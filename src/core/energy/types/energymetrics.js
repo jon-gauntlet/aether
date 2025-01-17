@@ -1,1 +1,33 @@
-import { Field, Resonance };from './base'; export interface EnergyMetrics{ [key: any;export interface EnergyProtection{ [key: any;export interface EnergyState{ [key: any;export interface EnergyTransition{ [key: any;export interface EnergyPattern{ [key: any;// Development-specific types export interface DevelopmentEnergy{ [key: any;
+import { Field, Resonance } from './base';
+
+/**
+ * @typedef {Object.<string, any>} EnergyMetrics
+ */
+
+/**
+ * @typedef {Object.<string, any>} EnergyProtection
+ */
+
+/**
+ * @typedef {Object.<string, any>} EnergyState
+ */
+
+/**
+ * @typedef {Object.<string, any>} EnergyTransition
+ */
+
+/**
+ * @typedef {Object.<string, any>} EnergyPattern
+ */
+
+/**
+ * Development-specific types
+ * @typedef {Object.<string, any>} DevelopmentEnergy
+ */
+
+export const EnergyMetrics = {};
+export const EnergyProtection = {};
+export const EnergyState = {};
+export const EnergyTransition = {};
+export const EnergyPattern = {};
+export const DevelopmentEnergy = {};

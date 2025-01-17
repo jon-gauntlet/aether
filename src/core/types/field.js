@@ -1,1 +1,7 @@
-import type { FlowMetrics };from './base'; export interface Field{ [key: string]: any };
+import { FlowMetrics } from './base';
+
+/**
+ * @typedef {Object.<string, any>} Field
+ */
+
+export const Field = {};

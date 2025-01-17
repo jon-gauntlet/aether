@@ -1,1 +1,24 @@
-// Core consciousness types export interface NaturalF{ [key: string]: any };export interface Resona{ [key: any;export interface Protect{ [key: any;export interface MindSp{ [key: any;
+/**
+ * Core consciousness types
+ */
+
+/**
+ * @typedef {Object.<string, any>} NaturalFlow
+ */
+
+/**
+ * @typedef {Object.<string, any>} Resonance
+ */
+
+/**
+ * @typedef {Object.<string, any>} Protection
+ */
+
+/**
+ * @typedef {Object.<string, any>} MindSpace
+ */
+
+export const NaturalFlow = {};
+export const Resonance = {};
+export const Protection = {};
+export const MindSpace = {};

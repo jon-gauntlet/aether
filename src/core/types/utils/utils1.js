@@ -1,1 +1,10 @@
- export interface ValidationState{ [key: string]: any };export interface setState{ [key: string]: any } };
+/**
+ * @typedef {Object.<string, any>} ValidationState
+ */
+
+/**
+ * @typedef {Object.<string, any>} SetState
+ */
+
+export const ValidationState = {};
+export const SetState = {};

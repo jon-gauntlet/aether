@@ -1,1 +1,5 @@
- interface ValidationStat { [key: string]: any };export type { ValidationStat }; 
+/**
+ * @typedef {Object.<string, any>} ValidationStat
+ */
+
+export const ValidationStat = {}; 

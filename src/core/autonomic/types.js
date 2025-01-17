@@ -1,1 +1,5 @@
-export interface Pattern{ [key: string]: any };
+/**
+ * @typedef {Object.<string, any>} Pattern
+ */
+
+export const Pattern = {};

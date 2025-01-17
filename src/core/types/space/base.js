@@ -1,1 +1,44 @@
- export interface FlowMetr{ [key: string]: any };export interface W{ [key: any;export interface Resona{ [key: any;export interface Protect{ [key: any;export interface FlowSp{ [key: any;export interface EnergySt{ [key: any;export interface ConsciousnessSt{ [key: any;export interface SystemM{ [key: any;export let isProtected: any;.;8; export let isCoherent: any;.;7; export let isFlowing: any;.;6;
+/**
+ * @typedef {Object.<string, any>} FlowMetrics
+ */
+
+/**
+ * @typedef {Object.<string, any>} Workspace
+ */
+
+/**
+ * @typedef {Object.<string, any>} Resonance
+ */
+
+/**
+ * @typedef {Object.<string, any>} Protection
+ */
+
+/**
+ * @typedef {Object.<string, any>} FlowSpace
+ */
+
+/**
+ * @typedef {Object.<string, any>} EnergyState
+ */
+
+/**
+ * @typedef {Object.<string, any>} ConsciousnessState
+ */
+
+/**
+ * @typedef {Object.<string, any>} SystemMeta
+ */
+
+export const FlowMetrics = {};
+export const Workspace = {};
+export const Resonance = {};
+export const Protection = {};
+export const FlowSpace = {};
+export const EnergyState = {};
+export const ConsciousnessState = {};
+export const SystemMeta = {};
+
+export let isProtected = false;
+export let isCoherent = false;
+export let isFlowing = false;

@@ -1,37 +1,50 @@
-import { FlowState, ProtectionLevel } from '../primitives/base';
-import { FlowMetrics } from '../primitives/metrics';
-import type { Field } from '../field';
+/**
+ * @typedef {Object} FlowState
+ * @property {string} id - Flow ID
+ * @property {boolean} active - Whether flow is active
+ * @property {number} depth - Current flow depth
+ * @property {boolean} protected - Whether flow is protected
+ */
 
-export interface AdvancedFlowMetrics extends FlowMetrics {
-  field: Field;
-  resonance: number;
-  conductivity: number;
-  resistance: number;
-}
+/**
+ * @typedef {Object} FlowMetrics
+ * @property {number} duration - Flow duration in seconds
+ * @property {number} intensity - Flow intensity (0-1)
+ * @property {number} consistency - Flow consistency (0-1)
+ */
 
-export interface ConsciousnessState {
-  energy: number;
-  focus: number;
-  clarity: number;
-  coherence: number;
-  protection: number;
-}
+/**
+ * @typedef {Object} FlowPattern
+ * @property {string} id - Pattern ID
+ * @property {string} type - Pattern type
+ * @property {number} strength - Pattern strength (0-1)
+ * @property {Object} metadata - Additional pattern metadata
+ */
 
-export interface FlowSpace {
-  dimensions: number;
-  capacity: number;
-  stability: number;
-  resonance: number;
-  fields: Field[];
-}
+/**
+ * Core flow management functions
+ */
 
-export function isConsciousnessState(obj: any): obj is ConsciousnessState {
-  return (
-    obj &&
-    typeof obj.energy === 'number' &&
-    typeof obj.focus === 'number' &&
-    typeof obj.clarity === 'number' &&
-    typeof obj.coherence === 'number' &&
-    typeof obj.protection === 'number'
-  );
-}
+export const createFlowState = (id) => ({
+  id,
+  active: false,
+  depth: 0,
+  protected: false
+});
+
+export const createFlowMetrics = () => ({
+  duration: 0,
+  intensity: 0,
+  consistency: 0
+});
+
+export const createFlowPattern = (id, type) => ({
+  id,
+  type,
+  strength: 0,
+  metadata: {}
+});
+
+export const isInFlow = (state) => state.active && state.depth > 0;
+
+export const isProtected = (state) => state.protected;
