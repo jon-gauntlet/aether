@@ -123,12 +123,57 @@ class LRUCache(Generic[T]):
         } 
 
 class Cache(Generic[T]):
-    """A generic caching system with LRU eviction."""
-    def __init__(self, max_size: int = 1000, ttl: Optional[float] = None):
+    """Base cache implementation."""
+    
+    def __init__(
+        self,
+        max_size: int = 1000,
+        max_size_bytes: Optional[int] = None,
+        ttl: Optional[float] = None,
+        eviction_policy: EvictionPolicy = EvictionPolicy.LRU
+    ):
+        """Initialize cache.
+        
+        Args:
+            max_size: Maximum number of items in cache
+            max_size_bytes: Maximum size in bytes (if None, no byte limit)
+            ttl: Time to live in seconds (if None, no expiration)
+            eviction_policy: Policy for evicting items when cache is full
+        """
         self.max_size = max_size
+        self.max_size_bytes = max_size_bytes
         self.ttl = ttl
-        self._cache: OrderedDict[str, CacheEntry[T]] = OrderedDict()
-        self._lock = asyncio.Lock()
+        self.eviction_policy = eviction_policy
+        self._cache: Dict[str, CacheEntry[T]] = {}
+        self._size_bytes = 0
+        self._stats = CacheStats(size=0)
+
+    def _get_item_size(self, value: T) -> int:
+        """Get size of item in bytes."""
+        if isinstance(value, (str, bytes)):
+            return len(value)
+        elif isinstance(value, np.ndarray):
+            return value.nbytes
+        else:
+            return len(pickle.dumps(value))
+
+    async def _check_size_limits(self, new_item_size: int = 0):
+        """Check and enforce size limits."""
+        while (len(self._cache) >= self.max_size or 
+               (self.max_size_bytes and self._size_bytes + new_item_size > self.max_size_bytes)):
+            if not self._cache:
+                raise ValueError("Cannot add item: cache size limits too small")
+            # Get eviction candidate based on policy
+            if self.eviction_policy == EvictionPolicy.LRU:
+                key = min(self._cache.items(), key=lambda x: x[1].last_accessed)[0]
+            elif self.eviction_policy == EvictionPolicy.LFU:
+                key = min(self._cache.items(), key=lambda x: x[1].access_count)[0]
+            elif self.eviction_policy == EvictionPolicy.FIFO:
+                key = min(self._cache.items(), key=lambda x: x[1].created_at)[0]
+            else:  # RANDOM
+                key = random.choice(list(self._cache.keys()))
+            await self.delete(key)
+            self._stats.evictions += 1
 
     @with_performance_monitoring
     async def get(self, key: str) -> Optional[T]:

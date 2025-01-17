@@ -160,33 +160,34 @@ async def test_optimization_interval(performance_optimizer):
     # Should not have optimized again
     assert first_time == second_time
 
-class TestClass:
-    """Test class for performance monitoring decorator."""
-    
-    def __init__(self):
-        self.performance_monitor = PerformanceMonitor(
-            window_size=10,
-            log_interval=1.0,
-            enable_gpu=False
-        )
-        
-    @with_performance_monitoring("test_operation")
-    async def test_method(self, arg1, arg2, kwarg1=None):
-        """Test method with performance monitoring."""
-        await asyncio.sleep(0.1)
-        return arg1 + arg2
+@pytest.fixture
+def monitored_test_instance():
+    """Fixture for test instance with performance monitoring."""
+    class MonitoredTest:
+        def __init__(self, performance_monitor):
+            self.performance_monitor = performance_monitor
+            
+        @with_performance_monitoring("test_operation")
+        async def test_method(self, arg1, arg2, kwarg1=None):
+            """Test method with performance monitoring."""
+            await asyncio.sleep(0.1)
+            return arg1 + arg2
+            
+    return MonitoredTest(PerformanceMonitor(
+        window_size=10,
+        log_interval=1.0,
+        enable_gpu=False
+    ))
 
 @pytest.mark.asyncio
-async def test_performance_decorator():
+async def test_performance_decorator(monitored_test_instance):
     """Test performance monitoring decorator."""
-    test_obj = TestClass()
-    
     # Call monitored method
-    result = await test_obj.test_method(1, 2, kwarg1="test")
+    result = await monitored_test_instance.test_method(1, 2, kwarg1="test")
     assert result == 3
     
     # Check recorded metrics
-    metrics = test_obj.performance_monitor.get_metrics("test_operation")
+    metrics = monitored_test_instance.performance_monitor.get_metrics("test_operation")
     assert len(metrics) == 1
     
     metric = metrics[0]

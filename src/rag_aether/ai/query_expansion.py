@@ -56,6 +56,36 @@ class QueryProcessor:
                     continue
         return results
 
+class MockT5Model:
+    """Mock T5 model for testing."""
+    def __init__(self):
+        self.device = "cpu"
+        
+    def to(self, device):
+        """Mock device movement."""
+        return self
+        
+    def half(self):
+        """Mock half precision."""
+        return self
+        
+    def generate(self, *args, **kwargs):
+        """Mock generation."""
+        return torch.tensor([[1, 2, 3]])
+
+class MockT5Tokenizer:
+    """Mock T5 tokenizer for testing."""
+    def __init__(self):
+        pass
+        
+    def encode(self, text, return_tensors="pt", **kwargs):
+        """Mock encoding."""
+        return torch.tensor([[1, 2, 3]])
+        
+    def decode(self, ids, **kwargs):
+        """Mock decoding."""
+        return "mock expanded query"
+
 class QueryExpander:
     """Query expansion using T5 model with GPU acceleration."""
     
@@ -64,26 +94,31 @@ class QueryExpander:
             self.model_name = model_name
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             
-            # Initialize tokenizer with trust_remote_code for safety
-            self.tokenizer = T5Tokenizer.from_pretrained(
-                model_name,
-                trust_remote_code=True,
-                local_files_only=False
-            )
-            
-            # Initialize model with proper configuration
-            self.model = T5ForConditionalGeneration.from_pretrained(
-                model_name,
-                trust_remote_code=True,
-                local_files_only=False
-            ).to(self.device)
-            
-            # Optimize for RTX 4090 if available
-            if self.device.type == "cuda":
-                self.model = self.model.half()  # Use FP16 for faster inference
-                torch.cuda.empty_cache()
+            if model_name == "mock-model":
+                self.tokenizer = MockT5Tokenizer()
+                self.model = MockT5Model()
+                logger.info("Initialized mock QueryExpander")
+            else:
+                # Initialize tokenizer with trust_remote_code for safety
+                self.tokenizer = T5Tokenizer.from_pretrained(
+                    model_name,
+                    trust_remote_code=True,
+                    local_files_only=False
+                )
                 
-            logger.info(f"Initialized QueryExpander with model {model_name} on {self.device}")
+                # Initialize model with proper configuration
+                self.model = T5ForConditionalGeneration.from_pretrained(
+                    model_name,
+                    trust_remote_code=True,
+                    local_files_only=False
+                ).to(self.device)
+                
+                # Optimize for RTX 4090 if available
+                if self.device.type == "cuda":
+                    self.model = self.model.half()  # Use FP16 for faster inference
+                    torch.cuda.empty_cache()
+                    
+                logger.info(f"Initialized QueryExpander with model {model_name} on {self.device}")
         except Exception as e:
             logger.error(f"Failed to initialize query expander: {str(e)}")
             raise QueryExpansionError(f"Failed to initialize query expander: {str(e)}")
@@ -91,29 +126,46 @@ class QueryExpander:
     async def expand_query(self, query: str, context: Optional[Dict] = None) -> Dict[str, Any]:
         """Expand a query using T5 with GPU acceleration."""
         try:
-            # For testing, return mock data
-            result = {
-                "original_query": query,
-                "expanded_queries": [
-                    "expanded test query about flow",
-                    "another expanded query",
-                    "third expansion"
-                ],
-                "metadata": {
-                    "model": self.model_name,
-                    "device": self.device.type,
-                    "context_used": bool(context),
-                    "num_expansions": 3
+            if self.model_name == "mock-model":
+                return {
+                    "original_query": query,
+                    "expanded_queries": [
+                        "expanded test query about flow",
+                        "another expanded query",
+                        "third expansion"
+                    ],
+                    "scores": [0.9, 0.8, 0.7],
+                    "context": context or {}
                 }
-            }
-            
-            if context:
-                result["context"] = context
                 
-            return result
+            # Real model implementation
+            input_ids = self.tokenizer.encode(
+                f"expand query: {query}",
+                return_tensors="pt"
+            ).to(self.device)
+            
+            outputs = self.model.generate(
+                input_ids,
+                max_length=128,
+                num_return_sequences=3,
+                num_beams=5,
+                temperature=0.7
+            )
+            
+            expanded = [
+                self.tokenizer.decode(output, skip_special_tokens=True)
+                for output in outputs
+            ]
+            
+            return {
+                "original_query": query,
+                "expanded_queries": expanded,
+                "scores": [0.9, 0.8, 0.7],  # Mock scores for now
+                "context": context or {}
+            }
         except Exception as e:
-            logger.error(f"Failed to expand query: {str(e)}")
-            raise QueryExpansionError(f"Failed to expand query: {str(e)}")
+            logger.error(f"Query expansion failed: {str(e)}")
+            raise QueryExpansionError(f"Query expansion failed: {str(e)}")
             
     async def expand_queries(self, queries: List[str], context: Optional[Dict] = None) -> List[Dict[str, Any]]:
         """Expand queries in parallel using GPU."""

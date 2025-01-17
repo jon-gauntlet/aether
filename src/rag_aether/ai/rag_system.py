@@ -2,85 +2,139 @@
 
 from typing import Dict, Any, List, Optional
 import logging
+from dataclasses import dataclass
+import numpy as np
+
 from .query_expansion import QueryExpander
+from ..core.caching import Cache
 from ..core.errors import RAGError
 
 logger = logging.getLogger(__name__)
 
+@dataclass
+class Message:
+    """Message data structure."""
+    content: str
+    metadata: Optional[Dict[str, Any]] = None
+    channel_id: Optional[str] = None
+    thread_id: Optional[str] = None
+    user_id: Optional[str] = None
+
+@dataclass
+class Document:
+    """Document data structure."""
+    content: str
+    metadata: Optional[Dict[str, Any]] = None
+    embedding: Optional[np.ndarray] = None
+
 class RAGSystem:
-    """RAG system with query expansion and retrieval."""
+    """Retrieval-Augmented Generation system."""
     
-    def __init__(self, use_mock: bool = True):
+    def __init__(self, model_name: str = "t5-small", use_production_features: bool = False,
+                 use_mock: bool = False, use_cache: bool = False):
         """Initialize RAG system.
         
         Args:
+            model_name: Name of the model to use for query expansion
+            use_production_features: Whether to enable production features
             use_mock: Whether to use mock components for testing
+            use_cache: Whether to enable caching
         """
+        self.model_name = model_name
+        self.use_production = use_production_features
+        self.use_mock = use_mock
+        
         try:
-            # Initialize components with mock awareness
-            self.use_mock = use_mock
-            self.query_expander = QueryExpander("t5-small" if not use_mock else "mock-model")
-            self.retriever = MockRetriever() if use_mock else None  # TODO: Implement real retriever
-            self.reranker = MockReranker() if use_mock else None   # TODO: Implement real reranker
-            
-            logger.info(f"Initialized RAG system (mock={use_mock})")
-        except Exception as e:
-            logger.error(f"Failed to initialize RAG system: {str(e)}")
-            raise RAGError(f"Failed to initialize RAG system: {str(e)}")
-    
-    async def process_query(self, query: str, context: Optional[Dict] = None) -> Dict[str, Any]:
-        """Process a query through the RAG pipeline."""
-        try:
-            # Expand query
-            expanded = await self.query_expander.expand_query(query, context)
-            
-            # For testing, return mock results
-            if self.use_mock:
-                return {
-                    "query": query,
-                    "results": [
-                        {"text": "Mock result 1", "score": 0.95},
-                        {"text": "Mock result 2", "score": 0.85},
-                        {"text": "Mock result 3", "score": 0.75}
-                    ],
-                    "metadata": {
-                        "expanded_queries": expanded["expanded_queries"],
-                        "retrieval_time": 0.1,
-                        "rerank_time": 0.05
-                    }
-                }
-            
-            # TODO: Implement real retrieval and reranking
-            return {"error": "Real retrieval not implemented yet"}
+            self.query_expander = QueryExpander(model_name=model_name, use_mock=use_mock)
+            if use_cache:
+                self.cache = Cache(max_size=1000, ttl=3600)
+            else:
+                self.cache = None
+                
+            if use_production_features:
+                self._init_production_features()
+                
+            logger.info(f"Initialized RAG system (mock={use_mock}, production={use_production_features}, cache={bool(self.cache)})")
             
         except Exception as e:
-            logger.error(f"Failed to process query: {str(e)}")
-            raise RAGError(f"Failed to process query: {str(e)}")
-    
-    async def process_batch(self, queries: List[str], context: Optional[Dict] = None) -> List[Dict[str, Any]]:
-        """Process multiple queries in parallel."""
-        try:
-            results = []
-            for query in queries:
-                result = await self.process_query(query, context)
-                results.append(result)
-            return results
-        except Exception as e:
-            logger.error(f"Failed to process query batch: {str(e)}")
-            raise RAGError(f"Failed to process query batch: {str(e)}")
-
-class MockRetriever:
-    """Mock retriever for testing."""
-    async def retrieve(self, query: str) -> List[Dict[str, Any]]:
-        return [
-            {"text": "Mock document 1", "score": 0.9},
-            {"text": "Mock document 2", "score": 0.8}
-        ]
-
-class MockReranker:
-    """Mock reranker for testing."""
-    async def rerank(self, query: str, documents: List[Dict]) -> List[Dict[str, Any]]:
-        return [
-            {"text": doc["text"], "score": doc["score"] * 0.95}
-            for doc in documents
-        ] 
+            logger.error(f"Failed to initialize RAG system: {e}")
+            raise RAGError(f"Failed to initialize RAG system: {e}")
+            
+        self.documents: List[Document] = []
+        self.messages: List[Message] = []
+            
+    def _init_production_features(self) -> None:
+        """Initialize production features."""
+        # TODO: Implement production features
+        pass
+        
+    async def ingest_message(self, message: Message) -> None:
+        """Ingest a message into the system.
+        
+        Args:
+            message: Message to ingest
+        """
+        self.messages.append(message)
+        await self.ingest_document(Document(content=message.content, metadata=message.metadata))
+        
+    async def ingest_document(self, document: Document) -> None:
+        """Ingest a document into the system.
+        
+        Args:
+            document: Document to ingest
+        """
+        if document.embedding is None:
+            # Compute embedding if not provided
+            document.embedding = await self.query_expander.encode_text(document.content)
+            
+        self.documents.append(document)
+        
+    async def retrieve(self, query: str, k: int = 3) -> List[Document]:
+        """Retrieve relevant documents for a query.
+        
+        Args:
+            query: Query string
+            k: Number of documents to retrieve
+            
+        Returns:
+            List of relevant documents
+        """
+        if not self.documents:
+            return []
+            
+        # Get query embedding
+        query_embedding = await self.query_expander.encode_text(query)
+        
+        # Compute similarities
+        similarities = []
+        for doc in self.documents:
+            if doc.embedding is not None:
+                sim = np.dot(query_embedding, doc.embedding)
+                similarities.append((sim, doc))
+                
+        # Sort by similarity
+        similarities.sort(key=lambda x: x[0], reverse=True)
+        
+        # Return top k
+        return [doc for _, doc in similarities[:k]]
+        
+    async def generate_response(self, query: str, context: Optional[List[Document]] = None,
+                              format: str = "default", temperature: float = 0.7) -> str:
+        """Generate a response for a query.
+        
+        Args:
+            query: Query string
+            context: Optional context documents
+            format: Response format (default, concise, detailed, technical)
+            temperature: Temperature for response generation
+            
+        Returns:
+            Generated response
+        """
+        if context is None:
+            context = await self.retrieve(query)
+            
+        # TODO: Implement response generation with LLM
+        # For now return mock response
+        context_str = "\n".join(doc.content for doc in context)
+        return f"Response to '{query}' based on context: {context_str}" 

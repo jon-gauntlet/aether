@@ -1,5 +1,5 @@
 """FastAPI routes for RAG system."""
-from fastapi import FastAPI, HTTPException
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional, Dict
 from rag_aether.ai.rag_system import RAGSystem
@@ -9,11 +9,11 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Initialize FastAPI app
-app = FastAPI(title="RAG API")
+# Initialize router
+router = APIRouter(prefix="/api/v1", tags=["rag"])
 
 # Initialize RAG system
-rag = RAGSystem(use_cache=True)
+rag = RAGSystem(use_mock=True, use_cache=True)
 
 class Document(BaseModel):
     """Document for ingestion."""
@@ -30,7 +30,7 @@ class SearchResponse(BaseModel):
     results: List[Dict]
     query: str
 
-@app.post("/documents")
+@router.post("/documents")
 async def add_documents(documents: List[Document]):
     """Add documents to the RAG system."""
     try:
@@ -42,24 +42,20 @@ async def add_documents(documents: List[Document]):
         logger.error(f"Failed to add documents: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/search")
+@router.post("/search")
 async def search(query: Query) -> SearchResponse:
     """Search for relevant documents."""
     try:
         results = rag.search(query.text, k=query.top_k)
         return SearchResponse(
-            results=[{
-                "text": r.text,
-                "score": r.score,
-                "metadata": r.metadata
-            } for r in results],
+            results=results,
             query=query.text
         )
     except Exception as e:
-        logger.error(f"Search failed: {str(e)}")
+        logger.error(f"Failed to search: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/health")
+@router.get("/health")
 async def health_check():
-    """Simple health check endpoint."""
-    return {"status": "healthy"} 
+    """Health check endpoint."""
+    return {"status": "healthy", "version": "1.0.0"} 
