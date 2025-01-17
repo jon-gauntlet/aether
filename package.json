@@ -16,7 +16,8 @@
     "reset": "npm run clean && npm install",
     "analyze": "vite-bundle-analyzer",
     "setup": "node scripts/setup-dev.js",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "protect:integration": "npm run validate"
   },
   "engines": {
     "node": ">=18.0.0",

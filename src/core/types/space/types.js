@@ -1,1 +1,59 @@
-/** * A place for people to work together naturally */ import { FlowState };from '../flow/types'; // Basic space types export SpaceType = any; any;s;'; export Feel = any; any;t;'; // Nice and peaceful export Doing = any; any;d;'; // Just hanging out export type Way = any;r;'; // Just moving about // Space interfaces export interface Plac{ [key: any;export interface Doo{ [key: any;export interface Perso{ [key: any;export interface Settin{ [key: any;// Transition and state interfaces export interface TransitionMetric{ [key: any;export interface SpaceStat{ [key: any;export interface SpaceTransitio{ [key: any;export interface SpaceContex{ [key: any;// Re-export for convenience export type _ _;_;_;
+/**
+ * @typedef {Object} SpaceConfig
+ * @property {string} id - Unique identifier
+ * @property {string} name - Space name
+ * @property {number} capacity - Maximum capacity
+ * @property {boolean} isPrivate - Whether the space is private
+ */
+
+/**
+ * @typedef {Object} SpaceState
+ * @property {string} id - Space ID
+ * @property {string} status - Current status
+ * @property {number} usage - Current usage
+ * @property {Object[]} members - Current members
+ */
+
+/**
+ * @typedef {Object} SpaceMetrics
+ * @property {number} activeUsers - Number of active users
+ * @property {number} messageCount - Number of messages
+ * @property {number} uptime - Space uptime in seconds
+ */
+
+/**
+ * Core space management functions
+ */
+
+export const createSpace = (config) => ({
+  id: config.id,
+  name: config.name,
+  capacity: config.capacity || 100,
+  isPrivate: config.isPrivate || false,
+  state: {
+    status: 'active',
+    usage: 0,
+    members: []
+  },
+  metrics: {
+    activeUsers: 0,
+    messageCount: 0,
+    uptime: 0
+  }
+});
+
+export const updateSpaceState = (space, newState) => ({
+  ...space,
+  state: {
+    ...space.state,
+    ...newState
+  }
+});
+
+export const updateSpaceMetrics = (space, newMetrics) => ({
+  ...space,
+  metrics: {
+    ...space.metrics,
+    ...newMetrics
+  }
+});

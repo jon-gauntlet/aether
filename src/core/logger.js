@@ -1,48 +1,65 @@
-import chalk from 'chalk';
+/**
+ * @typedef {'debug' | 'info' | 'warn' | 'error'} LogLevel
+ */
 
-export enum LogLevel {
-  DEBUG = 0,
-  INFO = 1,
-  WARN = 2,
-  ERROR = 3
+/**
+ * Base logger class that defines the logging interface
+ */
+class Logger {
+  /**
+   * Log a message with the specified level
+   * @param {LogLevel} level - The log level
+   * @param {string} message - The message to log
+   */
+  log(level, message) {
+    throw new Error('Not implemented');
+  }
+
+  /**
+   * Log a debug message
+   * @param {string} message - The message to log
+   */
+  debug(message) {
+    this.log('debug', message);
+  }
+
+  /**
+   * Log an info message
+   * @param {string} message - The message to log
+   */
+  info(message) {
+    this.log('info', message);
+  }
+
+  /**
+   * Log a warning message
+   * @param {string} message - The message to log
+   */
+  warn(message) {
+    this.log('warn', message);
+  }
+
+  /**
+   * Log an error message
+   * @param {string} message - The message to log
+   */
+  error(message) {
+    this.log('error', message);
+  }
 }
 
-export interface Logger {
-  [key: string]: any;
-  setLevel(level: LogLevel): void;
-  log(level: LogLevel, message: string): void;
-  debug(message: string): void;
-  info(message: string): void;
-  warn(message: string): void;
-  error(message: string): void;
-}
-
-class LoggerImpl implements Logger {
-  static level: LogLevel = LogLevel.INFO;
-
-  setLevel(level: LogLevel): void {
-    LoggerImpl.level = level;
-  }
-
-  log(level: LogLevel, message: string): void {
-    if (level >= LoggerImpl.level) {
-      console.log(`[${LogLevel[level]}] ${message}`);
-    }
-  }
-
-  debug(message: string): void {
-    this.log(LogLevel.DEBUG, message);
-  }
-
-  info(message: string): void {
-    this.log(LogLevel.INFO, message);
-  }
-
-  warn(message: string): void {
-    this.log(LogLevel.WARN, message);
-  }
-
-  error(message: string): void {
-    this.log(LogLevel.ERROR, message);
+/**
+ * Console implementation of the Logger
+ */
+class ConsoleLogger extends Logger {
+  /**
+   * Log a message with the specified level
+   * @param {LogLevel} level - The log level
+   * @param {string} message - The message to log
+   */
+  log(level, message) {
+    console[level](message);
   }
 }
+
+export { Logger, ConsoleLogger };

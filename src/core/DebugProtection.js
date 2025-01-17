@@ -1,40 +1,40 @@
-import { FlowState } from './types/base';
-
-export class DebugProtection {
-  private isDebugMode: boolean = false;
-  private flowState: FlowState;
-
-  setFlowState(state: FlowState): void {
-    this.flowState = { ...state };
+/**
+ * Manages debug protection state and functionality
+ */
+class DebugProtection {
+  constructor() {
+    this.debugMode = false;
   }
 
-  getFlowState(): FlowState {
-    return { ...this.flowState };
+  /**
+   * Enable debug mode
+   */
+  enableDebug() {
+    this.debugMode = true;
   }
 
-  startDebugging(): void {
-    this.isDebugMode = true;
-    if (this.flowState) {
-      this.flowState.protection = 1;
-    }
+  /**
+   * Disable debug mode
+   */
+  disableDebug() {
+    this.debugMode = false;
   }
 
-  endDebugging(): void {
-    this.isDebugMode = false;
-    if (this.flowState) {
-      this.flowState.protection = 0;
-    }
+  /**
+   * Check if debug mode is enabled
+   * @returns {boolean} Whether debug mode is enabled
+   */
+  isDebugEnabled() {
+    return this.debugMode;
   }
 
-  isProtected(): boolean {
-    return this.flowState?.protection > 0;
-  }
-
-  saveCheckpoint(): void {
-    // Future implementation
-  }
-
-  restoreCheckpoint(): void {
-    // Future implementation
+  /**
+   * Check if the system is protected
+   * @returns {boolean} Whether the system is protected
+   */
+  isProtected() {
+    return !this.debugMode;
   }
 }
+
+export { DebugProtection };
