@@ -1,8 +1,8 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import { resolve } from 'path'
+/// <reference types="vitest" />
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { resolve } from 'path';
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -18,6 +18,9 @@ export default defineConfig({
     exclude: ['node_modules', 'dist'],
     transformMode: {
       web: [/\.[jt]sx$/]
+    },
+    deps: {
+      inline: ['@testing-library/user-event']
     }
   }
-})
+}); 
