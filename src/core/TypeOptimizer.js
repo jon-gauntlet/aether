@@ -1,176 +1,86 @@
-/**
- * @typedef {Object} TypeOptimizer
- * @property {function(...any): Promise<void>} optimizeTypes - Optimize types for given arguments
- */
+import { FlowEngine } from './FlowEngine';
 
-/**
- * @implements {TypeOptimizer}
- */
-class TypeOptimizerImpl {
-  /**
-   * @param {import('./FlowEngine').FlowEngine} flowEngine - The flow engine instance
-   */
-  constructor(flowEngine) {
-    /** @private */
+export interface TypeOptimizer {
+  [key: string]: any;
+  optimizeTypes(...args: any): Promise<void>;
+}
+
+class TypeOptimizerImpl implements TypeOptimizer {
+  flowEngine: FlowEngine;
+
+  constructor(flowEngine: FlowEngine) {
     this.flowEngine = flowEngine;
   }
 
-  /**
-   * Optimize types for the given arguments
-   * @param {...any} args - Arguments to optimize
-   * @returns {Promise<void>}
-   */
-  async optimizeTypes(...args) {
+  async optimizeTypes(...args: any): Promise<void> {
     // Prevent optimization during low energy
-    const batches = this.groupIntoBatches(args);
+    let batches: any[] = this.groupIntoBatches(args);
     for (const batch of batches) {
       await this.processBatch(batch);
     }
   }
 
-  /**
-   * Group arguments into batches for processing
-   * @private
-   * @param {...any} args - Arguments to group
-   * @returns {Array<any>}
-   */
-  groupIntoBatches(...args) {
+  private groupIntoBatches(...args: any): any[] {
     // Implementation here
     return [];
   }
 
-  /**
-   * Calculate the optimal batch size based on current conditions
-   * @private
-   * @param {...any} args - Arguments to consider
-   * @returns {number}
-   */
-  calculateOptimalBatchSize(...args) {
+  private calculateOptimalBatchSize(...args: any): number {
     // Implementation here
     return 10;
   }
 
-  /**
-   * Determine if optimization should continue
-   * @private
-   * @param {...any} args - Arguments to check
-   * @returns {boolean}
-   */
-  shouldContinueOptimization(...args) {
+  private shouldContinueOptimization(...args: any): boolean {
     // Implementation here
     return true;
   }
 
-  /**
-   * Process a batch of items
-   * @private
-   * @param {any} batch - Batch to process
-   * @returns {Promise<void>}
-   */
-  async processBatch(batch) {
+  private async processBatch(batch: any): Promise<void> {
     // Implementation here
   }
 
-  /**
-   * Update optimization metrics
-   * @private
-   */
-  updateMetrics() {
+  private updateMetrics(): void {
     // Implementation here
   }
 
-  /**
-   * Recognize patterns in the given arguments
-   * @private
-   * @param {...any} args - Arguments to check
-   * @returns {boolean}
-   */
-  recognizePattern(...args) {
+  private recognizePattern(...args: any): boolean {
     // Implementation here
     return true;
   }
 
-  /**
-   * Apply a recognized pattern
-   * @private
-   * @param {...any} args - Arguments for pattern application
-   * @returns {Promise<void>}
-   */
-  async applyPattern(...args) {
+  private async applyPattern(...args: any): Promise<void> {
     // Implementation here
   }
 
-  /**
-   * Process items individually
-   * @private
-   * @param {...any} args - Items to process
-   * @returns {Promise<void>}
-   */
-  async processIndividually(...args) {
+  private async processIndividually(...args: any): Promise<void> {
     // Implementation here
   }
 
-  /**
-   * Process a single file
-   * @private
-   * @param {any} file - File to process
-   * @returns {Promise<void>}
-   */
-  async processFile(file) {
+  private async processFile(file: any): Promise<void> {
     // Implementation here
   }
 
-  /**
-   * Update pattern statistics
-   * @private
-   * @param {...any} args - Arguments for stats update
-   */
-  updatePatternStats(...args) {
+  private updatePatternStats(...args: any): void {
     // Implementation here
   }
 
-  /**
-   * Get recent fixes
-   * @private
-   * @param {...any} args - Arguments for retrieving fixes
-   * @returns {Array<any>}
-   */
-  getRecentFixes(...args) {
+  private getRecentFixes(...args: any): any[] {
     // Implementation here
     return [];
   }
 
-  /**
-   * Calculate the success rate
-   * @private
-   * @param {...any} args - Arguments for calculation
-   * @returns {number}
-   */
-  calculateSuccessRate(...args) {
+  private calculateSuccessRate(...args: any): number {
     // Implementation here
     return 0;
   }
 
-  /**
-   * Calculate energy impact
-   * @private
-   * @param {...any} args - Arguments for calculation
-   * @returns {number}
-   */
-  calculateEnergyImpact(...args) {
+  private calculateEnergyImpact(...args: any): number {
     // Implementation here
     return 0;
   }
 
-  /**
-   * Get optimization metrics
-   * @param {...any} args - Arguments for metrics retrieval
-   * @returns {Object}
-   */
-  getMetrics(...args) {
+  getMetrics(...args: any): any {
     // Implementation here
     return {};
   }
 }
-
-export { TypeOptimizerImpl };

@@ -1,57 +1,25 @@
-/**
- * @typedef {import('./types/base').FlowMetrics} FlowMetrics
- */
+import { FlowMetrics } from './types/base';
 
-/**
- * @typedef {Object} AttentionMetrics
- * @property {function(number, number, ...any): number} updateMetrics - Update attention metrics
- * @property {function(number, number, ...any): boolean} isHighAttention - Check if attention is high
- * @property {function(number, number, ...any): boolean} isLowAttention - Check if attention is low
- */
+export interface AttentionMetrics {
+  [key: string]: any;
+  updateMetrics(momentum: any, clarity: any, ...args: any): number;
+  isHighAttention(momentum: any, clarity: any, ...args: any): boolean;
+  isLowAttention(momentum: any, clarity: any, ...args: any): boolean;
+}
 
-/**
- * Implementation of attention metrics tracking
- * @implements {AttentionMetrics}
- */
-class AttentionMetricsImpl {
-  constructor() {
-    /** @private @type {FlowMetrics} */
-    this.metrics = null;
-  }
+class AttentionMetricsImpl implements AttentionMetrics {
+  metrics: any;
 
-  /**
-   * Update attention metrics
-   * @param {number} momentum - Current momentum value
-   * @param {number} clarity - Current clarity value
-   * @param {...any} args - Additional parameters
-   * @returns {number} Updated attention value
-   */
-  updateMetrics(momentum, clarity, ...args) {
+  updateMetrics(momentum: any, clarity: any, ...args: any): number {
     const { focus } = this.metrics;
     return (focus + momentum + clarity) / 3;
   }
 
-  /**
-   * Check if attention is high
-   * @param {number} momentum - Current momentum value
-   * @param {number} clarity - Current clarity value
-   * @param {...any} args - Additional parameters
-   * @returns {boolean} True if attention is high
-   */
-  isHighAttention(momentum, clarity, ...args) {
+  isHighAttention(momentum: any, clarity: any, ...args: any): boolean {
     return this.updateMetrics(momentum, clarity, ...args) >= 80;
   }
 
-  /**
-   * Check if attention is low
-   * @param {number} momentum - Current momentum value
-   * @param {number} clarity - Current clarity value
-   * @param {...any} args - Additional parameters
-   * @returns {boolean} True if attention is low
-   */
-  isLowAttention(momentum, clarity, ...args) {
+  isLowAttention(momentum: any, clarity: any, ...args: any): boolean {
     return this.updateMetrics(momentum, clarity, ...args) <= 40;
   }
 }
-
-export { AttentionMetricsImpl };
