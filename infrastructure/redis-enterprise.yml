@@ -1,0 +1,120 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Redis Infrastructure for Aether
+
+Parameters:
+  RedisVpcCidr:
+    Type: String
+    Default: 172.32.0.0/16
+    Description: CIDR block for Redis VPC
+  RedisSubnet1Cidr:
+    Type: String
+    Default: 172.32.1.0/24
+    Description: CIDR block for Redis subnet in AZ1
+  RedisSubnet2Cidr:
+    Type: String
+    Default: 172.32.2.0/24
+    Description: CIDR block for Redis subnet in AZ2
+  PeerVpcId:
+    Type: String
+    Description: VPC ID to peer with Redis VPC
+
+Resources:
+  RedisVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref RedisVpcCidr
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: redis-vpc
+
+  RedisSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref RedisVPC
+      CidrBlock: !Ref RedisSubnet1Cidr
+      AvailabilityZone: us-east-1a
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: redis-subnet-1
+
+  RedisSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref RedisVPC
+      CidrBlock: !Ref RedisSubnet2Cidr
+      AvailabilityZone: us-east-1b
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: redis-subnet-2
+
+  RedisSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for Redis
+      VpcId: !Ref RedisVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 6379
+          ToPort: 6379
+          CidrIp: !Ref RedisVpcCidr
+      Tags:
+        - Key: Name
+          Value: redis-sg
+
+  RedisRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref RedisVPC
+      Tags:
+        - Key: Name
+          Value: redis-rt
+
+  Subnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref RedisSubnet1
+      RouteTableId: !Ref RedisRouteTable
+
+  Subnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref RedisSubnet2
+      RouteTableId: !Ref RedisRouteTable
+
+  RedisVpcPeering:
+    Type: AWS::EC2::VPCPeeringConnection
+    Properties:
+      VpcId: !Ref RedisVPC
+      PeerVpcId: !Ref PeerVpcId
+      PeerRegion: us-east-1
+      Tags:
+        - Key: Name
+          Value: redis-peering
+
+  RedisRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref RedisRouteTable
+      DestinationCidrBlock: 172.31.0.0/16
+      VpcPeeringConnectionId: !Ref RedisVpcPeering
+
+Outputs:
+  VpcId:
+    Description: VPC ID
+    Value: !Ref RedisVPC
+  Subnet1Id:
+    Description: Subnet 1 ID
+    Value: !Ref RedisSubnet1
+  Subnet2Id:
+    Description: Subnet 2 ID
+    Value: !Ref RedisSubnet2
+  SecurityGroupId:
+    Description: Security Group ID
+    Value: !Ref RedisSecurityGroup
+  VpcPeeringId:
+    Description: VPC Peering Connection ID
+    Value: !Ref RedisVpcPeering 
