@@ -69,6 +69,17 @@
  */
 
 /**
+ * @typedef {Object} FlowStats
+ * @property {number} focus
+ * @property {number} depth
+ * @property {number} duration
+ * @property {number} interruptions
+ * @property {number} recoveries
+ * @property {number} quality
+ * @property {FlowMetrics} metrics
+ */
+
+/**
  * @typedef {Object} Field
  * @property {Object} center
  * @property {number} center.x
@@ -159,253 +170,18 @@
  * @readonly
  * @enum {string}
  */
-export const DevelopmentPhase = {
-  CONFIGURATION: 'CONFIGURATION',
-  OPTIMIZATION: 'OPTIMIZATION',
-  HEALING: 'HEALING',
-  PROTECTION: 'PROTECTION',
-  EVOLUTION: 'EVOLUTION',
-  INTEGRATION: 'INTEGRATION'
+const DevelopmentPhase = {
+  INITIAL: 'initial',
+  LEARNING: 'learning',
+  PRACTICING: 'practicing',
+  MASTERING: 'mastering',
+  TEACHING: 'teaching',
+  EVOLVING: 'evolving'
 };
 
-/**
- * Flow state enum
- * @readonly
- * @enum {string}
- */
-export const FlowState = {
-  FLOW: 'FLOW',
-  FOCUS: 'FOCUS',
-  HYPERFOCUS: 'HYPERFOCUS',
-  RECOVERING: 'RECOVERING',
-  RESTING: 'RESTING',
-  PROTECTED: 'PROTECTED'
+export {
+  DevelopmentPhase
 };
 
-/**
- * Type guard for BaseMetrics
- * @param {unknown} metrics - Value to check
- * @returns {metrics is BaseMetrics} True if value is BaseMetrics
- */
-export const isBaseMetrics = (metrics) => {
-  if (!metrics || typeof metrics !== 'object') return false;
-  return (
-    'stability' in metrics &&
-    'coherence' in metrics &&
-    'resonance' in metrics &&
-    'quality' in metrics &&
-    Object.values(metrics).every(v => typeof v === 'number')
-  );
-};
-
-/**
- * Type guard for BaseState
- * @param {unknown} state - Value to check
- * @returns {state is BaseState} True if value is BaseState
- */
-export const isBaseState = (state) => {
-  if (!state || typeof state !== 'object') return false;
-  return (
-    'id' in state &&
-    'type' in state &&
-    'timestamp' in state &&
-    'metrics' in state &&
-    typeof state.id === 'string' &&
-    typeof state.type === 'string' &&
-    typeof state.timestamp === 'number' &&
-    isBaseMetrics(state.metrics)
-  );
-};
-
-/**
- * Validates metrics object
- * @param {unknown} metrics - Metrics to validate
- * @returns {BaseMetrics} Validated metrics
- * @throws {TypeError} If metrics are invalid
- */
-export const validateMetrics = (metrics) => {
-  if (!isBaseMetrics(metrics)) {
-    throw new TypeError('Invalid metrics object');
-  }
-  return metrics;
-};
-
-/**
- * Validates state object
- * @param {unknown} state - State to validate
- * @returns {BaseState} Validated state
- * @throws {TypeError} If state is invalid
- */
-export const validateState = (state) => {
-  if (!isBaseState(state)) {
-    throw new TypeError('Invalid state object');
-  }
-  return state;
-};
-
-/**
- * Type guard for Connection
- * @param {unknown} value - Value to check
- * @returns {value is Connection} True if value is Connection
- */
-export function isConnection(value) {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'id' in value &&
-    'type' in value &&
-    'strength' in value &&
-    'stability' in value
-  );
-}
-
-/**
- * Type guard for Field
- * @param {unknown} value - Value to check
- * @returns {value is Field} True if value is Field
- */
-export function isField(value) {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'center' in value &&
-    'radius' in value &&
-    'strength' in value &&
-    'coherence' in value &&
-    'stability' in value
-  );
-}
-
-/**
- * Type guard for NaturalFlow
- * @param {unknown} value - Value to check
- * @returns {value is NaturalFlow} True if value is NaturalFlow
- */
-export function isNaturalFlow(value) {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'id' in value &&
-    'type' in value &&
-    'strength' in value &&
-    'resonance' in value &&
-    'evolution' in value
-  );
-}
-
-/**
- * Type guard for Resonance
- * @param {unknown} value - Value to check
- * @returns {value is Resonance} True if value is Resonance
- */
-export function isResonance(value) {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'primary' in value &&
-    'harmonics' in value &&
-    'coherence' in value &&
-    'stability' in value
-  );
-}
-
-/**
- * Type guard for Protection
- * @param {unknown} value - Value to check
- * @returns {value is Protection} True if value is Protection
- */
-export function isProtection(value) {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'level' in value &&
-    'type' in value &&
-    'strength' in value &&
-    'resilience' in value &&
-    'adaptability' in value &&
-    'natural' in value &&
-    'field' in value
-  );
-}
-
-/**
- * Type guard for FlowMetrics
- * @param {unknown} value - Value to check
- * @returns {value is FlowMetrics} True if value is FlowMetrics
- */
-export function isFlowMetrics(value) {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'intensity' in value &&
-    'stability' in value &&
-    'conductivity' in value &&
-    'velocity' in value &&
-    'focus' in value &&
-    'energy' in value
-  );
-}
-
-/**
- * Type guard for EnergyState
- * @param {unknown} value - Value to check
- * @returns {value is EnergyState} True if value is EnergyState
- */
-export function isEnergyState(value) {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'current' in value &&
-    'efficiency' in value &&
-    'phase' in value
-  );
-}
-
-/**
- * Type guard for ConsciousnessState
- * @param {unknown} value - Value to check
- * @returns {value is ConsciousnessState} True if value is ConsciousnessState
- */
-export function isConsciousnessState(value) {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'id' in value &&
-    'level' in value &&
-    'clarity' in value &&
-    'presence' in value
-  );
-}
-
-/**
- * Type guard for AutonomicState
- * @param {unknown} value - Value to check
- * @returns {value is AutonomicState} True if value is AutonomicState
- */
-export function isAutonomicState(value) {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'id' in value &&
-    'mode' in value &&
-    'confidence' in value &&
-    'adaptability' in value
-  );
-}
-
-/**
- * Type guard for MindSpace
- * @param {unknown} value - Value to check
- * @returns {value is MindSpace} True if value is MindSpace
- */
-export function isMindSpace(value) {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'id' in value &&
-    'type' in value &&
-    'protection' in value &&
-    'resonance' in value &&
-    'patterns' in value
-  );
-}
+// Export type definitions for TypeScript-like type checking in JavaScript
+export const Types = {};
