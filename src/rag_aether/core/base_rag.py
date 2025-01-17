@@ -27,9 +27,6 @@ class BaseRAG:
         self.texts = []
         self.metadata = []
         
-        # Start telemetry collection
-        collector.start()
-        
         # Initialize health monitoring
         from rag_aether.core.health import monitor, check_embedding_model, check_faiss_index, check_system_resources
         self.health_monitor = monitor
