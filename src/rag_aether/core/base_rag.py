@@ -225,6 +225,9 @@ class BaseRAG:
         return self.health_monitor.get_status()
     
     def __del__(self):
-        """Cleanup on deletion."""
-        collector.stop()
+        """Clean up resources."""
+        try:
+            collector.stop()
+        except (AttributeError, Exception):
+            pass  # Ignore errors during cleanup
         self.health_monitor.stop() 

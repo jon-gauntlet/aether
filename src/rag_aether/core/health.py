@@ -5,6 +5,7 @@ import time
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
+import numpy as np
 from rag_aether.core.logging import get_logger
 from rag_aether.core.errors import HealthCheckError
 from rag_aether.core.performance import with_performance_monitoring
@@ -180,35 +181,47 @@ class SystemHealth:
             "details": details
         }
 
-def with_retries(max_retries: int = 3, delay: float = 1.0):
-    """Decorator for retrying operations."""
-    def decorator(func):
-        async def wrapper(*args, **kwargs):
-            last_error = None
-            for attempt in range(max_retries):
-                try:
-                    return await func(*args, **kwargs)
-                except Exception as e:
-                    last_error = e
-                    if attempt < max_retries - 1:
-                        await asyncio.sleep(delay)
-            raise last_error
-        return wrapper
-    return decorator
+async def check_embedding_model(rag_system) -> bool:
+    """Check if embedding model is healthy."""
+    try:
+        if rag_system.model is None:
+            return False
+        # Try encoding a test string
+        test_text = "Health check test string"
+        embeddings = await rag_system._encode_texts_batch([test_text])
+        return embeddings is not None and embeddings.shape[1] == rag_system.embedding_dim
+    except Exception as e:
+        logger.error(f"Embedding model health check failed: {str(e)}")
+        return False
 
-def with_health_check(check_name: str):
-    """Decorator for adding health checks to operations."""
-    def decorator(func):
-        async def wrapper(self, *args, **kwargs):
-            try:
-                result = await func(self, *args, **kwargs)
-                self.health.add_check(
-                    check_name,
-                    lambda: asyncio.create_task(func(self, *args, **kwargs))
-                )
-                return result
-            except Exception as e:
-                logger.error(f"Operation {check_name} failed: {str(e)}")
-                raise HealthCheckError(f"Health check {check_name} failed") from e
-        return wrapper
-    return decorator 
+async def check_faiss_index(rag_system) -> bool:
+    """Check if FAISS index is healthy."""
+    try:
+        if rag_system.index is None:
+            return False
+        # Try a test search if index is not empty
+        if rag_system.index.ntotal > 0:
+            test_query = np.random.rand(1, rag_system.embedding_dim).astype('float32')
+            distances, indices = rag_system.index.search(test_query, 1)
+            return indices is not None and distances is not None
+        return True
+    except Exception as e:
+        logger.error(f"FAISS index health check failed: {str(e)}")
+        return False
+
+async def check_system_resources() -> bool:
+    """Check system resource usage."""
+    try:
+        import psutil
+        # Check CPU usage
+        cpu_percent = psutil.cpu_percent()
+        # Check memory usage
+        memory = psutil.virtual_memory()
+        # Consider system healthy if CPU < 90% and memory < 90%
+        return cpu_percent < 90 and memory.percent < 90
+    except Exception as e:
+        logger.error(f"System resources health check failed: {str(e)}")
+        return False
+
+# Create a global monitor instance
+monitor = SystemHealth() 
