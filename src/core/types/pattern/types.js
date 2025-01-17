@@ -1,43 +1,38 @@
 /**
  * @typedef {Object} Pattern
- * @property {string} id - Pattern ID
+ * @property {string} id - Pattern identifier
  * @property {string} type - Pattern type
- * @property {number} strength - Pattern strength (0-1)
- * @property {Object} metadata - Additional pattern metadata
+ * @property {number} strength - Pattern strength
+ * @property {Object} metadata - Additional pattern data
  */
 
 /**
  * @typedef {Object} PatternMetrics
- * @property {number} frequency - Pattern frequency
+ * @property {number} frequency - Pattern occurrence frequency
  * @property {number} duration - Pattern duration
- * @property {number} intensity - Pattern intensity (0-1)
+ * @property {number} intensity - Pattern intensity
  */
 
 /**
  * @typedef {Object} PatternContext
  * @property {string} source - Pattern source
  * @property {string} target - Pattern target
- * @property {Object} data - Pattern context data
+ * @property {Object} data - Context data
  */
 
-/**
- * Pattern types enum as constants
- */
-export const PatternTypes = {
+// Pattern types as constants
+export const PATTERN_TYPES = {
   FLOW: 'flow',
-  ENERGY: 'energy',
+  ENERGY: 'energy', 
   SPACE: 'space',
   SYSTEM: 'system'
 };
 
-/**
- * Core pattern management functions
- */
-
-export const createPattern = (id, type = PatternTypes.FLOW) => ({
+// Factory functions for creating objects
+export const createPattern = (id, type = PATTERN_TYPES.FLOW) => ({
   id,
   type,
-  strength: 0,
+  strength: 1,
   metadata: {}
 });
 
@@ -53,6 +48,6 @@ export const createPatternContext = (source, target) => ({
   data: {}
 });
 
+// Helper functions
 export const isPatternActive = (pattern) => pattern.strength > 0;
-
 export const matchesPatternType = (pattern, type) => pattern.type === type;

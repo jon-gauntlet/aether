@@ -1,1 +1,39 @@
- import { FlowState, FlowMetrics, Field, EnergyType };from '../base'; interface AutonomicMetrics { [key: string]: any };export interface UseAutonomicDevelopment{ [key: string]: any };const defaultMetrics: any{ [key: string]: any }; energyState: any{}; autonomicMetrics: any{} }; const defaultField: any{ [key: string]: any }; radius: any, strength: any, waves: any}; export let useAutonomicState: any; return { flowState$, defaultMetrics, defaultField } };
+import { FlowState, FlowMetrics, Field, EnergyType } from '../base';
+
+/**
+ * @typedef {Object.<string, any>} AutonomicMetrics
+ */
+
+/**
+ * @typedef {Object.<string, any>} UseAutonomicDevelopment
+ */
+
+/**
+ * Default metrics object
+ * @type {Object.<string, any>}
+ */
+const defaultMetrics = {
+  energyState: {},
+  autonomicMetrics: {}
+};
+
+/**
+ * Default field configuration
+ * @type {Object}
+ */
+const defaultField = {
+  radius: 0,
+  strength: 0,
+  waves: []
+};
+
+/**
+ * @type {Function}
+ */
+export const useAutonomicState = () => {
+  return { 
+    flowState$: null,
+    defaultMetrics,
+    defaultField
+  };
+};

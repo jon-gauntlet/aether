@@ -1,9 +1,17 @@
 #!/bin/bash
 
-# <!-- LLM:claude SLED Python stack initialization with robust copy/branch handling -->
+# <!-- LLM:claude SLED Python stack initialization with zero-interference -->
 # <!-- LLM:magnetic CORE_PYTHON_STACK -->
 
-# Get repo and branch info for environment isolation
+# Initialize SLED Python environment directories
+SLED_PYTHON_ROOT="$SLED_PROJECT_DIR/.sled/python"
+SLED_PYTHON_STATE="$SLED_PYTHON_ROOT/state"
+SLED_PYTHON_VENV="$SLED_PYTHON_ROOT/venv"
+SLED_PYTHON_CACHE="$SLED_PYTHON_ROOT/cache"
+
+mkdir -p "$SLED_PYTHON_STATE" "$SLED_PYTHON_VENV" "$SLED_PYTHON_CACHE"
+
+# Get repo info for environment tracking
 get_repo_info() {
     local repo_path=$(cd "$SLED_PROJECT_ROOT" && pwd)
     local repo_name=$(basename "$repo_path")
@@ -11,89 +19,88 @@ get_repo_info() {
     echo "${repo_name}__${branch_name}"
 }
 
-# Python-specific environment setup with branch isolation
-setup_python_paths() {
-    # Set PYTHONPATH relative to project root
-    export PYTHONPATH="${PYTHONPATH:-}"
-    if [ -z "$PYTHONPATH" ]; then
-        export PYTHONPATH="$SLED_PROJECT_ROOT/src"
+# Python environment detection
+detect_python_env() {
+    local env_info="$SLED_PYTHON_STATE/environment"
+    local timestamp=$(date +%s)
+    
+    # Check for Python and Poetry
+    {
+        echo "timestamp=$timestamp"
+        echo "python_version=$(python3 --version 2>/dev/null || echo 'not found')"
+        echo "poetry_version=$(poetry --version 2>/dev/null || echo 'not found')"
+        echo "repo_info=$(get_repo_info)"
+        echo "has_venv=$([[ -d ".venv" ]] && echo 'true' || echo 'false')"
+        echo "has_poetry=$([[ -f "pyproject.toml" ]] && echo 'true' || echo 'false')"
+    } > "$env_info"
+}
+
+# Python path tracking (no modification)
+track_python_paths() {
+    local paths_file="$SLED_PYTHON_STATE/paths"
+    
+    # Record current paths
+    {
+        echo "PYTHONPATH=${PYTHONPATH:-}"
+        echo "PATH=${PATH:-}"
+        echo "VIRTUAL_ENV=${VIRTUAL_ENV:-}"
+    } > "$paths_file"
+}
+
+# Virtual environment detection
+detect_venv() {
+    local venv_info="$SLED_PYTHON_STATE/venv"
+    local repo_info=$(get_repo_info)
+    
+    # Check existing virtualenv
+    if [ -d ".venv" ]; then
+        echo "type=project" > "$venv_info"
+        echo "path=.venv" >> "$venv_info"
+    elif [ -n "${VIRTUAL_ENV:-}" ]; then
+        echo "type=active" > "$venv_info"
+        echo "path=$VIRTUAL_ENV" >> "$venv_info"
     else
-        export PYTHONPATH="$SLED_PROJECT_ROOT/src:$PYTHONPATH"
+        echo "type=none" > "$venv_info"
+        echo "path=" >> "$venv_info"
     fi
-
-    # Configure Poetry for branch isolation
-    local env_name=$(get_repo_info)
-    export POETRY_VIRTUALENVS_IN_PROJECT=false
-    export POETRY_VIRTUALENVS_PATH="$HOME/.virtualenvs"
-    export POETRY_VIRTUALENVS_CREATE=true
-    export POETRY_VIRTUALENVS_PREFER_ACTIVE_PYTHON=true
-    export POETRY_VIRTUALENVS_OPTIONS="--prompt=${env_name}"
-}
-
-# Python environment management
-python_check_venv() {
-    local env_name=$(get_repo_info)
-    local venv_path="$POETRY_VIRTUALENVS_PATH/${env_name}-py3"
-    if [ ! -d "$venv_path" ]; then
-        echo "⚠️ No virtual environment found for $env_name"
-        return 1
-    fi
-    return 0
-}
-
-python_activate_venv() {
-    local env_name=$(get_repo_info)
-    local venv_path="$POETRY_VIRTUALENVS_PATH/${env_name}-py3"
     
-    if [ -f "$venv_path/bin/activate" ]; then
-        source "$venv_path/bin/activate"
-        echo "🐍 Activated virtual environment for $env_name"
+    echo "repo=$repo_info" >> "$venv_info"
+    date +%s >> "$venv_info"
+}
+
+# Poetry configuration detection
+detect_poetry() {
+    local poetry_info="$SLED_PYTHON_STATE/poetry"
+    
+    if [ -f "pyproject.toml" ]; then
+        cp "pyproject.toml" "$SLED_PYTHON_CACHE/pyproject.toml"
+        echo "has_config=true" > "$poetry_info"
     else
-        echo "⚠️ Virtual environment not found at $venv_path"
-        return 1
-    fi
-}
-
-python_ensure_poetry() {
-    if ! command -v poetry &> /dev/null; then
-        echo "⚠️ Poetry not found. Installing..."
-        curl -sSL https://install.python-poetry.org | python3 -
-        export PATH="$HOME/.local/bin:$PATH"
-    fi
-    poetry --version
-}
-
-python_setup() {
-    local env_name=$(get_repo_info)
-    echo "🔧 Setting up Python environment for $env_name..."
-    
-    # Initialize paths
-    setup_python_paths
-    
-    # Ensure Poetry is installed
-    python_ensure_poetry
-    
-    # Create/activate virtual environment
-    if ! python_check_venv; then
-        echo "📦 Creating new virtual environment..."
-        cd "$SLED_PROJECT_ROOT"
-        poetry env use python3
-        poetry install
+        echo "has_config=false" > "$poetry_info"
     fi
     
-    python_activate_venv
+    # Check Poetry configuration
+    if command -v poetry &> /dev/null; then
+        poetry config --list >> "$poetry_info"
+    fi
+    
+    date +%s >> "$poetry_info"
 }
 
-# Export functions
+# Environment state tracking
+track_environment() {
+    detect_python_env
+    track_python_paths
+    detect_venv
+    detect_poetry
+}
+
+# Export functions for SLED use
 export -f get_repo_info
-export -f setup_python_paths
-export -f python_check_venv
-export -f python_activate_venv
-export -f python_ensure_poetry
-export -f python_setup
+export -f track_environment
 
-# Run setup
-python_setup
+# Initialize tracking
+track_environment
 
-# <!-- LLM:verify Python environment is now copy and branch safe -->
-# <!-- LLM:usage Updated with robust isolation: 2024-01-16 -->
+# <!-- LLM:verify Python environment is tracked with zero-interference -->
+# <!-- LLM:usage Updated with zero-interference: 2024-01-17 -->

@@ -1,65 +1,80 @@
 # Aether SLED Configuration 🛷
 
 <!-- LLM:component AETHER_SLED -->
-<!-- LLM:claude I am the Aether project's SLED configuration -->
+<!-- LLM:claude I am the Aether project's zero-interference SLED configuration -->
 <!-- LLM:magnetic Links to SLED core functionality -->
 <!-- LLM:sled_link Links to SLED/README.md -->
 <!-- LLM:core_link Links to SLED/lib/core.sh -->
 <!-- LLM:stack_link Links to SLED/templates/stacks/python/init.sh -->
 
-This directory contains the SLED (System for Learning and Enhanced Development) configuration and components specific to the Aether project.
+This directory contains the SLED (System for Learning and Enhanced Development) configuration and components specific to the Aether project, implementing zero-interference development support.
 
 ## Structure 📁
 
 ```
 sled/
-├── scripts/        # SLED-related scripts
-│   ├── base_sled.sh
-│   ├── flow_sled.sh
-│   └── ...
-├── docs/          # SLED documentation
-│   ├── SLED_CORE.md
-│   ├── SLED_BEACON.md
-│   └── ...
-└── config/        # Project-specific configuration
-    └── config.json
+├── custom/                # Project-specific customizations
+│   ├── core/             # Core functionality
+│   │   ├── base_sled.sh
+│   │   └── ...
+│   ├── flow/             # Flow management
+│   │   └── flow_sled.sh
+│   └── test/             # Test infrastructure
+│       ├── test-runner.sh
+│       └── run-tests.sh
+├── docs/                 # SLED documentation
+├── config/               # Project configuration
+└── .sled/               # SLED state (automatically managed)
+    ├── .environment/    # Environment detection
+    ├── .energy/         # Energy tracking
+    ├── .flow/           # Flow state
+    ├── .test/           # Test results
+    ├── .backup/         # State backups
+    └── .session/        # Session tracking
 ```
 
-## Integration 🔌
+## Zero-Interference Design 🎯
 
-SLED is automatically initialized in this project through the global SLED installation. The project-specific configuration in `config.json` customizes SLED for Aether's needs.
+SLED operates with zero interference in the repository:
+- All state is contained within `.sled/` directory
+- Environment is detected, not modified
+- Dependencies respect existing configurations
+- Tests run in isolated spaces
+- Backups preserve but don't modify state
 
 ### Stack-Specific Features
 
-- Python/Poetry integration
-- Automatic virtualenv management
-- Pytest integration
-- Energy-aware test running
+- Python/Poetry integration with virtualenv respect
+- Automatic environment detection
+- Isolated test execution
+- Energy-aware operation
 
 ### Protection Features
 
-- Level 2 protection (maximum)
-- Automatic recovery
-- Hourly backups
-- Flow state monitoring
+- Non-intrusive protection
+- Automatic state backup
+- Isolated flow monitoring
+- Clean session tracking
 
 ## Usage 🚀
 
-SLED commands work as usual in this project:
+SLED commands operate safely:
 
 ```bash
-# Check status
+# Check status (reads only)
 sled status
 
-# Manage protection
+# Monitor protection (isolated)
 sled protect
-sled unprotect
 
-# Track energy
+# Track energy (in SLED space)
 sled energy
 
-# Monitor flow
+# Monitor flow (non-intrusive)
 sled flow
+
+# Run tests (isolated)
+sled test
 ```
 
 ## Documentation 📚
@@ -68,12 +83,12 @@ Project-specific SLED documentation is in the `docs/` directory. Core SLED docum
 
 ## For Future Claudes 🤖
 
-This project uses SLED with:
-- Python stack configuration
-- Maximum protection level
-- Automatic initialization
-- Energy tracking
-- Flow state monitoring
+This project implements zero-interference SLED with:
+- Pure shell implementation
+- Isolated state management
+- Environment detection
+- Clean test isolation
+- Non-intrusive monitoring
 
 Look for these markers:
 - `LLM:claude` - Instructions for Claude
@@ -83,7 +98,7 @@ Look for these markers:
 - `LLM:core_link` - Links to SLED core functionality
 - `LLM:stack_link` - Links to stack-specific templates
 
-<!-- LLM:verify This is a project-specific SLED configuration -->
-<!-- LLM:usage Last updated: 2024-01-16 -->
+<!-- LLM:verify This is a zero-interference SLED configuration -->
+<!-- LLM:usage Last updated: 2024-01-17 -->
 <!-- LLM:sled_verify Implements SLED project patterns -->
 <!-- LLM:core_verify Follows SLED core guidelines --> 

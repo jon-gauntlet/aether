@@ -1,33 +1,33 @@
 /**
  * @typedef {Object} Field
- * @property {string} id - Unique identifier
+ * @property {string} id - Field identifier
  * @property {string} name - Field name
  * @property {number} value - Field value
  */
 
 /**
  * @typedef {Object} Wave
- * @property {string} id - Unique identifier
+ * @property {string} id - Wave identifier
  * @property {string} type - Wave type
  * @property {number} amplitude - Wave amplitude
  */
 
 /**
  * @typedef {Object} Connection
- * @property {string} id - Unique identifier
- * @property {string} source - Source ID
- * @property {string} target - Target ID
+ * @property {string} id - Connection identifier
+ * @property {string} source - Source identifier
+ * @property {string} target - Target identifier
  */
 
 /**
  * @typedef {Object} Space
- * @property {string} id - Unique identifier
+ * @property {string} id - Space identifier
  * @property {string} name - Space name
- * @property {Field[]} fields - Array of fields
- * @property {Wave[]} waves - Array of waves
- * @property {Connection[]} connections - Array of connections
+ * @property {number} capacity - Space capacity
+ * @property {boolean} isPrivate - Privacy flag
  */
 
+// Factory functions for creating objects
 export const createField = (id, name, value) => ({
   id,
   name,
@@ -46,10 +46,9 @@ export const createConnection = (id, source, target) => ({
   target
 });
 
-export const createSpace = (id, name) => ({
+export const createSpace = (id, name, capacity = 100, isPrivate = false) => ({
   id,
   name,
-  fields: [],
-  waves: [],
-  connections: []
+  capacity,
+  isPrivate
 });

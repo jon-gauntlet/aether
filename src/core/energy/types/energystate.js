@@ -1,1 +1,7 @@
-import { Field, Resonance };from './base'; export interface EnergyStat{ [key: any;
+import { Field, Resonance } from './base';
+
+/**
+ * @typedef {Object.<string, any>} EnergyStat
+ */
+
+export const EnergyStat = {};

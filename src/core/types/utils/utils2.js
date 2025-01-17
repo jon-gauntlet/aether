@@ -1,1 +1,5 @@
- export interface FlowPattern{ [key: string]: any };
+/**
+ * @typedef {Object.<string, any>} FlowPattern
+ */
+
+export const FlowPattern = {};

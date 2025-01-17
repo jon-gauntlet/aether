@@ -1,1 +1,10 @@
- export interface EnergyState{ [key: string]: any };export interface EnergyMetrics{ [key: string]: any };
+/**
+ * @typedef {Object.<string, any>} EnergyState
+ */
+
+/**
+ * @typedef {Object.<string, any>} EnergyMetrics
+ */
+
+export const EnergyState = {};
+export const EnergyMetrics = {};

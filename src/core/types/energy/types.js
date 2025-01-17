@@ -2,7 +2,6 @@
  * @typedef {Object} EnergyState
  * @property {number} level - Current energy level
  * @property {number} capacity - Maximum energy capacity
- * @property {number} flow - Energy flow rate
  * @property {string} type - Energy type
  */
 
@@ -10,36 +9,29 @@
  * @typedef {Object} EnergyMetrics
  * @property {number} input - Energy input rate
  * @property {number} output - Energy output rate
- * @property {number} efficiency - Energy efficiency (0-1)
- * @property {number} stability - Energy stability (0-1)
+ * @property {number} efficiency - Energy efficiency
+ * @property {number} stability - Energy stability
  */
 
 /**
  * @typedef {Object} EnergyPattern
- * @property {string} id - Pattern ID
+ * @property {string} id - Pattern identifier
  * @property {string} type - Pattern type
- * @property {number} strength - Pattern strength (0-1)
- * @property {Object} metadata - Additional pattern metadata
+ * @property {number} strength - Pattern strength
  */
 
-/**
- * Energy types enum as constants
- */
-export const EnergyTypes = {
+// Energy types as constants
+export const ENERGY_TYPES = {
   PHYSICAL: 'physical',
   MENTAL: 'mental',
   EMOTIONAL: 'emotional',
   SPIRITUAL: 'spiritual'
 };
 
-/**
- * Core energy management functions
- */
-
-export const createEnergyState = (type = EnergyTypes.PHYSICAL) => ({
+// Factory functions for creating objects
+export const createEnergyState = (type = ENERGY_TYPES.PHYSICAL) => ({
   level: 100,
   capacity: 100,
-  flow: 0,
   type
 });
 
@@ -53,10 +45,9 @@ export const createEnergyMetrics = () => ({
 export const createEnergyPattern = (id, type) => ({
   id,
   type,
-  strength: 0,
-  metadata: {}
+  strength: 1
 });
 
+// Helper functions
 export const isEnergyDepleted = (state) => state.level <= 0;
-
 export const hasEnergyCapacity = (state) => state.level < state.capacity; 

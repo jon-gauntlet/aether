@@ -17,7 +17,7 @@ export default defineConfig({
     include: ['src/**/*.{test,spec}.{js,jsx}'],
     exclude: ['node_modules', 'dist'],
     transformMode: {
-      web: [/\.[jt]sx$/]
+      web: [/\.jsx$/]
     }
   }
 })

@@ -1,1 +1,5 @@
- [key: any};[key: any};
+/**
+ * @typedef {Object.<string, any>} GenericObject
+ */
+
+export const GenericObject = {};
