@@ -1,21 +1,42 @@
-"""Tests for BaseRAG class."""
+"""Tests for base RAG functionality."""
+
 import pytest
 import numpy as np
 from unittest.mock import patch
 from rag_aether.ai.rag import BaseRAG
-from ..test_utils import (
-    MockEmbeddingModel,
-    assert_embeddings_similar,
-    assert_results_ordered,
-    mock_async_return
-)
 
 @pytest.fixture
-def base_rag(mock_embedding_model):
-    """Fixture for BaseRAG instance."""
+def sample_texts():
+    """Sample texts for testing."""
+    return [
+        "Machine learning is a subset of artificial intelligence.",
+        "Natural language processing deals with text and speech.",
+        "Deep learning uses neural networks for pattern recognition.",
+        "Computer vision focuses on image and video analysis.",
+        "Reinforcement learning involves agents and environments."
+    ]
+
+@pytest.fixture
+def sample_metadata():
+    """Sample metadata for testing."""
+    return [
+        {"author": "alice", "type": "technical", "timestamp": 1001},
+        {"author": "bob", "type": "tutorial", "timestamp": 1002},
+        {"author": "alice", "type": "technical", "timestamp": 1003},
+        {"author": "charlie", "type": "blog", "timestamp": 1004},
+        {"author": "alice", "type": "technical", "timestamp": 1005}
+    ]
+
+@pytest.fixture
+async def base_rag(mock_embedding_model):
+    """Create a BaseRAG instance for testing."""
     with patch('rag_aether.ai.rag.SentenceTransformer', return_value=mock_embedding_model):
         rag = BaseRAG()
-        return rag
+        yield rag
+
+def assert_results_ordered(scores):
+    """Helper to verify results are ordered by score."""
+    assert all(scores[i] >= scores[i+1] for i in range(len(scores)-1))
 
 @pytest.mark.asyncio
 async def test_encode_texts_batch(base_rag, sample_texts):
@@ -40,12 +61,12 @@ async def test_ingest_text(base_rag, sample_texts, sample_metadata):
     # Ingest texts with metadata
     for text, metadata in zip(sample_texts, sample_metadata):
         await base_rag.ingest_text(text, metadata)
-    
+        
     # Verify metadata storage
     assert len(base_rag.metadata) == len(sample_texts)
     for i, expected_metadata in enumerate(sample_metadata):
         assert base_rag.metadata[i] == expected_metadata
-    
+        
     # Verify index size
     assert base_rag.index.ntotal == len(sample_texts)
 
@@ -55,7 +76,7 @@ async def test_retrieve_with_fusion(base_rag, sample_texts, sample_metadata):
     # Ingest sample data
     for text, metadata in zip(sample_texts, sample_metadata):
         await base_rag.ingest_text(text, metadata)
-    
+        
     # Test basic retrieval
     query = "machine learning and AI"
     k = 2
@@ -81,7 +102,7 @@ async def test_retrieve_with_metadata_filters(base_rag, sample_texts, sample_met
     # Ingest sample data
     for text, metadata in zip(sample_texts, sample_metadata):
         await base_rag.ingest_text(text, metadata)
-    
+        
     # Test filtering by author
     query = "machine learning"
     metadata_filters = {"author": "alice"}

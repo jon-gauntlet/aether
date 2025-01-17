@@ -29,7 +29,8 @@ import logging
 from pathlib import Path
 import torch
 import os
-from unittest.mock import Mock, patch
+import numpy as np
+from unittest.mock import Mock, patch, AsyncMock
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -75,16 +76,83 @@ def pytest_configure(config):
 
 @pytest.fixture(scope="session")
 def test_paths():
-    """Provide standardized test paths.
-    
-    Future Claudes: Use this to access test data consistently.
-    """
+    """Provide standardized test paths."""
     return {
         "root": TEST_ROOT,
         "project": PROJECT_ROOT,
         "fixtures": FIXTURE_PATH,
         "mocks": MOCK_PATH
     }
+
+@pytest.fixture
+def mock_embedding_model():
+    """Mock embedding model for testing."""
+    mock = Mock()
+    
+    # Cache for embeddings
+    embedding_cache = {}
+    
+    def mock_encode(texts, batch_size=None, convert_to_numpy=True, normalize_embeddings=True):
+        # Create cache key
+        if isinstance(texts, str):
+            cache_key = texts
+        else:
+            cache_key = tuple(texts)  # Make texts hashable for caching
+            
+        # Return cached embeddings if available
+        if cache_key in embedding_cache:
+            return embedding_cache[cache_key]
+            
+        # Generate new embeddings
+        if isinstance(texts, str):
+            # Single text - generate and normalize
+            embedding = np.random.rand(768)
+            normalized = embedding / np.linalg.norm(embedding)
+            embedding_cache[cache_key] = normalized
+            return normalized
+        else:
+            # Batch of texts - generate and normalize each vector
+            embeddings = np.random.rand(len(texts), 768)
+            norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
+            normalized = embeddings / norms
+            embedding_cache[cache_key] = normalized
+            return normalized
+            
+    mock.encode = Mock(side_effect=mock_encode)
+    mock.encode_batch = Mock(side_effect=lambda texts: mock_encode(texts))
+    mock.dimension = 768
+    return mock
+
+@pytest.fixture
+def mock_openai():
+    """Mock OpenAI client for testing."""
+    mock = AsyncMock()
+    mock.chat.completions.create = AsyncMock(return_value=AsyncMock(
+        choices=[AsyncMock(message=AsyncMock(content="Test response"))]
+    ))
+    return mock
+
+@pytest.fixture
+def sample_messages():
+    """Sample messages for testing."""
+    return [
+        {
+            "id": 1,
+            "content": "Test message 1",
+            "author": "user1",
+            "timestamp": 1577836800.0,  # 2020-01-01
+            "channel_id": "channel1",
+            "thread_id": "thread1"
+        },
+        {
+            "id": 2,
+            "content": "Test message 2",
+            "author": "user2",
+            "timestamp": 1577923200.0,  # 2020-01-02
+            "channel_id": "channel1",
+            "thread_id": "thread1"
+        }
+    ]
 
 # Test paths
 def pytest_collection_modifyitems(config, items):
