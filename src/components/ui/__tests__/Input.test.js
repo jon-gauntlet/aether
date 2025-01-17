@@ -1,98 +1,65 @@
-import React from 'react';
-import {
-  render,
-  screen,
-  fireEvent,
-  createMockEvent,
-  typeIntoField,
-  waitForLoadingToComplete,
-} from '../../test/utils/test-utils';
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { Input } from '../Input';
 
 describe('Input', () => {
-  const mockOnSubmit = jest.fn();
-
-  beforeEach(() => {
-    mockOnSubmit.mockReset();
-  });
-
   it('renders correctly', () => {
-    render(<Input onSubmit={mockOnSubmit} />);
-    
-    expect(screen.getByPlaceholderText('Type your message...')).toBeInTheDocument();
-    expect(screen.getByRole('button')).toBeInTheDocument();
-    expect(screen.getByRole('button')).not.toBeDisabled();
+    render(<Input aria-label="test-input" />);
+    expect(screen.getByRole('textbox', { name: /test-input/i })).toBeInTheDocument();
   });
 
-  it('handles text input correctly', async () => {
-    render(<Input onSubmit={mockOnSubmit} />);
+  it('handles value changes', async () => {
+    const onChange = vi.fn();
+    const user = userEvent.setup();
+    render(<Input value="" onChange={onChange} aria-label="test-input" />);
     
-    const input = screen.getByPlaceholderText('Type your message...');
-    await typeIntoField(input, 'Hello, world!');
+    const input = screen.getByRole('textbox', { name: /test-input/i });
+    await user.type(input, 'test');
     
-    expect(input.value).toBe('Hello, world!');
+    expect(onChange).toHaveBeenCalled();
+    expect(input).toHaveValue('test');
   });
 
-  it('handles form submission correctly', async () => {
-    render(<Input onSubmit={mockOnSubmit} />);
+  it('respects maxLength prop', async () => {
+    const user = userEvent.setup();
+    render(<Input maxLength={5} aria-label="test-input" />);
     
-    const input = screen.getByPlaceholderText('Type your message...');
-    const button = screen.getByRole('button');
+    const input = screen.getByRole('textbox', { name: /test-input/i });
+    await user.type(input, '123456');
     
-    await typeIntoField(input, 'Test message');
-    fireEvent.click(button);
-    
-    await waitForLoadingToComplete(() => {
-      expect(mockOnSubmit).toHaveBeenCalledWith('Test message');
-      expect(input.value).toBe('');
-    });
+    expect(input).toHaveValue('12345');
   });
 
-  it('prevents empty submission', async () => {
-    render(<Input onSubmit={mockOnSubmit} />);
-    
-    const button = screen.getByRole('button');
-    fireEvent.click(button);
-    
-    expect(mockOnSubmit).not.toHaveBeenCalled();
+  it('handles disabled state', () => {
+    render(<Input disabled aria-label="test-input" />);
+    expect(screen.getByRole('textbox', { name: /test-input/i })).toBeDisabled();
   });
 
-  it('handles loading state correctly', () => {
-    render(<Input onSubmit={mockOnSubmit} isLoading={true} />);
-    
-    const button = screen.getByRole('button');
-    expect(button).toBeDisabled();
-    expect(button).toHaveTextContent('Sending...');
+  it('applies placeholder text', () => {
+    render(<Input placeholder="Enter text" aria-label="test-input" />);
+    const input = screen.getByRole('textbox', { name: /test-input/i });
+    expect(input).toHaveAttribute('placeholder', 'Enter text');
   });
 
-  it('handles keyboard submission', async () => {
-    render(<Input onSubmit={mockOnSubmit} />);
+  it('handles focus and blur events', async () => {
+    const onFocus = vi.fn();
+    const onBlur = vi.fn();
+    const user = userEvent.setup();
     
-    const input = screen.getByPlaceholderText('Type your message...');
-    await typeIntoField(input, 'Test message');
+    render(
+      <Input 
+        onFocus={onFocus} 
+        onBlur={onBlur} 
+        aria-label="test-input" 
+      />
+    );
     
-    fireEvent.keyPress(input, {
-      key: 'Enter',
-      code: 'Enter',
-      charCode: 13,
-    });
+    const input = screen.getByRole('textbox', { name: /test-input/i });
+    await user.click(input);
+    expect(onFocus).toHaveBeenCalled();
     
-    await waitForLoadingToComplete(() => {
-      expect(mockOnSubmit).toHaveBeenCalledWith('Test message');
-      expect(input.value).toBe('');
-    });
-  });
-
-  it('trims whitespace from input', async () => {
-    render(<Input onSubmit={mockOnSubmit} />);
-    
-    const input = screen.getByPlaceholderText('Type your message...');
-    await typeIntoField(input, '  Test message  ');
-    
-    fireEvent.click(screen.getByRole('button'));
-    
-    await waitForLoadingToComplete(() => {
-      expect(mockOnSubmit).toHaveBeenCalledWith('Test message');
-    });
+    await user.tab();
+    expect(onBlur).toHaveBeenCalled();
   });
 }); 

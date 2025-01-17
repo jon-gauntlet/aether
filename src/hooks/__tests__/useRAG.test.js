@@ -1,94 +1,66 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react-hooks';
 import { useRAG } from '../useRAG';
-import { RAGService } from '../../services/rag';
-import { RAGError } from '../../utils/errors';
-import { createMockRAGResponse, createMockError } from '../../test/utils/test-utils';
 
-// Mock the RAGService
-jest.mock('../../services/rag', () => ({
+// Mock RAG service
+const mockRAGService = {
+  search: vi.fn(),
+  initialize: vi.fn(),
+  cleanup: vi.fn(),
+};
+
+vi.mock('../../services/rag', () => ({
   RAGService: {
-    getInstance: jest.fn(),
+    getInstance: vi.fn(() => mockRAGService),
   },
 }));
 
 describe('useRAG', () => {
-  const mockQuery = jest.fn();
-  const mockIngestText = jest.fn();
-  const mockGetInstance = RAGService.getInstance;
-
   beforeEach(() => {
-    mockGetInstance.mockReturnValue({
-      query: mockQuery,
-      ingestText: mockIngestText,
-    });
-    mockQuery.mockReset();
-    mockIngestText.mockReset();
+    vi.clearAllMocks();
+    mockRAGService.search.mockResolvedValue([]);
+    mockRAGService.initialize.mockResolvedValue(undefined);
   });
 
-  it('should handle successful query', async () => {
-    const mockResponse = createMockRAGResponse({
-      answer: 'Test answer',
-      sources: [{ content: 'source content', metadata: {} }],
-    });
-    mockQuery.mockResolvedValueOnce(mockResponse);
-
+  it('initializes with default state', () => {
     const { result } = renderHook(() => useRAG());
-
-    expect(result.current.loading).toBe(false);
+    expect(result.current.isLoading).toBe(false);
     expect(result.current.error).toBeNull();
-    expect(result.current.answer).toBeNull();
-
-    await act(async () => {
-      await result.current.query('test question');
-    });
-
-    expect(mockQuery).toHaveBeenCalledWith({
-      question: 'test question',
-      context: undefined,
-    });
-    expect(result.current.loading).toBe(false);
-    expect(result.current.error).toBeNull();
-    expect(result.current.answer).toEqual(mockResponse);
+    expect(result.current.results).toEqual([]);
   });
 
-  it('should handle query error', async () => {
-    const error = createMockError('QUERY_ERROR', 'Query failed');
-    mockQuery.mockRejectedValueOnce(error);
+  it('handles search operations', async () => {
+    const mockResults = [{ id: 1, text: 'Test result' }];
+    mockRAGService.search.mockResolvedValueOnce(mockResults);
 
     const { result } = renderHook(() => useRAG());
 
     await act(async () => {
-      await result.current.query('test question');
+      await result.current.search('test query');
     });
 
-    expect(result.current.loading).toBe(false);
-    expect(result.current.error).toEqual(error);
-    expect(result.current.answer).toBeNull();
+    expect(mockRAGService.search).toHaveBeenCalledWith('test query');
+    expect(result.current.results).toEqual(mockResults);
+    expect(result.current.isLoading).toBe(false);
   });
 
-  it('should handle successful text ingestion', async () => {
-    const { result } = renderHook(() => useRAG());
-
-    await act(async () => {
-      await result.current.ingestText('test text', { source: 'test' });
-    });
-
-    expect(mockIngestText).toHaveBeenCalledWith('test text', { source: 'test' });
-    expect(result.current.loading).toBe(false);
-    expect(result.current.error).toBeNull();
-  });
-
-  it('should handle ingestion error', async () => {
-    const error = createMockError('INGEST_ERROR', 'Ingestion failed');
-    mockIngestText.mockRejectedValueOnce(error);
+  it('handles search errors', async () => {
+    const error = new Error('Search failed');
+    mockRAGService.search.mockRejectedValueOnce(error);
 
     const { result } = renderHook(() => useRAG());
 
     await act(async () => {
-      await result.current.ingestText('test text');
+      await result.current.search('test query');
     });
 
-    expect(result.current.loading).toBe(false);
-    expect(result.current.error).toEqual(error);
+    expect(result.current.error).toBe(error);
+    expect(result.current.isLoading).toBe(false);
+  });
+
+  it('cleans up on unmount', () => {
+    const { unmount } = renderHook(() => useRAG());
+    unmount();
+    expect(mockRAGService.cleanup).toHaveBeenCalled();
   });
 }); 
