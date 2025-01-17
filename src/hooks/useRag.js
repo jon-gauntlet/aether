@@ -1,42 +1,88 @@
-import { useState } from 'react';
-import { ragService } from '../services/rag.js';
+import { useState, useCallback } from 'react';
 
-export function useRag() {
+export const useRag = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [metrics, setMetrics] = useState(null);
 
-  const queryDocuments = async (query) => {
+  /**
+   * Search for relevant documents
+   * @param {string} query - The search query
+   * @param {Object} options - Search options
+   * @param {number} [options.maxResults=5] - Maximum number of results to return
+   * @returns {Promise<Array>} Array of search results
+   */
+  const search = useCallback(async (query, { maxResults = 5 } = {}) => {
     setIsLoading(true);
     setError(null);
+    setMetrics(null);
+    
     try {
-      const response = await ragService.query(query);
-      return response.response;
+      const response = await fetch('/api/rag/query', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query,
+          maxResults
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.details || errorData.error || 'Search failed');
+      }
+      
+      const data = await response.json();
+      setMetrics(data.metrics);
+      
+      return data.results;
+      
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to query documents');
-      return null;
+      const errorMessage = err instanceof Error ? err.message : 'Search failed';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+      
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const ingestDocument = async (text, metadata) => {
-    setIsLoading(true);
-    setError(null);
+  /**
+   * Add documents to the search index
+   * @param {Array<{text: string, metadata?: Object}>} documents - Array of documents to add
+   * @returns {Promise<Object>} Response from the server
+   */
+  const addDocuments = useCallback(async (documents) => {
     try {
-      const response = await ragService.ingestDocument({ text, metadata });
-      return response.chunks;
+      const response = await fetch('/api/rag/documents', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ documents }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.details || errorData.error || 'Failed to add documents');
+      }
+      
+      return response.json();
+      
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to ingest document');
-      return null;
-    } finally {
-      setIsLoading(false);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to add documents';
+      setError(errorMessage);
+      throw new Error(errorMessage);
     }
-  };
+  }, []);
 
   return {
-    queryDocuments,
-    ingestDocument,
+    search,
+    addDocuments,
     isLoading,
     error,
+    metrics
   };
-} 
+}; 
