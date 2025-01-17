@@ -3,9 +3,9 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
-name = "rag-aether"
+name = "aether-infrastructure"
 version = "0.1.0"
-description = "RAG system for Aether"
+description = "Infrastructure for Aether project"
 authors = ["Your Name <your.email@example.com>"]
 
 [tool.poetry.dependencies]
@@ -32,4 +32,4 @@ ruff = "^0.3.3"
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 addopts = "-v --cov=rag_aether --cov-report=term-missing"
-asyncio_mode = "auto" 
+asyncio_mode = "auto"

@@ -1,23 +1,30 @@
 #!/bin/bash
-
-# Fast deployment script with protection
 set -e
 
 # Load environment variables
-source .env.production
+source .env
 
-# Validate environment
-if [ -z "$VITE_FIREBASE_API_KEY" ] || [ -z "$VITE_FIREBASE_PROJECT_ID" ] || [ -z "$VITE_FIREBASE_APP_ID" ]; then
-  echo "❌ Missing required Firebase environment variables"
-  exit 1
+# Health check before deployment
+echo "Running pre-deployment health check..."
+python scripts/health_check.py
+
+if [ $? -ne 0 ]; then
+    echo "Pre-deployment health check failed!"
+    exit 1
 fi
 
-# Build with protection
-echo "🛡️ Building with protection..."
-VITE_APP_ENV=production npm run build
+# Start services
+docker-compose up -d
 
-# Deploy to Vercel using existing project config
-echo "🚀 Deploying to Vercel..."
-vercel deploy --prod --yes
+# Post-deployment health check
+echo "Running post-deployment health check..."
+sleep 5  # Wait for services to start
+python scripts/health_check.py
 
-echo "✅ Deployment complete" 
+if [ $? -ne 0 ]; then
+    echo "Post-deployment health check failed! Rolling back..."
+    docker-compose down
+    exit 1
+fi
+
+echo "Deployment successful!" 

@@ -1,34 +1,6 @@
 version: '3.8'
 
 services:
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    ports:
-      - "80:80"
-    restart: unless-stopped
-    environment:
-      - NODE_ENV=production
-    networks:
-      - aether_net
-
-  # Development service
-  dev:
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
-    ports:
-      - "3000:3000"
-    volumes:
-      - .:/app
-      - /app/node_modules
-    environment:
-      - NODE_ENV=development
-    command: npm run start
-    networks:
-      - aether_net
-
   redis:
     image: redis:7.2
     ports:
@@ -41,6 +13,30 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - NODE_ENV=development
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    ports:
+      - "3000:3000"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      redis:
+        condition: service_healthy
 
 networks:
   aether_net:
