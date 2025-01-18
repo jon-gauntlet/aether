@@ -1,34 +1,35 @@
-import React from "react";
-import { VStack, Text, Skeleton } from "@chakra-ui/react";
-import { Message } from "./Message";
-import { ErrorBoundary } from "../shared/components/ErrorBoundary";
-
-const ChatMessageListComponent = ({ messages = [], isLoading, error }) => {
-  if (error) {
-    return <Text color="red.500">Error: {error.message}</Text>;
+export default function ChatMessageList({ messages, loading }) {
+  if (loading) {
+    return (
+      <div className="flex-1 p-4 flex items-center justify-center">
+        <div className="animate-pulse text-gray-500">Loading messages...</div>
+      </div>
+    )
   }
 
-  if (isLoading) {
+  if (messages.length === 0) {
     return (
-      <VStack spacing={4} align="stretch">
-        <Skeleton height="60px" />
-        <Skeleton height="60px" />
-        <Skeleton height="60px" />
-      </VStack>
-    );
+      <div className="flex-1 p-4 flex items-center justify-center">
+        <div className="text-gray-500">No messages yet. Start the conversation!</div>
+      </div>
+    )
   }
 
   return (
-    <VStack spacing={4} align="stretch">
-      {messages.map((message) => (
-        <Message key={message.id} message={message} />
+    <div className="flex-1 p-4 overflow-y-auto space-y-4">
+      {messages.map(message => (
+        <div key={message.id} className="message">
+          <div className="p-3 bg-gray-100 rounded-lg">
+            <div className="flex justify-between items-start mb-1">
+              <span className="text-sm text-gray-600">User {message.user_id}</span>
+              <span className="text-xs text-gray-500">
+                {new Date(message.created_at).toLocaleTimeString()}
+              </span>
+            </div>
+            <p className="text-gray-800">{message.content}</p>
+          </div>
+        </div>
       ))}
-    </VStack>
-  );
-};
-
-export const ChatMessageList = (props) => (
-  <ErrorBoundary>
-    <ChatMessageListComponent {...props} />
-  </ErrorBoundary>
-); 
+    </div>
+  )
+} 

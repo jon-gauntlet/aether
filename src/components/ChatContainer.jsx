@@ -1,100 +1,82 @@
-import React, { useEffect, useState } from 'react';
-import { VStack, Container, useToast } from '@chakra-ui/react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ChatMessageList } from './ChatMessageList';
-import { ChatInput } from './ChatInput';
-import { FileUpload } from './FileUpload';
-import { apiClient } from '../services/apiClient';
-import { withErrorBoundary } from './ErrorBoundary';
+import { useEffect, useState } from 'react'
+import { supabase } from '../supabaseClient'
+import ChatInput from './ChatInput'
+import ChatMessageList from './ChatMessageList'
 
-export const ChatContainer = withErrorBoundary(() => {
-  const [isLoading, setIsLoading] = useState(false);
-  const toast = useToast();
-  const queryClient = useQueryClient();
-
-  const { data: messages = [] } = useQuery({
-    queryKey: ['messages'],
-    queryFn: apiClient.getChatHistory,
-    onError: () => {
-      toast({
-        title: 'Error',
-        description: 'Failed to load messages',
-        status: 'error',
-        duration: 3000,
-        isClosable: true
-      });
-    }
-  });
-
-  const { mutate: sendMessage } = useMutation({
-    mutationFn: apiClient.processQuery,
-    onMutate: () => {
-      setIsLoading(true);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries(['messages']);
-      setIsLoading(false);
-    },
-    onError: () => {
-      toast({
-        title: 'Error',
-        description: 'Failed to send message',
-        status: 'error',
-        duration: 3000,
-        isClosable: true
-      });
-      setIsLoading(false);
-    }
-  });
-
-  const { mutate: uploadFile } = useMutation({
-    mutationFn: apiClient.uploadFile,
-    onSuccess: (data) => {
-      toast({
-        title: 'Success',
-        description: data.message,
-        status: 'success',
-        duration: 3000,
-        isClosable: true
-      });
-    },
-    onError: () => {
-      toast({
-        title: 'Error',
-        description: 'Failed to upload file',
-        status: 'error',
-        duration: 3000,
-        isClosable: true
-      });
-    }
-  });
+export default function ChatContainer() {
+  const [messages, setMessages] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [isConnected, setIsConnected] = useState(false)
 
   useEffect(() => {
-    const checkHealth = async () => {
-      try {
-        await apiClient.checkHealth();
-      } catch (error) {
-        toast({
-          title: 'Error',
-          description: 'API is not available',
-          status: 'error',
-          duration: 3000,
-          isClosable: true
-        });
-      }
-    };
-    checkHealth();
-  }, [toast]);
+    loadMessages()
+    
+    const channel = supabase
+      .channel('messages')
+      .on('postgres_changes', 
+        { event: 'INSERT', schema: 'public', table: 'messages' },
+        payload => {
+          setMessages(current => [...current, payload.new])
+        }
+      )
+      .subscribe(status => {
+        setIsConnected(status === 'SUBSCRIBED')
+      })
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [])
+
+  async function loadMessages() {
+    try {
+      setError(null)
+      const { data, error: loadError } = await supabase
+        .from('messages')
+        .select('*')
+        .order('created_at', { ascending: true })
+
+      if (loadError) throw loadError
+      setMessages(data)
+    } catch (err) {
+      setError('Failed to load messages')
+      console.error('Error loading messages:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleSendMessage(content) {
+    try {
+      setError(null)
+      const { error: sendError } = await supabase
+        .from('messages')
+        .insert([{ content, user_id: 'anonymous' }])
+
+      if (sendError) throw sendError
+    } catch (err) {
+      setError('Failed to send message')
+      console.error('Error sending message:', err)
+    }
+  }
 
   return (
-    <Container maxW="container.xl" py={8}>
-      <VStack spacing={8} align="stretch">
-        <div className="chat-container">
-          <ChatMessageList messages={messages} />
-          <ChatInput onSendMessage={sendMessage} isLoading={isLoading} />
+    <div className="flex flex-col h-[600px] border rounded-lg bg-white shadow-sm">
+      {error && (
+        <div className="p-2 bg-red-50 text-red-700 text-sm">
+          {error}
         </div>
-        <FileUpload onFileUpload={uploadFile} />
-      </VStack>
-    </Container>
-  );
-}); 
+      )}
+      <div className="p-2 border-b text-sm text-gray-500">
+        {isConnected ? (
+          <span className="text-green-600">●</span>
+        ) : (
+          <span className="text-red-600">●</span>
+        )} {isConnected ? 'Connected' : 'Connecting...'}
+      </div>
+      <ChatMessageList messages={messages} loading={loading} />
+      <ChatInput onSendMessage={handleSendMessage} />
+    </div>
+  )
+} 
