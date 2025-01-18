@@ -3,8 +3,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { ChakraProvider } from '@chakra-ui/react';
 import { vi } from 'vitest';
+import '@testing-library/jest-dom';
 
-// Shared Chakra UI mocks
+// Mock Chakra UI components
 vi.mock('@chakra-ui/react', async () => {
   const actual = await vi.importActual('@chakra-ui/react');
   return {
@@ -25,6 +26,7 @@ vi.mock('@chakra-ui/react', async () => {
   };
 });
 
+// Create a test query client
 export function createTestQueryClient() {
   return new QueryClient({
     defaultOptions: {
@@ -46,6 +48,7 @@ export function createTestQueryClient() {
   });
 }
 
+// Test wrapper component
 export function TestWrapper({ children }) {
   const testQueryClient = createTestQueryClient();
 
@@ -58,4 +61,14 @@ export function TestWrapper({ children }) {
       </QueryClientProvider>
     </ChakraProvider>
   );
-} 
+}
+
+// Global test setup
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
+// Global test teardown
+afterEach(() => {
+  vi.clearAllTimers();
+}); 
