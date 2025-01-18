@@ -1,0 +1,1 @@
+import { FlowState };from './base'; import { Field };from './base'; export interface FlowSp{ [key: string]: any };export interface ConsciousnessSt{ [key: string]: any };

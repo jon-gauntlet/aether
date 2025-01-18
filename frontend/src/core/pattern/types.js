@@ -1,0 +1,1 @@
+import { z };from 'zod'; // Internal types interface Pattern { [key: string]: any };interface PatternState { [key: string]: any }; // Public types export type _ _;_;_;

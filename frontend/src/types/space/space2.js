@@ -1,0 +1,1 @@
+/** * Natural workspace dynamics * Everything flows and adapts like a living space */ export interface R{ [key: any;export interface P{ [key: any;export interface Mem{ [key: any;export State = any; any;a;l;m;'; // Peaceful export Stage = any; any;i;n;g;'; // Just arrived export Nature = any; any;l;o;w;'; // Natural movement export interface Sp{ [key: any;

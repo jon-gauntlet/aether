@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { Box, VStack, useToast } from '@chakra-ui/react'
-import { ChatMessageList } from '../../components/ChatMessageList'
-import { ChatInput } from './ChatInput'
-import * as apiClient from '../../api/client'
+import { ChatMessageList } from './ChatMessageList'
+import ChatInput from './ChatInput'
+import * as apiClient from '../api/client'
+import { FileUpload } from './FileUpload'
 
-export function ChatContainer() {
+function ChatContainer() {
   const [messages, setMessages] = useState([])
   const [channel, setChannel] = useState('general')
   const toast = useToast()
@@ -40,6 +41,14 @@ export function ChatContainer() {
 
   const { mutate: sendMessageMutation, isLoading: isSending } = apiClient.useMutation({
     mutationFn: (message) => apiClient.sendMessage(message, channel),
+    onSuccess: (newMessage) => {
+      setMessages(prev => [...prev, newMessage])
+      toast({
+        title: 'Message sent',
+        status: 'success',
+        duration: 1000,
+      })
+    },
     onError: () => {
       toast({
         title: 'Failed to send message',
@@ -85,4 +94,6 @@ export function ChatContainer() {
       </Box>
     </VStack>
   )
-} 
+}
+
+export default ChatContainer 

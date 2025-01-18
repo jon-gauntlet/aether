@@ -1,0 +1,1 @@
+-- Add channel column to messages table\nalter table messages add column channel text not null default 'general';\nalter table messages add column coherence_level numeric not null default 0;\nalter table messages add column energy_level numeric not null default 0;

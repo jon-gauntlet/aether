@@ -1,0 +1,1 @@
+-- Add channel column to messages table\nalter table messages add column channel text not null default 'general';

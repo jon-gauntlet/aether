@@ -1,54 +1,50 @@
 import React, { useCallback } from 'react'
-import { Button, Input, useToast } from '@chakra-ui/react'
-import { AttachmentIcon } from '@chakra-ui/icons'
+import { Box, Button, Input, useToast } from '@chakra-ui/react'
 
 export function FileUpload({ onUpload, isLoading }) {
   const toast = useToast()
   const fileInputRef = React.useRef()
 
-  const handleFileChange = useCallback(async (event) => {
-    const file = event.target.files[0]
+  const handleClick = useCallback(() => {
+    fileInputRef.current?.click()
+  }, [])
+
+  const handleFileChange = useCallback((e) => {
+    const file = e.target.files?.[0]
     if (!file) return
 
-    try {
-      await onUpload(file)
+    if (file.size > 10 * 1024 * 1024) { // 10MB limit
       toast({
-        title: 'File uploaded successfully',
-        status: 'success',
+        title: 'File too large',
+        description: 'Please upload a file smaller than 10MB',
+        status: 'error',
         duration: 3000,
       })
-    } catch (error) {
-      toast({
-        title: 'Failed to upload file',
-        description: error.message,
-        status: 'error',
-        duration: 5000,
-      })
+      return
     }
 
-    // Reset input
-    event.target.value = ''
+    onUpload(file)
+    e.target.value = '' // Reset input
   }, [onUpload, toast])
 
   return (
-    <>
-      <Input
+    <Box mb={4}>
+      <input
         type="file"
         ref={fileInputRef}
         onChange={handleFileChange}
-        display="none"
-        data-testid="file-input"
+        style={{ display: 'none' }}
+        accept=".txt,.pdf,.doc,.docx"
       />
       <Button
-        leftIcon={<AttachmentIcon />}
-        onClick={() => fileInputRef.current?.click()}
+        onClick={handleClick}
         isLoading={isLoading}
-        variant="ghost"
         size="sm"
-        data-testid="file-upload-button"
+        variant="outline"
+        width="full"
       >
-        Attach
+        Upload File
       </Button>
-    </>
+    </Box>
   )
 } 

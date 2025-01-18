@@ -1,0 +1,1 @@
+-- Enable RLS\nalter table messages enable row level security;\n\n-- Create policy for reading messages\ncreate policy "Users can read messages in their channels" on messages for select to authenticated using (true);\n\n-- Create policy for inserting messages\ncreate policy "Users can insert messages" on messages for insert to authenticated with check (auth.uid() = user_id);

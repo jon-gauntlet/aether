@@ -1,6 +1,6 @@
 import { Auth as SupabaseAuth } from '@supabase/auth-ui-react'
 import { ThemeSupa } from '@supabase/auth-ui-shared'
-import { supabase } from '../lib/supabase'
+import { supabase } from '../services/supabase'
 import { Box, Container, Heading, VStack } from '@chakra-ui/react'
 
 export function Auth() {
@@ -46,7 +46,7 @@ export function Auth() {
                   },
                 },
               }}
-              providers={['google']}
+              providers={[]}
               redirectTo={window.location.origin}
             />
           </VStack>

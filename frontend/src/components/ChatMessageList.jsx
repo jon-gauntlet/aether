@@ -1,7 +1,7 @@
 import React from 'react'
 import { Box, VStack, Text, Skeleton, Fade } from '@chakra-ui/react';
-import { ErrorBoundary } from '../shared/components/ErrorBoundary';
-import { Message } from '../shared/components/Message';
+import { ErrorBoundary } from './ErrorBoundary';
+import { Message } from './Message';
 
 function ChatMessage({ message, isUser }) {
   return (
@@ -23,9 +23,9 @@ function ChatMessage({ message, isUser }) {
       }}
     >
       <Text>{message.content}</Text>
-      {message.timestamp && (
+      {message.created_at && (
         <Text fontSize="xs" opacity={0.8} mt={1}>
-          {new Date(message.timestamp).toLocaleTimeString()}
+          {new Date(message.created_at).toLocaleTimeString()}
         </Text>
       )}
     </Box>
@@ -80,9 +80,9 @@ function ChatMessageListComponent({ messages = [], isLoading, error }) {
       ) : (
         messages?.map((message, index) => (
           <ChatMessage
-            key={index}
+            key={message.id || index}
             message={message}
-            isUser={message.role === 'user'}
+            isUser={message.user_id === 'anonymous'}
           />
         ))
       )}
