@@ -1,4 +1,5 @@
 export default function ChatMessageList({ messages, loading }) {
+<<<<<<< HEAD
   if (loading) {
     return (
       <div className="flex-1 p-4 flex items-center justify-center">
@@ -28,6 +29,18 @@ export default function ChatMessageList({ messages, loading }) {
             </div>
             <p className="text-gray-800">{message.content}</p>
           </div>
+=======
+  if (loading) return <div className="flex-1 p-4">Loading...</div>
+
+  return (
+    <div className="flex-1 overflow-y-auto p-4">
+      {messages.map(message => (
+        <div key={message.id} className="mb-4">
+          <p className="bg-gray-100 p-2 rounded">{message.content}</p>
+          <small className="text-gray-500">
+            {new Date(message.created_at).toLocaleTimeString()}
+          </small>
+>>>>>>> feature/infra
         </div>
       ))}
     </div>

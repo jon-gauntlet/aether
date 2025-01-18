@@ -2,6 +2,7 @@ import { useState } from 'react'
 
 export default function ChatInput({ onSendMessage }) {
   const [message, setMessage] = useState('')
+<<<<<<< HEAD
   const [isLoading, setIsLoading] = useState(false)
 
   async function handleSubmit(e) {
@@ -16,10 +17,20 @@ export default function ChatInput({ onSendMessage }) {
     } finally {
       setIsLoading(false)
     }
+=======
+
+  function handleSubmit(e) {
+    e.preventDefault()
+    if (!message.trim()) return
+    
+    onSendMessage(message)
+    setMessage('')
+>>>>>>> feature/infra
   }
 
   return (
     <form onSubmit={handleSubmit} className="p-4 border-t">
+<<<<<<< HEAD
       <div className="flex gap-2">
         <input
           type="text"
@@ -38,6 +49,15 @@ export default function ChatInput({ onSendMessage }) {
           {isLoading ? 'Sending...' : 'Send'}
         </button>
       </div>
+=======
+      <input
+        type="text"
+        value={message}
+        onChange={e => setMessage(e.target.value)}
+        placeholder="Type a message..."
+        className="w-full p-2 border rounded"
+      />
+>>>>>>> feature/infra
     </form>
   )
 } 
