@@ -1,49 +1,31 @@
 {
   "name": "aether",
   "version": "1.0.0",
-  "description": "Aether Project",
-  "type": "module",
+  "private": true,
+  "workspaces": [
+    "frontend"
+  ],
   "scripts": {
-    "frontend:dev": "cd frontend && npm run dev",
-    "frontend:build": "cd frontend && npm run build",
-    "frontend:preview": "cd frontend && npm run preview",
-    "frontend:test": "cd frontend && npm run test",
-    "backend:dev": "./setup_env.sh poetry run uvicorn src.rag_aether.api.endpoints:app --reload --port 8000",
-    "backend:start": "poetry run uvicorn src.rag_aether.api.endpoints:app --port 8000",
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
-    "start": "concurrently \"npm run backend:start\" \"npm run frontend:preview\"",
-    "test": "poetry run pytest && cd frontend && npm run test",
-    "test:unit": "cd frontend && npm run test:unit",
-    "test:integration": "cd frontend && npm run test:integration",
-    "test:coverage": "cd frontend && npm run test:coverage",
-    "test:watch": "cd frontend && npm run test:watch",
-    "verify": "node scripts/verify-setup.js",
-    "db:reset": "supabase db reset",
-    "db:start": "supabase start",
-    "db:stop": "supabase stop",
-    "db:seed": "node scripts/seed-test-data.js",
-    "setup": "./scripts/setup-dev.sh && npm run db:seed",
-    "clean": "supabase db reset && npm run verify",
-    "verify:db": "node scripts/verify-db.js",
-    "verify:all": "npm run verify && npm run verify:db"
-  },
-  "dependencies": {
-    "@supabase/supabase-js": "^2.39.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && python -m uvicorn main:app --reload",
+    "test": "npm run test:frontend && npm run test:backend",
+    "test:frontend": "cd frontend && npm run test",
+    "test:backend": "cd backend && pytest",
+    "lint": "eslint .",
+    "format": "prettier --write ."
   },
   "devDependencies": {
-    "@testing-library/dom": "^10.4.0",
-    "@testing-library/jest-dom": "^6.6.3",
-    "@testing-library/react": "^16.2.0",
-    "@testing-library/user-event": "^14.6.0",
-    "@vitejs/plugin-react": "^4.2.0",
-    "autoprefixer": "^10.4.16",
-    "postcss": "^8.4.31",
-    "tailwindcss": "^3.3.5",
-    "vite": "^5.0.0",
-    "vitest": "^3.0.2"
+    "concurrently": "^8.2.2",
+    "eslint": "^8.56.0",
+    "eslint-plugin-react": "^7.33.2",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "husky": "^8.0.3",
+    "prettier": "^3.2.4"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "npm run lint"
+    }
   }
 }

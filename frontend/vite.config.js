@@ -7,14 +7,20 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    setupFiles: ['./tests/setup/setup.js'],
-    include: ['./tests/unit/**/*.{test,spec}.{js,jsx}'],
-    coverage: {
-      reporter: ['text', 'json', 'html'],
-      exclude: [
-        'node_modules/',
-        'tests/setup/',
-      ],
-    },
+    setupFiles: ['./src/__tests__/setup.js'],
+    include: ['src/**/*.{test,spec}.{js,jsx}'],
+    exclude: ['**/node_modules/**', '**/dist/**']
   },
+  resolve: {
+    alias: {
+      '@': '/src',
+      '@shared': '/shared',
+      '@components': '/src/components',
+      '@hooks': '/src/hooks',
+      '@contexts': '/src/contexts',
+      '@theme': '/src/theme',
+      '@utils': '/shared/utils',
+      '@constants': '/shared/constants'
+    }
+  }
 })
