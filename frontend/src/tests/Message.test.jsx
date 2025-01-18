@@ -5,7 +5,12 @@ import { Message } from '../shared/components/Message';
 describe('Message', () => {
   describe('Basic Rendering', () => {
     test('renders user message correctly', () => {
-      const message = { role: 'user', content: 'Hello' };
+      const message = {
+        id: '1',
+        sender: 'User',
+        content: 'Hello',
+        reactions: []
+      };
       render(<Message message={message} isUser={true} />, { wrapper: TestWrapper });
       
       const messageElement = screen.getByTestId('message-user');
@@ -14,7 +19,12 @@ describe('Message', () => {
     });
 
     test('renders assistant message correctly', () => {
-      const message = { role: 'assistant', content: 'Hi there' };
+      const message = {
+        id: '2',
+        sender: 'Assistant',
+        content: 'Hi there',
+        reactions: []
+      };
       render(<Message message={message} isUser={false} />, { wrapper: TestWrapper });
       
       const messageElement = screen.getByTestId('message-assistant');
@@ -24,9 +34,11 @@ describe('Message', () => {
 
     test('renders code blocks correctly', () => {
       const message = {
-        role: 'assistant',
+        id: '3',
+        sender: 'Assistant',
         content: 'Here is some code:',
-        code: 'console.log("test");'
+        code: 'console.log("test");',
+        reactions: []
       };
       render(<Message message={message} isUser={false} />, { wrapper: TestWrapper });
       
@@ -38,9 +50,11 @@ describe('Message', () => {
   describe('Timestamp Handling', () => {
     test('renders timestamp when provided', () => {
       const message = {
-        role: 'user',
+        id: '4',
+        sender: 'User',
         content: 'Hello',
-        timestamp: new Date('2024-01-01T12:00:00').toISOString()
+        timestamp: new Date('2024-01-01T12:00:00').toISOString(),
+        reactions: []
       };
       render(<Message message={message} isUser={true} />, { wrapper: TestWrapper });
       
@@ -48,7 +62,12 @@ describe('Message', () => {
     });
 
     test('does not render timestamp when not provided', () => {
-      const message = { role: 'user', content: 'Hello' };
+      const message = {
+        id: '5',
+        sender: 'User',
+        content: 'Hello',
+        reactions: []
+      };
       render(<Message message={message} isUser={true} />, { wrapper: TestWrapper });
       
       expect(screen.queryByTestId('message-timestamp')).not.toBeInTheDocument();
@@ -58,19 +77,28 @@ describe('Message', () => {
   describe('Error Handling', () => {
     test('renders error message when provided', () => {
       const message = {
-        role: 'assistant',
+        id: '6',
+        sender: 'Assistant',
         content: 'Error occurred',
-        error: 'Failed to process message'
+        error: true,
+        reactions: []
       };
       render(<Message message={message} isUser={false} />, { wrapper: TestWrapper });
       
+      expect(screen.getByTestId('message-error')).toBeInTheDocument();
       expect(screen.getByText('Failed to process message')).toBeInTheDocument();
     });
   });
 
   describe('Loading State', () => {
     test('shows loading indicator when loading', () => {
-      const message = { role: 'assistant', content: '', isLoading: true };
+      const message = {
+        id: '7',
+        sender: 'Assistant',
+        content: '',
+        loading: true,
+        reactions: []
+      };
       render(<Message message={message} isUser={false} />, { wrapper: TestWrapper });
       
       expect(screen.getByTestId('message-loading')).toBeInTheDocument();

@@ -1,8 +1,18 @@
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ErrorBoundary } from '../shared/components/ErrorBoundary';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import { TestWrapper } from './setup';
+
+// Mock Chakra UI components
+vi.mock('@chakra-ui/react', () => ({
+  __esModule: true,
+  ...vi.importActual('@chakra-ui/react'),
+  Box: ({ children, ...props }) => <div {...props}>{children}</div>,
+  Button: ({ children, onClick, ...props }) => <button onClick={onClick} {...props}>{children}</button>,
+  Text: ({ children, ...props }) => <span {...props}>{children}</span>,
+  VStack: ({ children, ...props }) => <div {...props}>{children}</div>,
+}));
 
 // Component that throws an error
 const ThrowError = () => {

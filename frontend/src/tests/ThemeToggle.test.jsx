@@ -1,8 +1,14 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ThemeToggle } from '../shared/components/ThemeToggle';
+import { ThemeToggle } from '../components/ThemeToggle';
 import { TestWrapper } from './setup';
+
+// Mock icons
+vi.mock('@chakra-ui/icons', () => ({
+  SunIcon: () => <span data-testid="sun-icon">☀️</span>,
+  MoonIcon: () => <span data-testid="moon-icon">🌙</span>,
+}));
 
 describe('ThemeToggle', () => {
   it('renders toggle button', () => {

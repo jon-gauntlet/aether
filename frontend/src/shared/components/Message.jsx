@@ -1,7 +1,7 @@
 import React from 'react'
 import { Box, Text, Avatar, HStack, VStack } from '@chakra-ui/react'
 import { ErrorBoundary } from './ErrorBoundary'
-import { ReactionDisplay } from './ReactionDisplay'
+import { ReactionDisplay } from '../../components/ReactionDisplay'
 
 const MessageComponent = ({ message, isUser }) => {
   if (message.error) {
