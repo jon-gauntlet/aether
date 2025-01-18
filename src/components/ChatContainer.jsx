@@ -1,100 +1,64 @@
-import React, { useEffect, useState } from 'react';
-import { VStack, Container, useToast } from '@chakra-ui/react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ChatMessageList } from './ChatMessageList';
-import { ChatInput } from './ChatInput';
-import { FileUpload } from './FileUpload';
-import { apiClient } from '../services/apiClient';
-import { withErrorBoundary } from './ErrorBoundary';
+import { useEffect, useState } from 'react'
+import { supabase } from '../lib/supabaseClient'
+import ChatInput from './ChatInput'
+import ChatMessageList from './ChatMessageList'
 
-export const ChatContainer = withErrorBoundary(() => {
-  const [isLoading, setIsLoading] = useState(false);
-  const toast = useToast();
-  const queryClient = useQueryClient();
-
-  const { data: messages = [] } = useQuery({
-    queryKey: ['messages'],
-    queryFn: apiClient.getChatHistory,
-    onError: () => {
-      toast({
-        title: 'Error',
-        description: 'Failed to load messages',
-        status: 'error',
-        duration: 3000,
-        isClosable: true
-      });
-    }
-  });
-
-  const { mutate: sendMessage } = useMutation({
-    mutationFn: apiClient.processQuery,
-    onMutate: () => {
-      setIsLoading(true);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries(['messages']);
-      setIsLoading(false);
-    },
-    onError: () => {
-      toast({
-        title: 'Error',
-        description: 'Failed to send message',
-        status: 'error',
-        duration: 3000,
-        isClosable: true
-      });
-      setIsLoading(false);
-    }
-  });
-
-  const { mutate: uploadFile } = useMutation({
-    mutationFn: apiClient.uploadFile,
-    onSuccess: (data) => {
-      toast({
-        title: 'Success',
-        description: data.message,
-        status: 'success',
-        duration: 3000,
-        isClosable: true
-      });
-    },
-    onError: () => {
-      toast({
-        title: 'Error',
-        description: 'Failed to upload file',
-        status: 'error',
-        duration: 3000,
-        isClosable: true
-      });
-    }
-  });
+export default function ChatContainer() {
+  const [messages, setMessages] = useState([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const checkHealth = async () => {
-      try {
-        await apiClient.checkHealth();
-      } catch (error) {
-        toast({
-          title: 'Error',
-          description: 'API is not available',
-          status: 'error',
-          duration: 3000,
-          isClosable: true
-        });
-      }
-    };
-    checkHealth();
-  }, [toast]);
+    // Load initial messages
+    loadMessages()
+    
+    // Subscribe to new messages
+    const channel = supabase
+      .channel('messages')
+      .on('postgres_changes', 
+        { event: 'INSERT', schema: 'public', table: 'messages' },
+        payload => {
+          setMessages(current => [...current, payload.new])
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [])
+
+  async function loadMessages() {
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .order('created_at', { ascending: true })
+
+      if (error) throw error
+      setMessages(data)
+    } catch (error) {
+      console.error('Error loading messages:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleSendMessage(content) {
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .insert([{ content }])
+
+      if (error) throw error
+    } catch (error) {
+      console.error('Error sending message:', error)
+    }
+  }
 
   return (
-    <Container maxW="container.xl" py={8}>
-      <VStack spacing={8} align="stretch">
-        <div className="chat-container">
-          <ChatMessageList messages={messages} />
-          <ChatInput onSendMessage={sendMessage} isLoading={isLoading} />
-        </div>
-        <FileUpload onFileUpload={uploadFile} />
-      </VStack>
-    </Container>
-  );
-}); 
+    <div className="flex flex-col h-screen">
+      <ChatMessageList messages={messages} loading={loading} />
+      <ChatInput onSendMessage={handleSendMessage} />
+    </div>
+  )
+} 

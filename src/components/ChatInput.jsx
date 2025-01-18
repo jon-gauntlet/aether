@@ -1,59 +1,25 @@
-import React, { useState, useCallback } from 'react';
-import { Box, Button, Textarea, Text } from '@chakra-ui/react';
+import { useState } from 'react'
 
-const MAX_LENGTH = 500;
+export default function ChatInput({ onSendMessage }) {
+  const [message, setMessage] = useState('')
 
-export const ChatInput = ({ onSubmit, disabled, placeholder = 'Type a message...' }) => {
-  const [message, setMessage] = useState('');
-  const remainingChars = MAX_LENGTH - message.length;
-
-  const handleSend = useCallback(() => {
-    if (message.trim()) {
-      onSubmit(message.trim());
-      setMessage('');
-    }
-  }, [message, onSubmit]);
-
-  const handleKeyDown = useCallback((e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    } else if (e.key === 'Escape') {
-      setMessage('');
-    }
-  }, [handleSend]);
-
-  const handleChange = useCallback((e) => {
-    const value = e.target.value;
-    if (value.length <= MAX_LENGTH) {
-      setMessage(value);
-    }
-  }, []);
+  function handleSubmit(e) {
+    e.preventDefault()
+    if (!message.trim()) return
+    
+    onSendMessage(message)
+    setMessage('')
+  }
 
   return (
-    <Box>
-      <Textarea
-        data-testid="message-input"
+    <form onSubmit={handleSubmit} className="p-4 border-t">
+      <input
+        type="text"
         value={message}
-        onChange={handleChange}
-        onKeyDown={handleKeyDown}
-        placeholder={placeholder}
-        disabled={disabled}
-        resize="none"
+        onChange={e => setMessage(e.target.value)}
+        placeholder="Type a message..."
+        className="w-full p-2 border rounded"
       />
-      {remainingChars <= 50 && (
-        <Text fontSize="sm" color={remainingChars === 0 ? 'red.500' : 'gray.500'}>
-          {remainingChars} characters remaining
-        </Text>
-      )}
-      <Button
-        data-testid="send-button"
-        onClick={handleSend}
-        disabled={disabled}
-        mt={2}
-      >
-        Send
-      </Button>
-    </Box>
-  );
-}; 
+    </form>
+  )
+} 
