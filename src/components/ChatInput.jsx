@@ -1,59 +1,43 @@
-import React, { useState, useCallback } from 'react';
-import { Box, Button, Textarea, Text } from '@chakra-ui/react';
+import { useState } from 'react'
 
-const MAX_LENGTH = 500;
+export default function ChatInput({ onSendMessage }) {
+  const [message, setMessage] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
 
-export const ChatInput = ({ onSubmit, disabled, placeholder = 'Type a message...' }) => {
-  const [message, setMessage] = useState('');
-  const remainingChars = MAX_LENGTH - message.length;
-
-  const handleSend = useCallback(() => {
-    if (message.trim()) {
-      onSubmit(message.trim());
-      setMessage('');
+  async function handleSubmit(e) {
+    e.preventDefault()
+    const trimmedMessage = message.trim()
+    if (!trimmedMessage) return
+    
+    setIsLoading(true)
+    try {
+      await onSendMessage(trimmedMessage)
+      setMessage('')
+    } finally {
+      setIsLoading(false)
     }
-  }, [message, onSubmit]);
-
-  const handleKeyDown = useCallback((e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    } else if (e.key === 'Escape') {
-      setMessage('');
-    }
-  }, [handleSend]);
-
-  const handleChange = useCallback((e) => {
-    const value = e.target.value;
-    if (value.length <= MAX_LENGTH) {
-      setMessage(value);
-    }
-  }, []);
+  }
 
   return (
-    <Box>
-      <Textarea
-        data-testid="message-input"
-        value={message}
-        onChange={handleChange}
-        onKeyDown={handleKeyDown}
-        placeholder={placeholder}
-        disabled={disabled}
-        resize="none"
-      />
-      {remainingChars <= 50 && (
-        <Text fontSize="sm" color={remainingChars === 0 ? 'red.500' : 'gray.500'}>
-          {remainingChars} characters remaining
-        </Text>
-      )}
-      <Button
-        data-testid="send-button"
-        onClick={handleSend}
-        disabled={disabled}
-        mt={2}
-      >
-        Send
-      </Button>
-    </Box>
-  );
-}; 
+    <form onSubmit={handleSubmit} className="p-4 border-t">
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={message}
+          onChange={e => setMessage(e.target.value)}
+          placeholder="Type a message..."
+          disabled={isLoading}
+          className="flex-1 p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+          maxLength={500}
+        />
+        <button 
+          type="submit"
+          disabled={!message.trim() || isLoading}
+          className="px-4 py-2 text-white bg-blue-500 rounded hover:bg-blue-600 disabled:bg-blue-300 disabled:cursor-not-allowed"
+        >
+          {isLoading ? 'Sending...' : 'Send'}
+        </button>
+      </div>
+    </form>
+  )
+} 
