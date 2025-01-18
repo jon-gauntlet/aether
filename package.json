@@ -1,41 +1,31 @@
 {
-  "name": "aether",
-  "version": "1.0.0",
+  "name": "aether-frontend",
+  "version": "0.1.0",
   "private": true,
-  "workspaces": [
-    "frontend"
-  ],
   "scripts": {
-    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
-    "dev:frontend": "cd frontend && npm run dev",
-    "dev:backend": "cd backend && poetry run uvicorn src.main:app --reload --port 8000",
-    "build": "cd frontend && npm run build",
-    "start": "concurrently \"npm run start:frontend\" \"npm run start:backend\"",
-    "start:frontend": "cd frontend && npm run preview",
-    "start:backend": "cd backend && poetry run uvicorn src.main:app --port 8000",
-    "test": "npm run test:frontend && npm run test:backend",
-    "test:frontend": "cd frontend && npm run test",
-    "test:backend": "cd backend && poetry run pytest",
-    "test:coverage": "npm run test:frontend:coverage && npm run test:backend:coverage",
-    "test:frontend:coverage": "cd frontend && npm run test:coverage",
-    "test:backend:coverage": "cd backend && poetry run pytest --cov",
-    "lint": "npm run lint:frontend && npm run lint:backend",
-    "lint:frontend": "cd frontend && npm run lint",
-    "lint:backend": "cd backend && poetry run black . && poetry run isort .",
-    "format": "npm run format:frontend && npm run format:backend",
-    "format:frontend": "cd frontend && npm run format",
-    "format:backend": "cd backend && poetry run black . && poetry run isort .",
-    "clean": "rm -rf frontend/dist backend/__pycache__ backend/.pytest_cache",
-    "setup": "npm install && cd frontend && npm install && cd ../backend && poetry install",
-    "precommit": "npm run lint && CI=true npm run test:frontend"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run --config vitest.config.js",
+    "test:watch": "vitest --config vitest.config.js",
+    "test:coverage": "vitest run --coverage --config vitest.config.js",
+    "test:ui": "vitest --ui --config vitest.config.js",
+    "test:perf": "vitest run \"tests/performance/*.perf.test.jsx\" --config vitest.config.js",
+    "test:perf:analyze": "npm run test:perf && node scripts/analyze-performance.js",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
     "eslint": "^8.56.0",
-    "eslint-plugin-react": "^7.33.2",
-    "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-jest": "^27.6.3",
     "eslint-plugin-jsx-a11y": "^6.8.0",
+    "eslint-plugin-react": "^7.33.2",
+    "eslint-plugin-react-hooks": "^4.6.0",
     "prettier": "^3.2.4"
+  },
+  "dependencies": {
+    "@playwright/test": "^1.49.1"
   }
 }

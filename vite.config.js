@@ -1,11 +1,18 @@
 import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import vue from '@vitejs/plugin-vue'
+import path from 'path'
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [vue()],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src')
+    }
+  },
   test: {
     globals: true,
     environment: 'jsdom',
-    setupFiles: './src/setupTests.js',
+    include: ['frontend/tests/unit/**/*.test.js'],
+    setupFiles: ['frontend/tests/setup.js']
   }
 }) 

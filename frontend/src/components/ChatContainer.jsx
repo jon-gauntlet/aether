@@ -1,88 +1,159 @@
 import React, { useEffect, useState, useCallback } from 'react'
-import { Box, VStack, useToast } from '@chakra-ui/react'
-import { ChatMessageList } from '../../components/ChatMessageList'
-import { ChatInput } from './ChatInput'
-import * as apiClient from '../../api/client'
+import { useAuth } from '../contexts/AuthContext'
+
+const ChatMessageList = ({ messages }) => (
+  <div className="chat-messages">
+    {messages.map((message, index) => (
+      <div key={`${message.id || message.timestamp || index}`} className="message">
+        <strong>{message.sender}: </strong>
+        {message.content}
+      </div>
+    ))}
+  </div>
+);
+
+function ChatInput({ onSendMessage, isLoading }) {
+  const [message, setMessage] = useState('')
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    if (message.trim()) {
+      onSendMessage(message)
+      setMessage('')
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="chat-input">
+      <input
+        type="text"
+        value={message}
+        onChange={(e) => setMessage(e.target.value)}
+        placeholder="Type a message..."
+        disabled={isLoading}
+        data-testid="message-input"
+      />
+      <button 
+        type="submit" 
+        disabled={isLoading || !message.trim()}
+        data-testid="send-button"
+      >
+        Send
+      </button>
+    </form>
+  )
+}
 
 export function ChatContainer() {
   const [messages, setMessages] = useState([])
   const [channel, setChannel] = useState('general')
-  const toast = useToast()
-
-  const { data: chatHistory, isLoading: isLoadingHistory } = apiClient.useQuery({
-    queryKey: ['chatHistory', channel],
-    queryFn: () => apiClient.fetchMessages(channel),
-    onError: () => {
-      toast({
-        title: 'Failed to load chat history',
-        status: 'error',
-        duration: 3000,
-      })
-    },
-  })
+  const [error, setError] = useState(null)
+  const { user, loading, logout } = useAuth()
 
   useEffect(() => {
-    if (chatHistory) {
-      setMessages(chatHistory)
+    if (!user) return
+
+    // Load initial messages
+    const loadMessages = async () => {
+      try {
+        const token = localStorage.getItem('auth_token')
+        const response = await fetch(`/api/messages/${channel}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+        if (!response.ok) throw new Error('Failed to load messages')
+        const data = await response.json()
+        setMessages(data)
+      } catch (err) {
+        setError('Failed to load messages')
+      }
     }
-  }, [chatHistory])
 
-  useEffect(() => {
-    // Subscribe to real-time updates
-    const subscription = apiClient.subscribeToMessages(channel, (newMessage) => {
+    loadMessages()
+
+    // Set up WebSocket connection
+    const token = localStorage.getItem('auth_token')
+    const ws = new WebSocket(`ws://localhost:8000/ws/${channel}?token=${token}`)
+    
+    ws.onmessage = (event) => {
+      const newMessage = JSON.parse(event.data)
       setMessages(prev => [...prev, newMessage])
-    })
+    }
 
     return () => {
-      subscription.unsubscribe()
+      ws.close()
     }
-  }, [channel])
+  }, [channel, user])
 
-  const { mutate: sendMessageMutation, isLoading: isSending } = apiClient.useMutation({
-    mutationFn: (message) => apiClient.sendMessage(message, channel),
-    onError: () => {
-      toast({
-        title: 'Failed to send message',
-        status: 'error',
-        duration: 3000,
+  const handleSendMessage = useCallback(async (content) => {
+    try {
+      const token = localStorage.getItem('auth_token')
+      const response = await fetch('/api/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          content,
+          channel,
+          username: user.email,
+        }),
       })
-    },
-  })
 
-  const { mutate: uploadFile, isLoading: isUploading } = apiClient.useMutation({
-    mutationFn: (file) => apiClient.uploadFile(file, channel),
-    onSuccess: () => {
-      toast({
-        title: 'File uploaded successfully',
-        status: 'success',
-        duration: 3000,
-      })
-    },
-    onError: () => {
-      toast({
-        title: 'Failed to upload file',
-        status: 'error',
-        duration: 3000,
-      })
-    },
-  })
+      if (!response.ok) {
+        throw new Error('Failed to send message')
+      }
+    } catch (err) {
+      setError('Failed to send message')
+    }
+  }, [channel, user])
 
-  const handleSendMessage = useCallback((text) => {
-    sendMessageMutation(text)
-  }, [sendMessageMutation])
+  const handleChannelChange = (e) => {
+    setChannel(e.target.value)
+  }
+
+  const handleLogout = async () => {
+    await logout()
+  }
+
+  if (loading) {
+    return <div>Loading...</div>
+  }
+
+  if (!user) {
+    return <div>Please log in to access the chat.</div>
+  }
 
   return (
-    <VStack h="100%" spacing={4} p={4}>
-      <Box flex={1} w="100%" overflowY="auto">
+    <div className="chat-container" data-testid="chat-container">
+      <div className="chat-header">
+        <div className="channel-select">
+          <select 
+            value={channel} 
+            onChange={handleChannelChange}
+            data-testid="channel-select"
+          >
+            <option value="general">General</option>
+            <option value="random">Random</option>
+          </select>
+        </div>
+        <button onClick={handleLogout} data-testid="logout-button">
+          Logout
+        </button>
+      </div>
+
+      {error && <div className="error" role="alert">{error}</div>}
+
+      <div className="messages">
         <ChatMessageList messages={messages} />
-      </Box>
-      <Box w="100%">
-        <FileUpload onUpload={uploadFile} isLoading={isUploading} />
-        <ChatInput 
-          onSendMessage={handleSendMessage} 
-          isLoading={isSending || isLoadingHistory} 
-        />
-      </Box>
-    </VStack>
+      </div>
+
+      <ChatInput 
+        onSendMessage={handleSendMessage}
+        isLoading={loading}
+      />
+    </div>
   )
 } 

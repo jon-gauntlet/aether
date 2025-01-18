@@ -1,57 +1,83 @@
-import { Auth as SupabaseAuth } from '@supabase/auth-ui-react'
-import { ThemeSupa } from '@supabase/auth-ui-shared'
-import { supabase } from '../lib/supabase'
-import { Box, Container, Heading, VStack } from '@chakra-ui/react'
+import React, { useState } from 'react'
+import { useAuth } from '../contexts/AuthContext'
 
 export function Auth() {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [localError, setLocalError] = useState(null)
+  const { login, loading, error: authError } = useAuth()
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setLocalError(null)
+    
+    if (!email || !password) {
+      setLocalError('Email and password are required')
+      return
+    }
+
+    try {
+      const { error } = await login({ email, password })
+      if (error) {
+        setLocalError(error)
+      }
+    } catch (err) {
+      setLocalError(err.message)
+    }
+  }
+
+  const errorMessage = localError || authError
+
   return (
-    <Container maxW="container.sm" py={10}>
-      <VStack spacing={8}>
-        <Box 
-          w="full" 
-          bg="gray.800" 
-          p={8} 
-          rounded="lg" 
-          shadow="lg"
-          borderWidth={1}
-          borderColor="gray.700"
-        >
-          <VStack spacing={6}>
-            <Heading size="lg" textAlign="center" color="white">
-              Welcome to Aether Chat
-            </Heading>
-            <SupabaseAuth
-              supabaseClient={supabase}
-              appearance={{
-                theme: ThemeSupa,
-                variables: {
-                  default: {
-                    colors: {
-                      brand: '#3182CE',
-                      brandAccent: '#4299E1',
-                      inputBackground: '#2D3748',
-                      inputText: 'white',
-                      inputPlaceholder: 'gray',
-                    },
-                  },
-                },
-                style: {
-                  button: {
-                    borderRadius: '0.375rem',
-                    height: '40px',
-                  },
-                  input: {
-                    borderRadius: '0.375rem',
-                    height: '40px',
-                  },
-                },
-              }}
-              providers={['google']}
-              redirectTo={window.location.origin}
+    <div className="auth-container">
+      <div className="auth-box">
+        <h1>Welcome to Aether Chat</h1>
+        
+        <form onSubmit={handleSubmit} className="auth-form">
+          {errorMessage && (
+            <div className="error" role="alert">
+              {errorMessage}
+            </div>
+          )}
+          
+          <div className="form-group">
+            <label htmlFor="email">Email</label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter your email"
+              required
+              disabled={loading}
+              data-testid="email-input"
             />
-          </VStack>
-        </Box>
-      </VStack>
-    </Container>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="password">Password</label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your password"
+              required
+              disabled={loading}
+              data-testid="password-input"
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="auth-button"
+            disabled={loading || !email || !password}
+            data-testid="login-button"
+          >
+            {loading ? 'Logging in...' : 'Login'}
+          </button>
+        </form>
+      </div>
+    </div>
   )
 } 

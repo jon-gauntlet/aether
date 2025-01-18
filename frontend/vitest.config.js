@@ -1,26 +1,19 @@
 /// <reference types="vitest" />
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import { resolve } from 'path';
+import { defineConfig } from 'vitest/config'
+import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  resolve: {
-    alias: {
-      '@': resolve(__dirname, './src')
-    }
-  },
   test: {
     globals: true,
     environment: 'jsdom',
-    setupFiles: ['./src/tests/setup.js'],
-    include: ['src/**/*.{test,spec}.{js,jsx}'],
-    exclude: ['node_modules', 'dist'],
-    transformMode: {
-      web: [/\.[jt]sx$/]
-    },
-    deps: {
-      inline: ['@testing-library/user-event']
+    setupFiles: ['./frontend/tests/setup.js'],
+    include: ['tests/**/*.{test,spec,perf}.{js,jsx,ts,tsx}'],
+    exclude: ['node_modules/**', 'dist/**', 'tests/e2e/**'],
+    testTimeout: 10000,
+    reporters: ['default', 'json'],
+    outputFile: {
+      json: './test-results/performance.json'
     }
   }
-}); 
+}) 

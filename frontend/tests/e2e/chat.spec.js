@@ -1,91 +1,69 @@
 import { test, expect } from '@playwright/test'
 
-test.describe('Chat Application', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/')
-  })
+test('basic chat flow', async ({ page }) => {
+  await page.goto('/')
+  
+  // Check initial state
+  await expect(page.getByText('Welcome to Aether Chat')).toBeVisible()
+  
+  // Login
+  await page.fill('[data-testid="email-input"]', 'test@example.com')
+  await page.fill('[data-testid="password-input"]', 'password')
+  await page.click('[data-testid="login-button"]')
+  
+  // Verify chat interface is visible
+  await expect(page.getByTestId('chat-container')).toBeVisible()
+  
+  // Send a message
+  await page.fill('[data-testid="message-input"]', 'Hello from E2E test')
+  await page.click('[data-testid="send-button"]')
+  
+  // Verify message appears
+  await expect(page.getByText('Hello from E2E test')).toBeVisible()
+  
+  // Switch channels
+  await page.selectOption('[data-testid="channel-select"]', 'random')
+  await expect(page.getByText('Channel: random')).toBeVisible()
+})
 
-  test('should complete authentication flow', async ({ page }) => {
-    // Check initial auth state
-    await expect(page.getByText('Welcome to Aether Chat')).toBeVisible()
+test('failed login', async ({ page }) => {
+  await page.goto('/')
+  
+  await page.fill('[data-testid="email-input"]', 'wrong@example.com')
+  await page.fill('[data-testid="password-input"]', 'wrongpass')
+  await page.click('[data-testid="login-button"]')
+  
+  await expect(page.getByRole('alert')).toBeVisible()
+  await expect(page.getByRole('alert')).toContainText('Invalid credentials')
+})
 
-    // Fill in sign up form
-    await page.getByLabel('Email').fill('test@example.com')
-    await page.getByLabel('Password').fill('testpassword123')
-    await page.getByRole('button', { name: 'Sign up' }).click()
+test('required fields validation', async ({ page }) => {
+  await page.goto('/')
+  
+  await page.click('[data-testid="login-button"]')
+  
+  const emailInput = page.getByTestId('email-input')
+  const passwordInput = page.getByTestId('password-input')
+  
+  await expect(emailInput).toHaveAttribute('aria-invalid', 'true')
+  await expect(passwordInput).toHaveAttribute('aria-invalid', 'true')
+})
 
-    // Verify redirect to chat
-    await expect(page.getByTestId('message-input')).toBeVisible()
-    await expect(page.getByText('test@example.com')).toBeVisible()
-  })
-
-  test('should handle chat functionality', async ({ page, browser }) => {
-    // Login first
-    await page.getByLabel('Email').fill('test@example.com')
-    await page.getByLabel('Password').fill('testpassword123')
-    await page.getByRole('button', { name: 'Sign in' }).click()
-
-    // Wait for chat to load
-    await expect(page.getByTestId('message-input')).toBeVisible()
-
-    // Send a message
-    await page.getByTestId('message-input').fill('Hello from test')
-    await page.getByTestId('send-button').click()
-
-    // Verify message appears
-    await expect(page.getByText('Hello from test')).toBeVisible()
-
-    // Test channel switching
-    await page.getByTestId('channel-select').selectOption('random')
-    await expect(page.getByText('Hello from test')).not.toBeVisible()
-
-    // Test multi-user interaction
-    const page2 = await browser.newPage()
-    await page2.goto('/')
-
-    // Login second user
-    await page2.getByLabel('Email').fill('test2@example.com')
-    await page2.getByLabel('Password').fill('testpassword123')
-    await page2.getByRole('button', { name: 'Sign in' }).click()
-
-    // Send message from second user
-    await page2.getByTestId('channel-select').selectOption('random')
-    await page2.getByTestId('message-input').fill('Hello from user 2')
-    await page2.getByTestId('send-button').click()
-
-    // Verify message appears for both users
-    await expect(page.getByText('Hello from user 2')).toBeVisible()
-    await expect(page2.getByText('Hello from user 2')).toBeVisible()
-
-    await page2.close()
-  })
-
-  test('should handle sign out', async ({ page }) => {
-    // Login
-    await page.getByLabel('Email').fill('test@example.com')
-    await page.getByLabel('Password').fill('testpassword123')
-    await page.getByRole('button', { name: 'Sign in' }).click()
-
-    // Sign out
-    await page.getByRole('button', { name: 'Sign out' }).click()
-
-    // Verify redirect to auth page
-    await expect(page.getByText('Welcome to Aether Chat')).toBeVisible()
-  })
-
-  test('should persist messages between sessions', async ({ page, browser }) => {
-    // Login and send message
-    await page.getByLabel('Email').fill('test@example.com')
-    await page.getByLabel('Password').fill('testpassword123')
-    await page.getByRole('button', { name: 'Sign in' }).click()
-
-    await page.getByTestId('message-input').fill('Persistent message')
-    await page.getByTestId('send-button').click()
-
-    // Reload page
-    await page.reload()
-
-    // Verify message still appears after reload
-    await expect(page.getByText('Persistent message')).toBeVisible()
-  })
+test('logout flow', async ({ page }) => {
+  await page.goto('/')
+  
+  // Login first
+  await page.fill('[data-testid="email-input"]', 'test@example.com')
+  await page.fill('[data-testid="password-input"]', 'password')
+  await page.click('[data-testid="login-button"]')
+  
+  // Verify logged in
+  await expect(page.getByTestId('chat-container')).toBeVisible()
+  
+  // Logout
+  await page.click('[data-testid="logout-button"]')
+  
+  // Verify logged out
+  await expect(page.getByText('Welcome to Aether Chat')).toBeVisible()
+  await expect(page.getByTestId('chat-container')).not.toBeVisible()
 }) 

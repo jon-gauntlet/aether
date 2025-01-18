@@ -1,22 +1,25 @@
-import { ChakraProvider } from '@chakra-ui/react'
-import { AuthProvider, useAuth } from './contexts/AuthContext'
-import { Auth } from './components/Auth'
-import ChatContainer from './components/ChatContainer'
-import theme from './theme'
-
-function AppContent() {
-  const { user } = useAuth()
-  
-  return user ? <ChatContainer /> : <Auth />
-}
+import { Link, Routes, Route } from 'react-router-dom'
+import Home from './views/Home'
+import About from './views/About'
 
 function App() {
   return (
-    <ChakraProvider theme={theme}>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
-    </ChakraProvider>
+    <div className="app">
+      <header>
+        <h1>Welcome to Aether</h1>
+        <nav>
+          <Link to="/" aria-label="home">Home</Link>
+          <Link to="/about" aria-label="about">About</Link>
+        </nav>
+      </header>
+
+      <main>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/about" element={<About />} />
+        </Routes>
+      </main>
+    </div>
   )
 }
 

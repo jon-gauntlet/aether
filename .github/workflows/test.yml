@@ -1,0 +1,86 @@
+name: Test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  unit-and-integration:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+    
+    - name: Install dependencies
+      working-directory: frontend
+      run: npm ci
+    
+    - name: Run unit and integration tests
+      working-directory: frontend
+      run: npm run test
+      
+    - name: Run coverage
+      working-directory: frontend
+      run: npm run test:coverage
+    
+    - name: Upload coverage reports
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: frontend/coverage/
+        retention-days: 30
+
+  e2e:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shardIndex: [1, 2, 3]
+        shardTotal: [3]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+    
+    - name: Install dependencies
+      working-directory: frontend
+      run: npm ci
+    
+    - name: Install Playwright browsers
+      working-directory: frontend
+      run: npx playwright install --with-deps
+    
+    - name: Cache Playwright browsers
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/ms-playwright
+        key: playwright-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
+        restore-keys: |
+          playwright-${{ runner.os }}-
+    
+    - name: Run E2E tests
+      working-directory: frontend
+      run: npx playwright test --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --retries=2
+    
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: playwright-report-${{ matrix.shardIndex }}
+        path: frontend/playwright-report/
+        retention-days: 30 

@@ -1,12 +1,34 @@
+import React from 'react'
+import { Link, Routes, Route } from 'react-router-dom'
 import ChatContainer from './components/ChatContainer'
 
-export default function App() {
+const Home = () => (
+  <div>
+    <h1>Welcome to Aether</h1>
+    <ChatContainer />
+  </div>
+)
+
+const About = () => (
+  <div>
+    <h1>About Aether</h1>
+    <p>A modern chat application built with React and Supabase</p>
+  </div>
+)
+
+const App = () => {
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto p-4">
-        <h1 className="text-2xl font-bold mb-4">Aether Chat</h1>
-        <ChatContainer />
-      </div>
+    <div>
+      <nav>
+        <Link to="/">Home</Link>
+        <Link to="/about">About</Link>
+      </nav>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/about" element={<About />} />
+      </Routes>
     </div>
   )
-} 
+}
+
+export default App 
