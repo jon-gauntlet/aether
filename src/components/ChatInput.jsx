@@ -1,55 +1,58 @@
 import React, { useState } from 'react';
-import { VStack, Input, Button, Text } from '@chakra-ui/react';
-import { withErrorBoundary } from './ErrorBoundary';
+import { Box, Button, Textarea, Text } from '@chakra-ui/react';
 
-const MAX_LENGTH = 1000;
-const NEAR_LIMIT_THRESHOLD = 900;
+const MAX_LENGTH = 500;
 
-export const ChatInput = withErrorBoundary(({ onSendMessage, isLoading }) => {
+export const ChatInput = ({ onSendMessage, isLoading }) => {
   const [message, setMessage] = useState('');
+  const remainingChars = MAX_LENGTH - message.length;
 
-  const handleSubmit = () => {
-    const trimmedMessage = message.trim();
-    if (trimmedMessage) {
-      onSendMessage(trimmedMessage);
+  const handleSend = useCallback(() => {
+    if (message.trim()) {
+      onSendMessage(message.trim());
       setMessage('');
     }
-  };
+  }, [message, onSendMessage]);
 
-  const handleKeyDown = (e) => {
+  const handleKeyDown = useCallback((e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSubmit();
+      handleSend();
     }
-  };
+  }, [handleSend]);
 
-  const isNearLimit = message.length >= NEAR_LIMIT_THRESHOLD;
-  const isDisabled = isLoading || !message.trim() || message.length > MAX_LENGTH;
+  const handleChange = useCallback((e) => {
+    const value = e.target.value;
+    if (value.length <= MAX_LENGTH) {
+      setMessage(value);
+    }
+  }, []);
 
   return (
-    <VStack spacing={2} align="stretch">
-      <Input
-        data-testid="chat-input"
+    <Box>
+      <Textarea
+        data-testid="message-input"
         value={message}
-        onChange={(e) => setMessage(e.target.value)}
+        onChange={handleChange}
         onKeyDown={handleKeyDown}
-        placeholder="Type your message..."
-        maxLength={MAX_LENGTH}
+        placeholder="Type a message..."
         disabled={isLoading}
+        resize="none"
       />
-      {isNearLimit && (
-        <Text fontSize="sm" color={message.length > MAX_LENGTH ? 'red.500' : 'gray.500'}>
-          {message.length}/{MAX_LENGTH}
+      {remainingChars <= 50 && (
+        <Text fontSize="sm" color={remainingChars === 0 ? 'red.500' : 'gray.500'}>
+          {remainingChars} characters remaining
         </Text>
       )}
       <Button
         data-testid="send-button"
-        onClick={handleSubmit}
-        isDisabled={isDisabled}
-        colorScheme="blue"
+        onClick={handleSend}
+        isLoading={isLoading}
+        isDisabled={!message.trim() || isLoading}
+        mt={2}
       >
         Send
       </Button>
-    </VStack>
+    </Box>
   );
-}); 
+}; 

@@ -13,6 +13,44 @@
   },
   "rules": [
     {
+      "name": "System Stability Protection",
+      "pattern": ".*",
+      "action": "enforce",
+      "priority": 0,
+      "rules": [
+        "Never modify system Python installation",
+        "Always use Poetry for dependency management, never pip install",
+        "Preserve user access to Cursor IDE at all times",
+        "Maintain operating system stability through safe practices",
+        "Use shell commands for files outside working directory"
+      ]
+    },
+    {
+      "name": "Development Standards",
+      "pattern": ".*\\.(py|js|vue|test.*)$",
+      "action": "enforce",
+      "priority": 1,
+      "rules": [
+        "Use Vitest for testing, never Jest",
+        "Avoid TypeScript in favor of JavaScript",
+        "Always use non-interactive command versions (--no-pager, -q, etc)",
+        "Append | cat to commands that might trigger pagers",
+        "Run long-running commands in background"
+      ]
+    },
+    {
+      "name": "Test Infrastructure Alignment",
+      "pattern": ".*test.*\\.(py|js|vue)$",
+      "action": "enforce",
+      "priority": 1,
+      "rules": [
+        "Check existing test patterns before creating new tests",
+        "Maintain consistent test structure across codebase",
+        "Use existing test utilities and fixtures",
+        "Follow established naming conventions for tests"
+      ]
+    },
+    {
       "name": "Flow State Protection",
       "pattern": ".*",
       "action": "consider",
@@ -32,18 +70,89 @@
       "action": "consider",
       "source": "natural-system-design.md",
       "priority": 1
+    },
+    {
+      "name": "Prevent Duplicate RAG Implementation",
+      "pattern": ".*(RAGSystem|rag_system).*",
+      "action": "enforce",
+      "source": "src/rag_aether/ai/rag_system.py",
+      "priority": 1,
+      "rules": [
+        "Always use existing RAGSystem implementation from src/rag_aether/ai/rag_system.py",
+        "Never create new RAG implementations",
+        "Extend existing RAGSystem class for new features",
+        "Use dependency injection for testing"
+      ]
+    },
+    {
+      "name": "Code Reuse First",
+      "pattern": ".*\\.(py|js|ts|vue)$",
+      "action": "enforce",
+      "priority": 1,
+      "rules": [
+        "Always check existing code before creating new implementations",
+        "Adapt and extend existing code over writing new code",
+        "Use composition over inheritance when extending functionality",
+        "Document any deviations from existing patterns"
+      ]
     }
   ],
   "integrations": {
     "cursor": {
       "contextPreservation": true,
       "stateAwareness": true,
-      "autoProtection": true
+      "autoProtection": true,
+      "codeReuse": {
+        "enabled": true,
+        "searchPaths": ["src/", "tests/"],
+        "excludePaths": [".backup/", "tools/"],
+        "preferredImplementations": {
+          "rag": "src/rag_aether/ai/rag_system.py",
+          "vector_search": "src/rag_aether/ai/vector_search.py",
+          "query_expansion": "src/rag_aether/ai/query_expansion.py"
+        }
+      },
+      "commandExecution": {
+        "preferNonInteractive": true,
+        "appendCatToPagers": true,
+        "backgroundLongRunning": true
+      }
     },
     "ide": {
       "flowProtection": true,
       "contextSync": true,
-      "energyTracking": true
+      "energyTracking": true,
+      "duplicateDetection": {
+        "enabled": true,
+        "threshold": 0.8,
+        "action": "warn"
+      },
+      "systemProtection": {
+        "preventSystemPythonModification": true,
+        "enforcePoetryUsage": true,
+        "preventTypeScriptUsage": true
+      }
     }
+  },
+  "shellCommands": {
+    "preferredFlags": {
+      "git": ["--no-pager"],
+      "pytest": ["-q"],
+      "poetry": ["--no-interaction"],
+      "npm": ["--silent"]
+    },
+    "backgroundCommands": [
+      "npm run dev",
+      "poetry run uvicorn",
+      "docker-compose up"
+    ],
+    "pagerCommands": [
+      "git log",
+      "git diff",
+      "less",
+      "more",
+      "tail",
+      "head"
+    ]
   }
 } 

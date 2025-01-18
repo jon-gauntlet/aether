@@ -1,7 +1,7 @@
 import React from 'react';
-import { VStack, Text, Button } from '@chakra-ui/react';
+import { Box, Text, Button } from '@chakra-ui/react';
 
-class ErrorBoundary extends React.Component {
+export class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
     this.state = { hasError: false, error: null };
@@ -17,36 +17,20 @@ class ErrorBoundary extends React.Component {
     }
   }
 
-  handleReset = () => {
+  handleTryAgain = () => {
     this.setState({ hasError: false, error: null });
-    if (this.props.onReset) {
-      this.props.onReset();
-    }
   };
 
   render() {
     if (this.state.hasError) {
       return (
-        <VStack spacing={4} p={4} align="center">
-          <Text fontSize="lg" fontWeight="bold">Something went wrong</Text>
-          <Text color="gray.600">{this.state.error?.message}</Text>
-          <Button onClick={this.handleReset} colorScheme="blue">
-            Try again
-          </Button>
-        </VStack>
+        <Box data-testid="error-ui" textAlign="center" p={4}>
+          <Text mb={4}>Something went wrong. Please try again.</Text>
+          <Button onClick={this.handleTryAgain}>Try again</Button>
+        </Box>
       );
     }
 
     return this.props.children;
   }
-}
-
-export const withErrorBoundary = (Component) => {
-  const WithErrorBoundary = (props) => (
-    <ErrorBoundary onError={props.onError} onReset={props.onReset}>
-      <Component {...props} />
-    </ErrorBoundary>
-  );
-  WithErrorBoundary.displayName = `WithErrorBoundary(${Component.displayName || Component.name || 'Component'})`;
-  return WithErrorBoundary;
-}; 
+} 

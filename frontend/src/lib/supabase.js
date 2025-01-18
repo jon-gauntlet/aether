@@ -1,72 +1,92 @@
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseKey) {
+if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
-
-// Storage helpers
-export const storage = {
-  async uploadFile(file, bucket = 'documents') {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Math.random().toString(36).slice(2)}.${fileExt}`;
-    const filePath = `${bucket}/${fileName}`;
-
-    const { data, error } = await supabase.storage
-      .from(bucket)
-      .upload(filePath, file);
-
-    if (error) throw error;
-    return data;
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
   },
+});
 
-  async getFileUrl(path, bucket = 'documents') {
-    const { data } = await supabase.storage
-      .from(bucket)
-      .getPublicUrl(path);
-    
-    return data.publicUrl;
-  },
-
-  async deleteFile(path, bucket = 'documents') {
-    const { error } = await supabase.storage
-      .from(bucket)
-      .remove([path]);
-    
-    if (error) throw error;
-  }
+// Auth helpers
+export const signInWithEmail = async (email, password) => {
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+  if (error) throw error;
+  return data;
 };
 
-// Message helpers
-export const messages = {
-  async create({ content, sender, metadata = {} }) {
-    const { data, error } = await supabase
-      .from('messages')
-      .insert([
-        { 
-          content,
-          sender,
-          metadata,
-          created_at: new Date().toISOString()
-        }
-      ])
-      .select();
+export const signInWithGoogle = async () => {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+  });
+  if (error) throw error;
+  return data;
+};
 
-    if (error) throw error;
-    return data[0];
-  },
+export const signUp = async (email, password) => {
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+  });
+  if (error) throw error;
+  return data;
+};
 
-  async list() {
-    const { data, error } = await supabase
-      .from('messages')
-      .select('*')
-      .order('created_at', { ascending: true });
+export const signOut = async () => {
+  const { error } = await supabase.auth.signOut();
+  if (error) throw error;
+};
 
-    if (error) throw error;
-    return data;
-  }
+// Message persistence helpers
+export const saveMessage = async (message) => {
+  const { data, error } = await supabase
+    .from('messages')
+    .insert([
+      {
+        content: message.content,
+        username: message.username,
+        channel: message.channel,
+        timestamp: message.timestamp,
+      },
+    ])
+    .select();
+  if (error) throw error;
+  return data[0];
+};
+
+export const getChannelMessages = async (channel, limit = 50) => {
+  const { data, error } = await supabase
+    .from('messages')
+    .select('*')
+    .eq('channel', channel)
+    .order('timestamp', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data.reverse();
+};
+
+// Real-time subscription for new messages
+export const subscribeToMessages = (channel, callback) => {
+  return supabase
+    .channel(`messages:${channel}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+        filter: `channel=eq.${channel}`,
+      },
+      (payload) => callback(payload.new)
+    )
+    .subscribe();
 }; 

@@ -1,15 +1,11 @@
 """FastAPI application for RAG system."""
 import uvicorn
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import logging
-import os
-from typing import List, Optional, Dict, Any
-
-from ..ai.rag import BaseRAG
-from ..core.telemetry import track_operation
-from ..data.document import Document
+from typing import Optional, Dict, Any
+from anthropic import Anthropic
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -18,7 +14,7 @@ logger = logging.getLogger(__name__)
 # Initialize FastAPI app
 app = FastAPI(
     title="Aether RAG System",
-    description="Professional-grade RAG system with Supabase integration",
+    description="Professional-grade RAG system",
     version="1.0.0"
 )
 
@@ -31,19 +27,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize RAG system on startup
-rag: Optional[BaseRAG] = None
-
-@app.on_event("startup")
-async def startup_event():
-    """Initialize RAG system on startup."""
-    global rag
-    try:
-        rag = await BaseRAG.create(use_mock=False)
-        logger.info("RAG system initialized successfully")
-    except Exception as e:
-        logger.error(f"Failed to initialize RAG system: {str(e)}")
-        raise
+# Initialize Anthropic client
+anthropic = Anthropic()
 
 # Pydantic models for API
 class QueryRequest(BaseModel):
@@ -53,20 +38,12 @@ class QueryRequest(BaseModel):
 
 class QueryResponse(BaseModel):
     answer: str
-    context: List[Dict[str, Any]]
     metadata: Dict[str, Any]
-
-class DocumentRequest(BaseModel):
-    content: str
-    metadata: Optional[Dict[str, Any]] = None
 
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
-    return {
-        "status": "healthy",
-        "rag_initialized": rag is not None
-    }
+    return {"status": "healthy"}
 
 @app.get("/")
 async def root():
@@ -74,89 +51,37 @@ async def root():
     return {"message": "Welcome to Aether RAG System"}
 
 @app.post("/api/query", response_model=QueryResponse)
-@track_operation("query_endpoint")
 async def query(request: QueryRequest):
-    """Process a query through the RAG system."""
-    if not rag:
-        raise HTTPException(status_code=503, detail="RAG system not initialized")
-        
+    """Process a query through Claude."""
     try:
-        response = await rag.process_query(
-            query=request.query,
-            conversation_id=request.conversation_id
+        # Call Claude
+        message = await anthropic.messages.create(
+            model="claude-3-opus-20240229",
+            max_tokens=1000,
+            messages=[{
+                "role": "user",
+                "content": request.query
+            }]
         )
-        return response
+        
+        return QueryResponse(
+            answer=message.content[0].text,
+            metadata={
+                "model": "claude-3-opus-20240229",
+                "conversation_id": request.conversation_id
+            }
+        )
     except Exception as e:
         logger.error(f"Query processing failed: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/documents")
-@track_operation("document_ingestion")
-async def add_document(document: DocumentRequest):
-    """Add a document to the RAG system."""
-    if not rag:
-        raise HTTPException(status_code=503, detail="RAG system not initialized")
-        
-    try:
-        doc = Document(
-            content=document.content,
-            metadata=document.metadata or {}
-        )
-        await rag.add_document(doc)
-        return {"status": "success", "message": "Document added successfully"}
-    except Exception as e:
-        logger.error(f"Document ingestion failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/documents/upload")
-@track_operation("file_upload")
-async def upload_file(file: UploadFile = File(...)):
-    """Upload and process a file."""
-    if not rag:
-        raise HTTPException(status_code=503, detail="RAG system not initialized")
-        
-    try:
-        content = await file.read()
-        text_content = content.decode()
-        doc = Document(
-            content=text_content,
-            metadata={"filename": file.filename}
-        )
-        await rag.add_document(doc)
-        return {"status": "success", "message": "File processed successfully"}
-    except Exception as e:
-        logger.error(f"File upload failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/chat/{conversation_id}")
-@track_operation("chat_history")
-async def get_chat_history(conversation_id: str):
-    """Get chat history for a conversation."""
-    if not rag:
-        raise HTTPException(status_code=503, detail="RAG system not initialized")
-        
-    try:
-        history = await rag.get_chat_history(conversation_id)
-        return {"history": history}
-    except Exception as e:
-        logger.error(f"Failed to get chat history: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
 def main():
     """Run the FastAPI application."""
-    port = int(os.getenv("PORT", "8000"))
-    
-    # Configure uvicorn logging
-    log_config = uvicorn.config.LOGGING_CONFIG
-    log_config["formatters"]["access"]["fmt"] = "%(asctime)s - %(levelname)s - %(message)s"
-    
-    # Run the server
     uvicorn.run(
         "src.rag_aether.api.main:app",
         host="127.0.0.1",
-        port=port,
-        reload=True,
-        log_config=log_config
+        port=8000,
+        reload=True
     )
 
 if __name__ == "__main__":

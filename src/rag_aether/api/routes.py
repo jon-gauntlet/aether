@@ -1,61 +1,74 @@
 """FastAPI routes for RAG system."""
 from fastapi import APIRouter, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from typing import Dict, Any, List, Optional
 from pydantic import BaseModel
-from typing import List, Optional, Dict
-from rag_aether.ai.rag_system import RAGSystem
-import logging
 
-# Initialize logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+from ..ai.rag_system import RAGSystem
+from ..core.monitor import SystemMonitor
 
-# Initialize router
-router = APIRouter(prefix="/api/v1", tags=["rag"])
-
-# Initialize RAG system
-rag = RAGSystem(use_mock=True, use_cache=True)
+router = APIRouter()
+rag_system = RAGSystem()  # Using default initialization
+monitor = SystemMonitor()
 
 class Document(BaseModel):
-    """Document for ingestion."""
+    """Document model."""
     text: str
-    metadata: Optional[Dict] = None
+    metadata: Optional[Dict[str, Any]] = None
 
 class Query(BaseModel):
-    """Search query."""
+    """Query model."""
     text: str
-    top_k: Optional[int] = 3
+    top_k: int = 3
 
 class SearchResponse(BaseModel):
-    """Search response."""
-    results: List[Dict]
-    query: str
+    """Search response model."""
+    results: List[Dict[str, Any]]
+    metadata: Optional[Dict[str, Any]] = None
 
-@router.post("/documents")
+@router.options("/documents")
+@router.options("/search")
+@router.options("/health")
+async def options_handler():
+    """Handle CORS preflight requests."""
+    return {}
+
+@router.post("/documents", response_model=Dict[str, Any])
 async def add_documents(documents: List[Document]):
     """Add documents to the RAG system."""
     try:
         texts = [doc.text for doc in documents]
         metadata = [doc.metadata for doc in documents]
-        rag.add_documents(texts, metadata)
+        await rag_system.add_documents([{"text": t, "metadata": m} for t, m in zip(texts, metadata)])
         return {"status": "success", "count": len(documents)}
     except Exception as e:
-        logger.error(f"Failed to add documents: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/search")
-async def search(query: Query) -> SearchResponse:
+@router.post("/search", response_model=SearchResponse)
+async def search(query: Query):
     """Search for relevant documents."""
     try:
-        results = rag.search(query.text, k=query.top_k)
+        response = await rag_system.query(query.text, k=query.top_k)
         return SearchResponse(
-            results=results,
-            query=query.text
+            results=response.context,
+            metadata={"expanded_query": response.expanded_query}
         )
     except Exception as e:
-        logger.error(f"Failed to search: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/health")
 async def health_check():
     """Health check endpoint."""
-    return {"status": "healthy", "version": "1.0.0"} 
+    try:
+        metrics = monitor.get_metrics()
+        return {
+            "status": "healthy",
+            "metrics": metrics,
+            "version": "0.1.0"
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "error": str(e),
+            "version": "0.1.0"
+        } 

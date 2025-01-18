@@ -1,5 +1,6 @@
 import React from 'react';
-import { IconButton, useColorMode } from '@chakra-ui/react';
+import { IconButton } from '@chakra-ui/react';
+import { useColorMode } from '@chakra-ui/react';
 import { SunIcon, MoonIcon } from '@chakra-ui/icons';
 
 export const ThemeToggle = () => {
@@ -8,15 +9,11 @@ export const ThemeToggle = () => {
 
   return (
     <IconButton
+      data-testid="theme-toggle"
       aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
       icon={isDark ? <SunIcon /> : <MoonIcon />}
       onClick={toggleColorMode}
-      variant="ghost"
-      colorScheme={isDark ? 'yellow' : 'gray'}
-      backgroundColor={isDark ? 'gray.700' : 'gray.100'}
-      _hover={{
-        backgroundColor: isDark ? 'gray.600' : 'gray.200'
-      }}
+      size="md"
     />
   );
 }; 

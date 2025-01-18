@@ -1,41 +1,51 @@
-import { Box, Button, Heading, Text } from '@chakra-ui/react';
-import { ErrorBoundary } from 'react-error-boundary';
+import React from 'react'
+import { Box, Button, Text, VStack } from '@chakra-ui/react'
 
-function ErrorFallback({ error, resetErrorBoundary }) {
-  return (
-    <Box
-      role="alert"
-      p={4}
-      bg="red.600"
-      color="white"
-      borderRadius="md"
-      m={4}
-    >
-      <Heading size="md" mb={2}>Something went wrong</Heading>
-      <Text mb={4}>{error.message}</Text>
-      <Button
-        onClick={resetErrorBoundary}
-        colorScheme="whiteAlpha"
-      >
-        Try again
-      </Button>
-    </Box>
-  );
+export class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props)
+    this.state = { hasError: false, error: null }
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error }
+  }
+
+  componentDidCatch(error, errorInfo) {
+    this.props.onError?.(error, errorInfo)
+  }
+
+  handleTryAgain = () => {
+    this.setState({ hasError: false, error: null })
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <Box p={4} data-testid="error-boundary">
+          <VStack spacing={4}>
+            <Text color="red.500">Something went wrong</Text>
+            <Text fontSize="sm" color="gray.500">
+              {this.state.error?.message}
+            </Text>
+            <Button onClick={this.handleTryAgain} colorScheme="blue">
+              Try again
+            </Button>
+          </VStack>
+        </Box>
+      )
+    }
+
+    return this.props.children
+  }
 }
 
-export function withErrorBoundary(Component, options = {}) {
-  return function WithErrorBoundary(props) {
+export function withErrorBoundary(Component) {
+  return function WithErrorBoundaryWrapper(props) {
     return (
-      <ErrorBoundary
-        FallbackComponent={ErrorFallback}
-        onReset={() => {
-          // Reset the state of your app here
-          options.onReset?.();
-        }}
-        {...options}
-      >
+      <ErrorBoundary onError={props.onError}>
         <Component {...props} />
       </ErrorBoundary>
-    );
-  };
+    )
+  }
 } 

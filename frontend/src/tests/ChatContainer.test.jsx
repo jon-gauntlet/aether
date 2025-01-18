@@ -1,144 +1,122 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { ChatContainer } from '../components/ChatContainer';
-import { TestWrapper } from './setup';
-import { apiClient } from '../api/client';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import React from 'react'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { ChatContainer } from '../components/ChatContainer'
+import { TestWrapper } from './setup/setup'
+import * as apiClient from '../services/apiClient'
 
-// Mock the API client
-vi.mock('../api/client', () => ({
-  apiClient: {
-    processQuery: vi.fn(),
-    uploadFile: vi.fn(),
-    getChatHistory: vi.fn(),
-    checkHealth: vi.fn()
-  }
-}));
+vi.mock('../services/apiClient', () => ({
+  fetchMessages: vi.fn(),
+  sendMessage: vi.fn(),
+  subscribeToMessages: vi.fn()
+}))
 
 describe('ChatContainer', () => {
-  let queryClient;
+  const mockMessages = [
+    { id: 1, content: 'Hello', channel: 'general' },
+    { id: 2, content: 'World', channel: 'general' }
+  ]
 
   beforeEach(() => {
-    vi.clearAllMocks();
-    queryClient = new QueryClient({
-      defaultOptions: {
-        queries: {
-          retry: false,
-          cacheTime: 0,
-          staleTime: 0,
-          refetchOnWindowFocus: false,
-        },
-      },
-    });
-    
-    // Setup default mock implementations
-    apiClient.getChatHistory.mockResolvedValue([
-      { id: 1, content: 'Hello', role: 'user' }
-    ]);
-    apiClient.checkHealth.mockResolvedValue({ status: 'healthy' });
-  });
+    vi.clearAllMocks()
+    apiClient.fetchMessages.mockResolvedValue(mockMessages)
+    apiClient.sendMessage.mockResolvedValue({ id: 3, content: 'New message', channel: 'general' })
+    apiClient.subscribeToMessages.mockImplementation((channel, callback) => {
+      // Simulate subscription
+      return {
+        unsubscribe: vi.fn()
+      }
+    })
+  })
 
-  const renderWithClient = (ui) => {
-    return render(
-      <QueryClientProvider client={queryClient}>
-        {ui}
-      </QueryClientProvider>,
-      { wrapper: TestWrapper }
-    );
-  };
-
-  it('renders all child components', async () => {
-    renderWithClient(<ChatContainer />);
+  it('renders chat container with messages', async () => {
+    render(<ChatContainer />, { wrapper: TestWrapper })
     
     await waitFor(() => {
-      expect(screen.getByTestId('chat-message-list')).toBeInTheDocument();
-      expect(screen.getByTestId('chat-input')).toBeInTheDocument();
-      expect(screen.getByTestId('file-upload')).toBeInTheDocument();
-    });
-  });
+      expect(screen.getByText('Hello')).toBeInTheDocument()
+      expect(screen.getByText('World')).toBeInTheDocument()
+    })
+  })
 
-  it('loads and displays chat history on mount', async () => {
-    renderWithClient(<ChatContainer />);
+  it('handles message sending', async () => {
+    render(<ChatContainer />, { wrapper: TestWrapper })
+    
+    const input = screen.getByTestId('message-input')
+    const sendButton = screen.getByTestId('send-button')
+
+    await userEvent.type(input, 'New message')
+    await userEvent.click(sendButton)
+
+    expect(apiClient.sendMessage).toHaveBeenCalledWith('New message', 'general')
+  })
+
+  it('subscribes to channel updates', async () => {
+    render(<ChatContainer />, { wrapper: TestWrapper })
     
     await waitFor(() => {
-      expect(screen.getByText('Hello')).toBeInTheDocument();
-    });
-    expect(apiClient.getChatHistory).toHaveBeenCalledWith('default');
-  });
+      expect(apiClient.subscribeToMessages).toHaveBeenCalledWith(
+        'general',
+        expect.any(Function)
+      )
+    })
+  })
 
-  it('handles sending messages', async () => {
-    const mockResponse = { content: 'Hello back!', role: 'assistant' };
-    apiClient.processQuery.mockResolvedValue(mockResponse);
+  it('handles message loading errors', async () => {
+    apiClient.fetchMessages.mockRejectedValueOnce(new Error('Failed to load'))
     
-    renderWithClient(<ChatContainer />);
-    
-    const input = screen.getByTestId('chat-input');
-    await userEvent.type(input, 'Hello');
-    await userEvent.click(screen.getByTestId('send-button'));
+    render(<ChatContainer />, { wrapper: TestWrapper })
     
     await waitFor(() => {
-      expect(apiClient.processQuery).toHaveBeenCalledWith('Hello');
-      expect(screen.getByText('Hello back!')).toBeInTheDocument();
-    });
-  });
-
-  it('handles file uploads', async () => {
-    const mockResponse = { message: 'Document uploaded successfully' };
-    apiClient.uploadFile.mockResolvedValue(mockResponse);
-    
-    renderWithClient(<ChatContainer />);
-    
-    const file = new File(['test content'], 'test.txt', { type: 'text/plain' });
-    const input = screen.getByTestId('file-input');
-    
-    await userEvent.upload(input, file);
-    
-    await waitFor(() => {
-      expect(apiClient.uploadFile).toHaveBeenCalled();
-      expect(screen.getByText(/document uploaded successfully/i)).toBeInTheDocument();
-    });
-  });
-
-  it('shows error toast when API is unhealthy', async () => {
-    apiClient.checkHealth.mockRejectedValue(new Error('API is down'));
-    
-    renderWithClient(<ChatContainer />);
-    
-    await waitFor(() => {
-      expect(screen.getByText(/api is not available/i)).toBeInTheDocument();
-    });
-  });
+      expect(screen.getByText('Failed to load chat history')).toBeInTheDocument()
+    })
+  })
 
   it('handles message sending errors', async () => {
-    apiClient.processQuery.mockRejectedValue(new Error('Failed to send message'));
+    apiClient.sendMessage.mockRejectedValueOnce(new Error('Failed to send'))
     
-    renderWithClient(<ChatContainer />);
+    render(<ChatContainer />, { wrapper: TestWrapper })
     
-    const input = screen.getByTestId('chat-input');
-    await userEvent.type(input, 'Hello');
-    await userEvent.click(screen.getByTestId('send-button'));
-    
-    await waitFor(() => {
-      expect(screen.getByText(/failed to send message/i)).toBeInTheDocument();
-    });
-  });
+    const input = screen.getByTestId('message-input')
+    const sendButton = screen.getByTestId('send-button')
 
-  it('updates UI state during API calls', async () => {
-    apiClient.processQuery.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)));
-    
-    renderWithClient(<ChatContainer />);
-    
-    const input = screen.getByTestId('chat-input');
-    await userEvent.type(input, 'Hello');
-    await userEvent.click(screen.getByTestId('send-button'));
-    
-    expect(input).toBeDisabled();
-    expect(screen.getByTestId('send-button')).toBeDisabled();
-    
+    await userEvent.type(input, 'Test message')
+    await userEvent.click(sendButton)
+
     await waitFor(() => {
-      expect(input).not.toBeDisabled();
-      expect(screen.getByTestId('send-button')).not.toBeDisabled();
-    });
-  });
-}); 
+      expect(screen.getByText('Failed to send message')).toBeInTheDocument()
+    })
+  })
+
+  it('updates messages when receiving real-time updates', async () => {
+    let subscriptionCallback
+    apiClient.subscribeToMessages.mockImplementation((channel, callback) => {
+      subscriptionCallback = callback
+      return { unsubscribe: vi.fn() }
+    })
+
+    render(<ChatContainer />, { wrapper: TestWrapper })
+
+    await waitFor(() => {
+      expect(screen.getByText('Hello')).toBeInTheDocument()
+    })
+
+    // Simulate receiving a new message
+    const newMessage = { id: 4, content: 'Real-time message', channel: 'general' }
+    subscriptionCallback(newMessage)
+
+    await waitFor(() => {
+      expect(screen.getByText('Real-time message')).toBeInTheDocument()
+    })
+  })
+
+  it('cleans up subscription on unmount', async () => {
+    const unsubscribe = vi.fn()
+    apiClient.subscribeToMessages.mockReturnValue({ unsubscribe })
+
+    const { unmount } = render(<ChatContainer />, { wrapper: TestWrapper })
+    unmount()
+
+    expect(unsubscribe).toHaveBeenCalled()
+  })
+}) 

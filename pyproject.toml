@@ -3,33 +3,25 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
-name = "rag-aether"
+name = "aether"
 version = "0.1.0"
-description = "RAG system for Aether"
-authors = ["Your Name <your.email@example.com>"]
-readme = "README.md"
+description = "Aether RAG System"
+authors = ["Your Name <you@example.com>"]
 
 [tool.poetry.dependencies]
-python = "^3.10"
-numpy = "^1.26.4"
-redis = "^5.0.1"
+python = "^3.12"
 fastapi = "^0.110.0"
-anthropic = "^0.21.3"
-pytest = "^8.3.4"
-pytest-asyncio = "^0.25.2"
-pytest-cov = "^6.0.0"
-pytest-xdist = "^3.5.0"
-hypothesis = "^6.98.17"
 uvicorn = "^0.27.1"
-pydantic = "^2.6.3"
-python-dotenv = "^1.0.1"
-httpx = "^0.27.0"
-aioredis = "^2.0.1"
-python-multipart = "^0.0.9"
+psutil = "^5.9.8"
+sentence-transformers = "^2.5.1"
+anthropic = "^0.43.1"
+pydantic = "^2.6.1"
+python-multipart = "^0.0.20"
+httpx = "^0.28.1"
+aiohttp = "^3.11.11"
+redis = "^5.2.1"
 
 [tool.poetry.group.dev.dependencies]
-black = "^24.3.0"
-isort = "^5.13.2"
-flake8 = "^7.0.0"
-mypy = "^1.9.0"
-pylint = "^3.1.0"
+pytest = "^8.0.0"
+pytest-asyncio = "^0.25.2"
+pytest-cov = "^4.1.0"

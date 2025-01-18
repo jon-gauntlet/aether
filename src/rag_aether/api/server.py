@@ -17,8 +17,9 @@ def create_app() -> FastAPI:
     """Create and configure FastAPI application."""
     app = FastAPI(title="RAG Aether API")
     
-    # Configure CORS
+    # Configure CORS with WebSocket support
     origins = [
+        # HTTP origins for development
         "http://localhost:5173",
         "http://localhost:5174",
         "http://localhost:5175",
@@ -27,6 +28,12 @@ def create_app() -> FastAPI:
         "http://127.0.0.1:5174",
         "http://127.0.0.1:5175",
         "http://127.0.0.1:5176",
+        # WebSocket origins for development
+        "ws://localhost:8000",
+        "ws://127.0.0.1:8000",
+        # Allow WebSocket connections from frontend to backend
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
     ]
     
     app.add_middleware(
@@ -68,7 +75,12 @@ def create_app() -> FastAPI:
             logger.error(f"No origin header from {client_host}")
             return False
             
-        if origin.replace('http://', 'ws://') not in [f"ws://{o.replace('http://', '')}" for o in origins]:
+        # Allow both http:// and ws:// origins
+        origin_http = origin
+        origin_ws = origin.replace('http://', 'ws://')
+        allowed_origins = origins + [o.replace('http://', 'ws://') for o in origins]
+        
+        if origin_http not in allowed_origins and origin_ws not in allowed_origins:
             logger.error(f"Invalid origin {origin} from {client_host}")
             return False
             
@@ -81,17 +93,14 @@ def create_app() -> FastAPI:
         logger.info(f"WebSocket connection attempt from {client} for channel {channel}")
         logger.info(f"Headers: {dict(websocket.headers)}")
         
-        # Verify client before accepting connection
-        if not await verify_client(dict(websocket.headers), client):
-            logger.error(f"Client verification failed for {client}")
-            return
-        
         try:
-            # Accept the connection first
-            await websocket.accept()
-            logger.info(f"WebSocket connection accepted for {client}")
-            
-            # Then add to manager
+            # Verify client before accepting connection
+            if not await verify_client(dict(websocket.headers), client):
+                logger.error(f"Client verification failed for {client}")
+                await websocket.close(code=1008)  # Policy Violation
+                return
+                
+            # Let the manager handle the connection acceptance
             await manager.connect(websocket, channel)
             logger.info(f"Client {client} added to channel {channel}")
             
@@ -113,6 +122,7 @@ def create_app() -> FastAPI:
             logger.error(f"Error in WebSocket connection: {str(e)}", exc_info=True)
             try:
                 manager.disconnect(websocket, channel)
+                await websocket.close(code=1011)  # Internal Error
             except:
                 pass
     

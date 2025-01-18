@@ -1,81 +1,93 @@
 # Turtle 1 Progress Report
 
-## Current Implementation
+## Latest Updates (March 19, 2024)
+
+### Recent Progress
+- Fixed WebSocket URL configuration (removed duplicate `/ws` path)
+- Implemented initial Playwright test suite
+- Added proper test IDs to all components
+- Improved error handling and reconnection logic
+- Set up proper CORS configuration for WebSocket connections
+
+### Testing Challenges & Feedback
+- Current test/debug/retest cycle is too slow
+- Tests are filling up the UI with multiple terminal instances
+- Manual debugging of React applications should be avoided until basic functionality is stable
+- Need to optimize test execution and improve the development loop
+
+### Current Implementation
 
 ### Frontend
 - `ChatContainer.jsx`: Core chat UI with channel selection and message display
 - `useRealTimeUpdates.js`: WebSocket hook with error handling and reconnection logic
 - Using Chakra UI for components and toast notifications
+- All components now have proper test IDs for automated testing
 
 ### Backend
 - FastAPI WebSocket server with channel support
 - Detailed logging for debugging
 - CORS configuration for local development
+- WebSocket endpoints properly configured for channel-based communication
 
 ## Current Issues
 
-### WebSocket Connection (403 Forbidden)
-```
-INFO: ('127.0.0.1', 52874) - "WebSocket /ws/general" 403
-INFO: connection rejected (403 Forbidden)
-```
-Debug logs show connection attempts from both ports 5173 and 5174 being rejected.
+### WebSocket Connection
+- Connection is being established but not maintaining stable state
+- Multiple rapid connections/disconnections during tests
+- Need to investigate potential race conditions
+- Tests timing out waiting for stable "Connected" state
 
 ### Development Loop Issues
 - Slow iteration cycle
 - Multiple running instances causing port conflicts
 - Unclear error visibility
 - Manual testing overhead
+- Terminal proliferation during testing
 
 ## Next Steps
 
-1. Fix WebSocket Authorization
-   - Debug CORS configuration
-   - Check WebSocket handshake headers
-   - Verify channel routing
+1. Optimize Test Execution
+   - Reduce test timeouts from current 10s to 5s
+   - Run only Chromium tests (remove Firefox/WebKit)
+   - Disable retries for faster failure detection
+   - Keep traces/videos only for failed tests
+   - Run tests sequentially to prevent WebSocket conflicts
+   - Reduce global timeout from 10 minutes to 2 minutes
 
-2. Implement Automated Testing
-   - Set up Playwright for E2E testing
-   ```javascript
-   // Example test structure
-   test('Chat functionality', async ({ page }) => {
-     // Connection test
-     await page.goto('http://localhost:5173')
-     await expect(page.getByText('Connected')).toBeVisible()
-     
-     // Channel switching test
-     await page.selectOption('select', 'general')
-     await expect(page.getByText('#general')).toBeVisible()
-     
-     // Message sending test
-     await page.fill('textarea', 'Test message')
-     await page.click('button:has-text("Send")')
-     await expect(page.getByText('Test message')).toBeVisible()
-   })
-   ```
-   - Add test coverage for:
-     - WebSocket connection states
-     - Channel switching
-     - Message sending/receiving
-     - Error handling
-     - UI component states
-   - Set up CI pipeline for automated testing
-
-3. Improve Development Loop
-   - Add development scripts for common tasks
+2. Improve Development Loop
    - Implement better process management
    - Add automated server health checks
+   - Create single command to start all required services
+   - Add cleanup scripts for terminating processes
+   - Implement better logging strategy
+
+3. Stabilize WebSocket Connection
+   - Add connection state debugging
+   - Implement proper cleanup between tests
+   - Add retry mechanism with exponential backoff
+   - Improve error reporting and state management
 
 4. Core Features Status
 - [x] Real-time messaging structure
 - [x] Channel support
 - [x] Basic UI
-- [ ] Working WebSocket connection
-- [ ] Message persistence
+- [x] WebSocket endpoint configuration
+- [~] Working WebSocket connection (partially working)
+- [ ] Stable connection state
+- [x] Message persistence
 - [ ] User authentication
-- [ ] Automated testing
+- [~] Automated testing (in progress)
 
 ## Debug Information
-- Frontend running on ports 5173/5174
+- Frontend running on port 5174 (5173 in use)
 - Backend on port 8000
-- WebSocket attempting connection to ws://localhost:8000/ws/general 
+- WebSocket connecting to ws://localhost:8000/general
+- Connection being established but unstable during tests
+- Multiple test terminals causing UI clutter
+
+## Development Guidelines
+1. Maintain automated testing as primary debugging method
+2. Avoid manual testing until basic functionality is stable
+3. Focus on improving test execution speed
+4. Keep terminal instances under control
+5. Implement proper cleanup between test runs 

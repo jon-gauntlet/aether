@@ -1,6 +1,8 @@
-import { render, screen } from '@testing-library/react';
-import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { ErrorBoundary } from '@/components/ErrorBoundary';
+import React from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { ErrorBoundary } from '../components/ErrorBoundary';
+import { withFlowProtection, createDebugContext, withDebugProtection } from '../core/__tests__/utils/debug-utils';
 
 const ThrowError = ({ shouldThrow }) => {
   if (shouldThrow) {
@@ -10,90 +12,77 @@ const ThrowError = ({ shouldThrow }) => {
 };
 
 describe('ErrorBoundary', () => {
+  let debugContext;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    debugContext = createDebugContext();
   });
 
-  it('renders children when no error', () => {
-    render(
-      <ErrorBoundary>
-        <ThrowError shouldThrow={false} />
-      </ErrorBoundary>
-    );
+  it('renders children when no error occurs', withFlowProtection(async () => {
+    withDebugProtection(() => {
+      render(
+        <ErrorBoundary>
+          <ThrowError shouldThrow={false} />
+        </ErrorBoundary>
+      );
 
-    expect(screen.getByText('No error')).toBeInTheDocument();
-  });
+      expect(screen.getByText('No error')).toBeInTheDocument();
+    }, debugContext);
+  }));
 
-  it('renders error message when error occurs', () => {
-    render(
-      <ErrorBoundary>
-        <ThrowError shouldThrow={true} />
-      </ErrorBoundary>
-    );
+  it('renders error UI when an error occurs', withFlowProtection(async () => {
+    withDebugProtection(() => {
+      render(
+        <ErrorBoundary>
+          <ThrowError shouldThrow={true} />
+        </ErrorBoundary>
+      );
 
-    expect(screen.getByText(/Test error/i)).toBeInTheDocument();
-    expect(screen.getByText(/Something went wrong/i)).toBeInTheDocument();
-  });
+      expect(screen.getByTestId('error-ui')).toBeInTheDocument();
+      expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+      expect(screen.getByText('Test error')).toBeInTheDocument();
+    }, debugContext);
+  }));
 
-  it('shows error details in development', () => {
-    const originalEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = 'development';
+  it('resets error state when try again is clicked', withFlowProtection(async () => {
+    withDebugProtection(() => {
+      const { rerender } = render(
+        <ErrorBoundary>
+          <ThrowError shouldThrow={true} />
+        </ErrorBoundary>
+      );
 
-    render(
-      <ErrorBoundary>
-        <ThrowError shouldThrow={true} />
-      </ErrorBoundary>
-    );
+      const tryAgainButton = screen.getByText('Try again');
+      fireEvent.click(tryAgainButton);
 
-    expect(screen.getByText(/Test error/i)).toBeInTheDocument();
-    expect(screen.getByText(/Error Stack/i)).toBeInTheDocument();
+      rerender(
+        <ErrorBoundary>
+          <ThrowError shouldThrow={false} />
+        </ErrorBoundary>
+      );
 
-    process.env.NODE_ENV = originalEnv;
-  });
+      expect(screen.getByText('No error')).toBeInTheDocument();
+    }, debugContext);
+  }));
 
-  it('uses custom fallback component', () => {
-    const CustomFallback = ({ error }) => <div>Custom error: {error.message}</div>;
+  it('calls onError prop when an error occurs', withFlowProtection(async () => {
+    withDebugProtection(() => {
+      const onError = vi.fn();
+      render(
+        <ErrorBoundary onError={onError}>
+          <ThrowError shouldThrow={true} />
+        </ErrorBoundary>
+      );
 
-    render(
-      <ErrorBoundary FallbackComponent={CustomFallback}>
-        <ThrowError shouldThrow={true} />
-      </ErrorBoundary>
-    );
+      expect(onError).toHaveBeenCalledWith(expect.any(Error), expect.any(Object));
+    }, debugContext);
+  }));
 
-    expect(screen.getByText(/Custom error: Test error/i)).toBeInTheDocument();
-  });
-
-  it('resets error state when children change', () => {
-    const { rerender } = render(
-      <ErrorBoundary>
-        <ThrowError shouldThrow={true} />
-      </ErrorBoundary>
-    );
-
-    expect(screen.getByText(/Test error/i)).toBeInTheDocument();
-
-    rerender(
-      <ErrorBoundary>
-        <ThrowError shouldThrow={false} />
-      </ErrorBoundary>
-    );
-
-    expect(screen.getByText('No error')).toBeInTheDocument();
-  });
-
-  it('provides development-specific error details', () => {
-    const originalEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = 'development';
-
-    render(
-      <ErrorBoundary>
-        <ThrowError shouldThrow={true} />
-      </ErrorBoundary>
-    );
-
-    expect(screen.getByText(/Component Stack/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Try Again/i })).toBeInTheDocument();
-
-    process.env.NODE_ENV = originalEnv;
+  afterEach(() => {
+    const analysis = analyzeDebugContext(debugContext);
+    if (analysis.warningCount > 0) {
+      console.warn('Test optimization recommendations:', analysis.recommendations);
+    }
   });
 }); 

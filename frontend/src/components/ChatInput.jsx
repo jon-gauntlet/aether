@@ -1,57 +1,81 @@
-import React, { useState } from 'react';
-import { VStack, Input, Button, Text } from '@chakra-ui/react';
-import { withErrorBoundary } from './ErrorBoundary';
+import React, { useCallback } from 'react'
+import { Box, Input, Button, Text } from '@chakra-ui/react'
 
-const MAX_LENGTH = 1000;
-const NEAR_LIMIT_THRESHOLD = 50;
+const MAX_LENGTH = 500
 
-function ChatInputComponent({ onSendMessage, isLoading = false }) {
-  const [message, setMessage] = useState('');
-  const isNearLimit = MAX_LENGTH - message.length <= NEAR_LIMIT_THRESHOLD;
-  const trimmedMessage = message.trim();
-  const isDisabled = isLoading || !trimmedMessage || message.length > MAX_LENGTH;
+const ChatInput = ({ onSendMessage, isLoading }) => {
+  const [message, setMessage] = React.useState('')
+  const remainingChars = MAX_LENGTH - message.length
+  const showCharCount = remainingChars <= 50
 
-  const handleSubmit = () => {
-    if (!trimmedMessage) {
-      return;
+  const handleSend = useCallback(() => {
+    if (message.trim()) {
+      onSendMessage(message.trim())
+      setMessage('')
     }
-    onSendMessage(trimmedMessage);
-    setMessage('');
-  };
+  }, [message, onSendMessage])
 
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit();
+  const handleKeyDown = useCallback((e) => {
+    if (e.key === 'Enter') {
+      if (e.shiftKey) {
+        // Don't prevent default - let the newline be inserted
+        return
+      } else {
+        e.preventDefault()
+        handleSend()
+      }
     }
-  };
+  }, [handleSend])
+
+  const handleChange = useCallback((e) => {
+    const newValue = e.target.value
+    if (newValue.length <= MAX_LENGTH) {
+      setMessage(newValue)
+    }
+  }, [])
 
   return (
-    <VStack spacing={2} align="stretch">
-      <Input
-        value={message}
-        onChange={(e) => setMessage(e.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder="Type your message..."
-        maxLength={MAX_LENGTH}
-        isDisabled={isLoading}
-        data-testid="chat-input"
-      />
-      {isNearLimit && (
-        <Text fontSize="sm" color={message.length > MAX_LENGTH ? 'red.500' : 'gray.500'} data-testid="char-count">
-          {message.length}/{MAX_LENGTH}
+    <Box position="relative">
+      <Box display="flex" gap={2}>
+        <Input
+          as="textarea"
+          data-testid="message-input"
+          value={message}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          placeholder="Type a message..."
+          disabled={isLoading}
+          rows={1}
+          resize="none"
+          minHeight="40px"
+          pr={showCharCount ? "120px" : "70px"}
+        />
+        <Button
+          data-testid="send-button"
+          onClick={handleSend}
+          isDisabled={!message.trim() || isLoading}
+          position="absolute"
+          right={2}
+          top="50%"
+          transform="translateY(-50%)"
+        >
+          Send
+        </Button>
+      </Box>
+      {showCharCount && (
+        <Text 
+          fontSize="sm" 
+          color="gray.500" 
+          position="absolute"
+          right="70px"
+          top="50%"
+          transform="translateY(-50%)"
+        >
+          {remainingChars} characters remaining
         </Text>
       )}
-      <Button
-        onClick={handleSubmit}
-        isDisabled={isDisabled}
-        isLoading={isLoading}
-        data-testid="send-button"
-      >
-        Send
-      </Button>
-    </VStack>
-  );
+    </Box>
+  )
 }
 
-export const ChatInput = withErrorBoundary(ChatInputComponent); 
+export default ChatInput 

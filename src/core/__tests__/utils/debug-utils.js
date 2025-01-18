@@ -132,4 +132,21 @@ export const withDebugProtection = (operation, context) => {
     context.errors.push(error);
     throw error;
   }
+};
+
+/**
+ * Wraps test function with flow protection
+ */
+export const withFlowProtection = (testFn) => {
+  return async () => {
+    const startTime = Date.now();
+    try {
+      await testFn();
+    } finally {
+      const duration = Date.now() - startTime;
+      if (duration > 1000) {
+        console.warn(`Test took ${duration}ms - consider optimizing`);
+      }
+    }
+  };
 }; 
