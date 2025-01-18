@@ -1,0 +1,117 @@
+components:
+  schemas:
+    NotificationConfig:
+      type: object
+      properties:
+        senderConfig:
+          $ref: '#/components/schemas/SenderConfig'
+        templateConfig:
+          $ref: '#/components/schemas/TemplateConfig'
+        policyConfig:
+          $ref: '#/components/schemas/NotificationPolicyConfig'
+    SenderConfig:
+      type: object
+      properties:
+        email:
+          $ref: '#/components/schemas/EmailConfig'
+        sms:
+          $ref: '#/components/schemas/SMSConfig'
+        push:
+          $ref: '#/components/schemas/PushConfig'
+    EmailConfig:
+      type: object
+      properties:
+        provider:
+          type: string
+        apiKey:
+          type: string
+        from:
+          type: string
+        replyTo:
+          type: string
+    SMSConfig:
+      type: object
+      properties:
+        provider:
+          type: string
+        apiKey:
+          type: string
+        from:
+          type: string
+    PushConfig:
+      type: object
+      properties:
+        provider:
+          type: string
+        apiKey:
+          type: string
+        appId:
+          type: string
+    TemplateConfig:
+      type: object
+      properties:
+        engine:
+          type: string
+        cacheEnabled:
+          type: boolean
+        defaultLocale:
+          type: string
+    NotificationPolicyConfig:
+      type: object
+      properties:
+        rateLimits:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/RateLimit'
+        preferences:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        recipient:
+          type: string
+        data:
+          type: object
+        content:
+          type: string
+        status:
+          type: string
+          enum: [pending, sending, sent, failed]
+        createdAt:
+          type: number
+        sentAt:
+          type: number
+        deliveredAt:
+          type: number
+        error:
+          type: string
+    NotificationStats:
+      type: object
+      properties:
+        sent:
+          type: number
+        failed:
+          type: number
+        total:
+          type: number
+        successRate:
+          type: number
+        byType:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              sent:
+                type: number
+              failed:
+                type: number
+              total:
+                type: number 

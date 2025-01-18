@@ -1,0 +1,70 @@
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    DatabaseStats:
+      type: object
+      properties:
+        table_stats:
+          type: object
+        index_stats:
+          type: object
+        query_stats:
+          type: object
+        collected_at:
+          type: string
+          format: date-time
+
+    QueryOptimization:
+      type: object
+      properties:
+        originalQuery:
+          type: string
+        analysis:
+          type: object
+        suggestions:
+          type: array
+          items:
+            type: string
+        recommendedActions:
+          type: object
+
+    MetricsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            uptime:
+              type: number
+            memory:
+              type: object
+            errors:
+              type: object
+            performance:
+              type: object
+        meta:
+          type: object
+          properties:
+            duration:
+              type: string
+            timestamp:
+              type: string
+            cached:
+              type: boolean 

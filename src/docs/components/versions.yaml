@@ -1,0 +1,38 @@
+components:
+  parameters:
+    ApiVersion:
+      in: header
+      name: Accept-Version
+      required: false
+      schema:
+        type: string
+        enum: ['1.0.0', '2.0.0']
+        default: '1.0.0'
+      description: |
+        API version to use. Available versions:
+        - 1.0.0: Stable version with basic features
+        - 2.0.0: Beta version with enhanced features
+        
+        Deprecated versions:
+        - 0.9.0: Will be removed in future releases
+
+  schemas:
+    VersionInfo:
+      type: object
+      properties:
+        version:
+          type: string
+          example: '1.0.0'
+        status:
+          type: string
+          enum: ['stable', 'beta', 'deprecated']
+        features:
+          type: array
+          items:
+            type: string
+        deprecationDate:
+          type: string
+          format: date-time
+        sunsetDate:
+          type: string
+          format: date-time 

@@ -1,0 +1,25 @@
+components:
+  schemas:
+    ArchitectureDoc:
+      type: object
+      properties:
+        systemOverview:
+          $ref: '#/components/schemas/SystemOverview'
+        componentArchitecture:
+          $ref: '#/components/schemas/ComponentArchitecture'
+        dataArchitecture:
+          $ref: '#/components/schemas/DataArchitecture'
+        integrationPatterns:
+          $ref: '#/components/schemas/IntegrationPatterns'
+        securityArchitecture:
+          $ref: '#/components/schemas/SecurityArchitecture'
+        designPatterns:
+          $ref: '#/components/schemas/DesignPatterns'
+        scalabilityDesign:
+          $ref: '#/components/schemas/ScalabilityDesign'
+        resilience:
+          $ref: '#/components/schemas/ResiliencePatterns'
+        performance:
+          $ref: '#/components/schemas/PerformanceArchitecture'
+        evolution:
+          $ref: '#/components/schemas/ArchitectureEvolution' 

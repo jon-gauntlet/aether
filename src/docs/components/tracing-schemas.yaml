@@ -1,0 +1,85 @@
+components:
+  schemas:
+    TracingConfig:
+      type: object
+      properties:
+        collectorConfig:
+          $ref: '#/components/schemas/SpanCollectorConfig'
+        exporterConfig:
+          $ref: '#/components/schemas/TraceExporterConfig'
+        policyConfig:
+          $ref: '#/components/schemas/TracingPolicyConfig'
+    SpanCollectorConfig:
+      type: object
+      properties:
+        retention:
+          type: string
+        maxSpans:
+          type: number
+        bufferSize:
+          type: number
+    TraceExporterConfig:
+      type: object
+      properties:
+        format:
+          type: string
+          enum: [jaeger, zipkin]
+        endpoint:
+          type: string
+        batchSize:
+          type: number
+        flushInterval:
+          type: string
+    TracingPolicyConfig:
+      type: object
+      properties:
+        samplingRate:
+          type: number
+        enabledOperations:
+          type: array
+          items:
+            type: string
+        maxSpansPerTrace:
+          type: number
+    Span:
+      type: object
+      properties:
+        id:
+          type: string
+        traceId:
+          type: string
+        parentId:
+          type: string
+        name:
+          type: string
+        startTime:
+          type: number
+        endTime:
+          type: number
+        duration:
+          type: number
+        tags:
+          type: object
+        status:
+          type: string
+          enum: [active, completed, error]
+        error:
+          type: object
+          properties:
+            message:
+              type: string
+            stack:
+              type: string
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpanEvent'
+    SpanEvent:
+      type: object
+      properties:
+        name:
+          type: string
+        timestamp:
+          type: number
+        data:
+          type: object 

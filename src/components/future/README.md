@@ -1,0 +1,1 @@
+# Future Components\n\nThese components are part of the larger vision from brainlifts but are not yet fully implemented.\nThey are preserved here for future development but are not part of the current working app.

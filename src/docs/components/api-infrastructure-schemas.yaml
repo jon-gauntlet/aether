@@ -1,0 +1,51 @@
+components:
+  schemas:
+    ApiRequest:
+      type: object
+      properties:
+        context:
+          type: object
+          properties:
+            requestId:
+              type: string
+            timestamp:
+              type: number
+            user:
+              $ref: '#/components/schemas/User'
+            permissions:
+              type: array
+              items:
+                type: string
+            source:
+              $ref: '#/components/schemas/RequestSource'
+    RequestSource:
+      type: object
+      properties:
+        ip:
+          type: string
+        userAgent:
+          type: string
+        referer:
+          type: string
+        origin:
+          type: string
+    ApiResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+        error:
+          $ref: '#/components/schemas/ApiError'
+        timestamp:
+          type: number
+    ApiError:
+      type: object
+      properties:
+        message:
+          type: string
+        code:
+          type: string
+        status:
+          type: number 

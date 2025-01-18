@@ -1,0 +1,51 @@
+components:
+  schemas:
+    ServiceConfig:
+      type: object
+      properties:
+        baseUrl:
+          type: string
+        defaultTimeout:
+          type: number
+        headers:
+          type: object
+        retryConfig:
+          $ref: '#/components/schemas/RetryConfig'
+        circuitBreakerConfig:
+          $ref: '#/components/schemas/CircuitBreakerConfig'
+    RetryConfig:
+      type: object
+      properties:
+        maxRetries:
+          type: number
+        baseDelay:
+          type: number
+        maxDelay:
+          type: number
+    CircuitBreakerConfig:
+      type: object
+      properties:
+        failureThreshold:
+          type: number
+        resetTimeout:
+          type: number
+    ServiceResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+        error:
+          $ref: '#/components/schemas/ServiceError'
+    ServiceError:
+      type: object
+      properties:
+        message:
+          type: string
+        type:
+          type: string
+        serviceName:
+          type: string
+        operation:
+          type: string 

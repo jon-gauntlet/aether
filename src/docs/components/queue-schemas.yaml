@@ -1,0 +1,92 @@
+components:
+  schemas:
+    QueueConfig:
+      type: object
+      properties:
+        jobQueueConfig:
+          $ref: '#/components/schemas/JobQueueConfig'
+        processorConfig:
+          $ref: '#/components/schemas/ProcessorConfig'
+        policyConfig:
+          $ref: '#/components/schemas/QueuePolicyConfig'
+    JobQueueConfig:
+      type: object
+      properties:
+        maxSize:
+          type: number
+        defaultPriority:
+          type: string
+          enum: [high, normal, low]
+        defaultMaxAttempts:
+          type: number
+    ProcessorConfig:
+      type: object
+      properties:
+        concurrency:
+          type: number
+        timeout:
+          type: number
+        errorThreshold:
+          type: number
+    QueuePolicyConfig:
+      type: object
+      properties:
+        rateLimits:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/RateLimit'
+        maxQueueSize:
+          type: number
+        validJobTypes:
+          type: array
+          items:
+            type: string
+    RateLimit:
+      type: object
+      properties:
+        maxRequests:
+          type: number
+        windowMs:
+          type: number
+    Job:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        data:
+          type: object
+        status:
+          type: string
+          enum: [pending, processing, completed, failed]
+        priority:
+          type: string
+          enum: [high, normal, low]
+        attempts:
+          type: number
+        maxAttempts:
+          type: number
+        createdAt:
+          type: number
+        startedAt:
+          type: number
+        completedAt:
+          type: number
+        result:
+          type: object
+        lastError:
+          type: string
+    QueueStats:
+      type: object
+      properties:
+        enqueued:
+          type: number
+        completed:
+          type: number
+        failed:
+          type: number
+        retried:
+          type: number
+        successRate:
+          type: number 

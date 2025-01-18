@@ -1,0 +1,25 @@
+version: '3.8'
+services:
+  supabase:
+    image: supabase/supabase-dev
+    ports:
+      - "54321:54321"
+      - "54322:54322"
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-your-secure-password}
+      JWT_SECRET: ${JWT_SECRET:-your-jwt-secret}
+      DASHBOARD_USERNAME: ${DASHBOARD_USERNAME:-admin}
+      DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD:-admin}
+      # Health check configuration
+      POSTGRES_DB: postgres
+      POSTGRES_HOST_AUTH_METHOD: trust
+      ENABLE_HEALTH_CHECK: "true"
+      HEALTH_CHECK_TIMEOUT: "5"
+    volumes:
+      - ./volumes/db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped 

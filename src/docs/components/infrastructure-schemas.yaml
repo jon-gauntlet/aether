@@ -1,0 +1,124 @@
+components:
+  schemas:
+    InfrastructureDoc:
+      type: object
+      properties:
+        systemArchitecture:
+          type: object
+          properties:
+            components:
+              type: array
+              items:
+                $ref: '#/components/schemas/SystemComponent'
+            networkTopology:
+              $ref: '#/components/schemas/NetworkTopology'
+        deploymentConfig:
+          type: object
+          properties:
+            environments:
+              type: object
+              additionalProperties:
+                $ref: '#/components/schemas/Environment'
+            deploymentProcess:
+              $ref: '#/components/schemas/DeploymentProcess'
+        serviceTopology:
+          type: object
+          properties:
+            services:
+              type: object
+              additionalProperties:
+                $ref: '#/components/schemas/Service'
+            dependencies:
+              $ref: '#/components/schemas/Dependencies'
+        securityInfo:
+          $ref: '#/components/schemas/SecurityInfo'
+        scalingConfig:
+          $ref: '#/components/schemas/ScalingConfig'
+        environmentInfo:
+          $ref: '#/components/schemas/EnvironmentInfo'
+        maintenanceProcedures:
+          $ref: '#/components/schemas/MaintenanceProcedures'
+        monitoringSetup:
+          $ref: '#/components/schemas/MonitoringSetup'
+        backupStrategy:
+          $ref: '#/components/schemas/BackupStrategy'
+
+    SystemComponent:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        technology:
+          type: string
+        description:
+          type: string
+        dependencies:
+          type: array
+          items:
+            type: string
+        scaling:
+          type: object
+          properties:
+            type:
+              type: string
+            minInstances:
+              type: integer
+            maxInstances:
+              type: integer
+
+    NetworkTopology:
+      type: object
+      properties:
+        ingressPoints:
+          type: array
+          items:
+            type: string
+        securityGroups:
+          type: array
+          items:
+            type: string
+        vpcConfig:
+          type: object
+          properties:
+            cidr:
+              type: string
+            subnets:
+              type: object
+              properties:
+                public:
+                  type: array
+                  items:
+                    type: string
+                private:
+                  type: array
+                  items:
+                    type: string 
+
+    InfrastructureDiagrams:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              type:
+                type: string
+                enum: [architecture, network, deployment, security]
+              content:
+                type: string
+                description: Diagram content in specified format (SVG or Mermaid)
+
+    DiagramType:
+      type: string
+      enum: [architecture, network, deployment, security, all]
+      description: Type of infrastructure diagram
+
+    DiagramFormat:
+      type: string
+      enum: [mermaid, svg]
+      description: Output format for the diagram 

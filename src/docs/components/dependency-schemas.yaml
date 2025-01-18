@@ -1,0 +1,25 @@
+components:
+  schemas:
+    DependencyDoc:
+      type: object
+      properties:
+        projectDependencies:
+          $ref: '#/components/schemas/ProjectDependencies'
+        dependencyManagement:
+          $ref: '#/components/schemas/DependencyManagement'
+        versionControl:
+          $ref: '#/components/schemas/VersionControl'
+        securityAudits:
+          $ref: '#/components/schemas/SecurityAudits'
+        dependencyGraph:
+          $ref: '#/components/schemas/DependencyGraph'
+        updateStrategy:
+          $ref: '#/components/schemas/UpdateStrategy'
+        compatibilityMatrix:
+          $ref: '#/components/schemas/CompatibilityMatrix'
+        buildConfiguration:
+          $ref: '#/components/schemas/BuildConfiguration'
+        dependencyMonitoring:
+          $ref: '#/components/schemas/DependencyMonitoring'
+        licenseCompliance:
+          $ref: '#/components/schemas/LicenseCompliance' 

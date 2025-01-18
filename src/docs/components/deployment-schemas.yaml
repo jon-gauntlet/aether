@@ -1,0 +1,52 @@
+components:
+  schemas:
+    DeploymentDoc:
+      type: object
+      properties:
+        deploymentProcedures:
+          $ref: '#/components/schemas/DeploymentProcedures'
+        environmentConfigs:
+          $ref: '#/components/schemas/EnvironmentConfigs'
+        kubernetesResources:
+          $ref: '#/components/schemas/KubernetesResources'
+        cicdPipelines:
+          $ref: '#/components/schemas/CICDPipelines'
+        monitoringSetup:
+          $ref: '#/components/schemas/MonitoringSetup'
+        rollbackProcedures:
+          $ref: '#/components/schemas/RollbackProcedures'
+        healthChecks:
+          $ref: '#/components/schemas/HealthChecks'
+        scalingStrategies:
+          $ref: '#/components/schemas/ScalingStrategies'
+        troubleshootingGuide:
+          $ref: '#/components/schemas/TroubleshootingGuide'
+
+    DeploymentProcedures:
+      type: object
+      properties:
+        preDeployment:
+          type: object
+          properties:
+            checks:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  command:
+                    type: string
+                  description:
+                    type: string
+            approvals:
+              type: array
+              items:
+                type: object
+                properties:
+                  type:
+                    type: string
+                  minApprovers:
+                    type: integer
+                  requiredRole:
+                    type: string 

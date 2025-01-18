@@ -1,0 +1,25 @@
+components:
+  schemas:
+    TestingDoc:
+      type: object
+      properties:
+        testingStrategy:
+          $ref: '#/components/schemas/TestingStrategy'
+        testSuites:
+          $ref: '#/components/schemas/TestSuites'
+        testInfrastructure:
+          $ref: '#/components/schemas/TestInfrastructure'
+        testCoverage:
+          $ref: '#/components/schemas/TestCoverage'
+        automationFrameworks:
+          $ref: '#/components/schemas/AutomationFrameworks'
+        cicdIntegration:
+          $ref: '#/components/schemas/CICDIntegration'
+        testEnvironments:
+          $ref: '#/components/schemas/TestEnvironments'
+        performanceTesting:
+          $ref: '#/components/schemas/PerformanceTesting'
+        securityTesting:
+          $ref: '#/components/schemas/SecurityTesting'
+        testingStandards:
+          $ref: '#/components/schemas/TestingStandards' 

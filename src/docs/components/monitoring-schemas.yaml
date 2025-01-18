@@ -1,0 +1,25 @@
+components:
+  schemas:
+    MonitoringDoc:
+      type: object
+      properties:
+        metricsCollection:
+          $ref: '#/components/schemas/MetricsCollection'
+        alertingSystem:
+          $ref: '#/components/schemas/AlertingSystem'
+        loggingInfrastructure:
+          $ref: '#/components/schemas/LoggingInfrastructure'
+        dashboards:
+          $ref: '#/components/schemas/Dashboards'
+        healthChecks:
+          $ref: '#/components/schemas/HealthChecks'
+        monitoringStrategy:
+          $ref: '#/components/schemas/MonitoringStrategy'
+        incidentManagement:
+          $ref: '#/components/schemas/IncidentManagement'
+        performanceMonitoring:
+          $ref: '#/components/schemas/PerformanceMonitoring'
+        resourceUtilization:
+          $ref: '#/components/schemas/ResourceUtilization'
+        slos:
+          $ref: '#/components/schemas/ServiceLevelObjectives' 

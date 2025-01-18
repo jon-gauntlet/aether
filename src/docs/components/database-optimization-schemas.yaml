@@ -1,0 +1,20 @@
+components:
+  schemas:
+    DatabaseOptimizationResult:
+      type: object
+      properties:
+        statistics:
+          type: object
+          properties:
+            tableStats:
+              $ref: '#/components/schemas/TableStatistics'
+            indexStats:
+              $ref: '#/components/schemas/IndexStatistics'
+            queryStats:
+              $ref: '#/components/schemas/QueryStatistics'
+            vacuumStats:
+              $ref: '#/components/schemas/VacuumStatistics'
+        optimizationPlan:
+          $ref: '#/components/schemas/OptimizationPlan'
+        recommendations:
+          $ref: '#/components/schemas/OptimizationRecommendations' 

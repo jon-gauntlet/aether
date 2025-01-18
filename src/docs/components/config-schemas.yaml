@@ -1,0 +1,25 @@
+components:
+  schemas:
+    ConfigDoc:
+      type: object
+      properties:
+        environmentConfig:
+          $ref: '#/components/schemas/EnvironmentConfig'
+        systemSettings:
+          $ref: '#/components/schemas/SystemSettings'
+        secretsManagement:
+          $ref: '#/components/schemas/SecretsManagement'
+        configValidation:
+          $ref: '#/components/schemas/ConfigValidation'
+        configVersioning:
+          $ref: '#/components/schemas/ConfigVersioning'
+        configStrategy:
+          $ref: '#/components/schemas/ConfigStrategy'
+        deploymentConfig:
+          $ref: '#/components/schemas/DeploymentConfig'
+        featureFlags:
+          $ref: '#/components/schemas/FeatureFlags'
+        configSecurity:
+          $ref: '#/components/schemas/ConfigSecurity'
+        configAudit:
+          $ref: '#/components/schemas/ConfigAudit' 

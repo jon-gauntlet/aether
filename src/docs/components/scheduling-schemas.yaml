@@ -1,0 +1,114 @@
+components:
+  schemas:
+    SchedulerConfig:
+      type: object
+      properties:
+        schedulerConfig:
+          $ref: '#/components/schemas/TaskSchedulerConfig'
+        executorConfig:
+          $ref: '#/components/schemas/TaskExecutorConfig'
+        policyConfig:
+          $ref: '#/components/schemas/SchedulingPolicyConfig'
+    TaskSchedulerConfig:
+      type: object
+      properties:
+        checkInterval:
+          type: number
+        maxConcurrent:
+          type: number
+        defaultPriority:
+          type: string
+          enum: [high, normal, low]
+    TaskExecutorConfig:
+      type: object
+      properties:
+        timeout:
+          type: number
+        retries:
+          type: number
+        backoffStrategy:
+          type: string
+          enum: [linear, exponential]
+    SchedulingPolicyConfig:
+      type: object
+      properties:
+        enabledTasks:
+          type: array
+          items:
+            type: string
+        concurrencyLimits:
+          type: object
+          additionalProperties:
+            type: number
+    Task:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        data:
+          type: object
+        schedule:
+          type: string
+        priority:
+          type: string
+          enum: [high, normal, low]
+        status:
+          type: string
+          enum: [scheduled, running, completed, failed]
+        createdAt:
+          type: number
+        startedAt:
+          type: number
+        completedAt:
+          type: number
+        nextRun:
+          type: number
+        result:
+          type: object
+        error:
+          type: string
+        dependencies:
+          type: array
+          items:
+            type: string
+          description: Array of task IDs that must complete before this task can run
+    SchedulerStats:
+      type: object
+      properties:
+        scheduled:
+          type: number
+        completed:
+          type: number
+        failed:
+          type: number
+        total:
+          type: number
+        successRate:
+          type: number
+        byTask:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              scheduled:
+                type: number
+              completed:
+                type: number
+              failed:
+                type: number
+              total:
+                type: number
+    DistributedSchedulerConfig:
+      type: object
+      properties:
+        lockTTL:
+          type: number
+          description: Time-to-live for task locks in milliseconds
+        heartbeatInterval:
+          type: number
+          description: Interval for node heartbeats in milliseconds
+        nodeTimeout:
+          type: number
+          description: Time after which a node is considered inactive 

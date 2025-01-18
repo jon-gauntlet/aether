@@ -1,25 +1,21 @@
 #!/bin/bash
 
-# Start Supabase
-echo "Starting Supabase..."
-supabase start
+# Check for Supabase CLI
+if ! command -v supabase &> /dev/null; then
+    echo "Error: Supabase CLI required"
+    echo "Install: https://supabase.com/docs/guides/cli"
+    exit 1
+fi
 
-# Get Supabase credentials
-echo "Fetching credentials..."
+# Start Supabase and get credentials
+supabase start
 SUPABASE_URL=$(supabase status | grep 'API URL' | awk '{print $NF}')
 SUPABASE_KEY=$(supabase status | grep 'anon key' | awk '{print $NF}')
 
-# Update .env
-echo "Updating .env..."
+# Save config
 echo "VITE_SUPABASE_URL=$SUPABASE_URL" > .env
 echo "VITE_SUPABASE_ANON_KEY=$SUPABASE_KEY" >> .env
 
-# Reset database
-echo "Resetting database..."
+# Reset DB and verify
 supabase db reset
-
-# Verify setup
-echo "Verifying setup..."
-npm run verify
-
-echo "Setup complete! Run 'npm run dev' to start development server" 
+node scripts/verify-setup.js 

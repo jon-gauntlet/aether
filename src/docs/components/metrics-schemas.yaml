@@ -1,0 +1,92 @@
+components:
+  schemas:
+    MetricsConfig:
+      type: object
+      properties:
+        collectorConfig:
+          $ref: '#/components/schemas/CollectorConfig'
+        aggregatorConfig:
+          $ref: '#/components/schemas/AggregatorConfig'
+        exporterConfig:
+          $ref: '#/components/schemas/ExporterConfig'
+        policyConfig:
+          $ref: '#/components/schemas/MetricsPolicyConfig'
+    CollectorConfig:
+      type: object
+      properties:
+        retention:
+          type: string
+        maxSeries:
+          type: number
+        resolution:
+          type: string
+    AggregatorConfig:
+      type: object
+      properties:
+        intervals:
+          type: array
+          items:
+            type: string
+        functions:
+          type: array
+          items:
+            type: string
+    ExporterConfig:
+      type: object
+      properties:
+        formats:
+          type: array
+          items:
+            type: string
+        endpoint:
+          type: string
+    MetricsPolicyConfig:
+      type: object
+      properties:
+        enabledMetrics:
+          type: array
+          items:
+            type: string
+        rateLimits:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/RateLimit'
+    Metric:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        value:
+          type: number
+        tags:
+          type: object
+        timestamp:
+          type: number
+    MetricAggregation:
+      type: object
+      properties:
+        count:
+          type: number
+        sum:
+          type: number
+        min:
+          type: number
+        max:
+          type: number
+        avg:
+          type: number
+        lastUpdate:
+          type: number
+    MetricsResponse:
+      type: object
+      properties:
+        metrics:
+          type: array
+          items:
+            $ref: '#/components/schemas/Metric'
+        aggregations:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/MetricAggregation' 

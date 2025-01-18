@@ -1,0 +1,69 @@
+components:
+  schemas:
+    SecurityConfig:
+      type: object
+      properties:
+        tokenConfig:
+          $ref: '#/components/schemas/TokenConfig'
+        encryptionConfig:
+          $ref: '#/components/schemas/EncryptionConfig'
+        accessControlConfig:
+          $ref: '#/components/schemas/AccessControlConfig'
+        policyConfig:
+          $ref: '#/components/schemas/PolicyConfig'
+    TokenConfig:
+      type: object
+      properties:
+        algorithm:
+          type: string
+        expiresIn:
+          type: string
+        issuer:
+          type: string
+        audience:
+          type: string
+    EncryptionConfig:
+      type: object
+      properties:
+        algorithm:
+          type: string
+        keySize:
+          type: number
+        ivSize:
+          type: number
+    AccessControlConfig:
+      type: object
+      properties:
+        roles:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+        defaultRole:
+          type: string
+    PolicyConfig:
+      type: object
+      properties:
+        rateLimiting:
+          $ref: '#/components/schemas/RateLimitingPolicy'
+        ipFiltering:
+          $ref: '#/components/schemas/IpFilteringPolicy'
+    RateLimitingPolicy:
+      type: object
+      properties:
+        maxRequests:
+          type: number
+        windowMs:
+          type: number
+    IpFilteringPolicy:
+      type: object
+      properties:
+        allowedIps:
+          type: array
+          items:
+            type: string
+        blockedIps:
+          type: array
+          items:
+            type: string 

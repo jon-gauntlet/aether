@@ -1,0 +1,89 @@
+components:
+  schemas:
+    LoggingConfig:
+      type: object
+      properties:
+        writerConfig:
+          $ref: '#/components/schemas/WriterConfig'
+        formatterConfig:
+          $ref: '#/components/schemas/FormatterConfig'
+        policyConfig:
+          $ref: '#/components/schemas/LogPolicyConfig'
+    WriterConfig:
+      type: object
+      properties:
+        console:
+          type: boolean
+        file:
+          $ref: '#/components/schemas/FileWriterConfig'
+        custom:
+          type: object
+    FileWriterConfig:
+      type: object
+      properties:
+        path:
+          type: string
+        maxSize:
+          type: string
+        maxFiles:
+          type: number
+        compress:
+          type: boolean
+    FormatterConfig:
+      type: object
+      properties:
+        template:
+          type: string
+        includeMetadata:
+          type: boolean
+        dateFormat:
+          type: string
+    LogPolicyConfig:
+      type: object
+      properties:
+        minLevel:
+          type: string
+          enum: [error, warn, info, debug]
+        rateLimits:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/RateLimit'
+        filters:
+          type: array
+          items:
+            type: string
+    LogEntry:
+      type: object
+      properties:
+        id:
+          type: string
+        timestamp:
+          type: number
+        level:
+          type: string
+          enum: [error, warn, info, debug]
+        message:
+          type: string
+        context:
+          type: object
+        formatted:
+          type: string
+        metadata:
+          type: object
+    LogStats:
+      type: object
+      properties:
+        error:
+          type: number
+        warn:
+          type: number
+        info:
+          type: number
+        debug:
+          type: number
+        total:
+          type: number
+        errorRate:
+          type: number
+        warnRate:
+          type: number 

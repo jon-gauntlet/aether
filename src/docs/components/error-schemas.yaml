@@ -1,0 +1,25 @@
+components:
+  schemas:
+    ErrorDoc:
+      type: object
+      properties:
+        errorTypes:
+          $ref: '#/components/schemas/ErrorTypes'
+        errorHandling:
+          $ref: '#/components/schemas/ErrorHandling'
+        recoveryProcedures:
+          $ref: '#/components/schemas/RecoveryProcedures'
+        errorMonitoring:
+          $ref: '#/components/schemas/ErrorMonitoring'
+        errorReporting:
+          $ref: '#/components/schemas/ErrorReporting'
+        errorStrategy:
+          $ref: '#/components/schemas/ErrorStrategy'
+        fallbackMechanisms:
+          $ref: '#/components/schemas/FallbackMechanisms'
+        retryStrategies:
+          $ref: '#/components/schemas/RetryStrategies'
+        circuitBreakers:
+          $ref: '#/components/schemas/CircuitBreakers'
+        errorPrevention:
+          $ref: '#/components/schemas/ErrorPrevention' 

@@ -1,0 +1,25 @@
+components:
+  schemas:
+    ApiDoc:
+      type: object
+      properties:
+        apiOverview:
+          $ref: '#/components/schemas/ApiOverview'
+        endpoints:
+          $ref: '#/components/schemas/Endpoints'
+        authentication:
+          $ref: '#/components/schemas/Authentication'
+        schemas:
+          $ref: '#/components/schemas/Schemas'
+        examples:
+          $ref: '#/components/schemas/Examples'
+        versioning:
+          $ref: '#/components/schemas/Versioning'
+        errorHandling:
+          $ref: '#/components/schemas/ErrorHandling'
+        rateLimit:
+          $ref: '#/components/schemas/RateLimit'
+        bestPractices:
+          $ref: '#/components/schemas/BestPractices'
+        sdkSupport:
+          $ref: '#/components/schemas/SDKSupport' 

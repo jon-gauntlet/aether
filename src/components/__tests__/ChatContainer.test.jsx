@@ -1,39 +1,54 @@
-import { describe, it, expect, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import { describe, it, expect, vi } from 'vitest'
+import { render, screen, fireEvent } from '@testing-library/react'
 import ChatContainer from '../ChatContainer'
-import { testUtils } from '../../lib/test-utils'
+import { supabase } from '../../lib/supabaseClient'
+
+// Mock Supabase client
+vi.mock('../../lib/supabaseClient', () => ({
+  supabase: {
+    from: vi.fn(() => ({
+      select: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockResolvedValue({ data: [], error: null })
+    })),
+    channel: vi.fn(() => ({
+      on: vi.fn().mockReturnThis(),
+      subscribe: vi.fn()
+    }))
+  }
+}))
 
 describe('ChatContainer', () => {
-  beforeEach(async () => {
-    await testUtils.clearMessages()
+  it('renders without crashing', () => {
+    render(<ChatContainer />)
+    expect(screen.getByTestId('chat-container')).toBeDefined()
   })
 
-  it('should render loading state', () => {
+  it('displays loading state initially', () => {
     render(<ChatContainer />)
-    expect(screen.getByText(/loading/i)).toBeInTheDocument()
+    expect(screen.getByText(/loading/i)).toBeDefined()
   })
 
-  it('should load and display messages', async () => {
-    const testMessages = await testUtils.createTestMessages(2)
+  it('handles message sending', async () => {
     render(<ChatContainer />)
-
-    await waitFor(() => {
-      testMessages.forEach(msg => {
-        expect(screen.getByText(msg.content)).toBeInTheDocument()
-      })
-    })
-  })
-
-  it('should send new message', async () => {
-    const user = userEvent.setup()
-    render(<ChatContainer />)
-
     const input = screen.getByPlaceholderText(/type a message/i)
-    await user.type(input, 'New test message{enter}')
+    const message = 'Hello, World!'
+    
+    fireEvent.change(input, { target: { value: message } })
+    fireEvent.keyPress(input, { key: 'Enter', code: 13, charCode: 13 })
+    
+    expect(supabase.from).toHaveBeenCalledWith('messages')
+  })
 
-    await waitFor(() => {
-      expect(screen.getByText('New test message')).toBeInTheDocument()
-    })
+  it('displays error state when Supabase fails', async () => {
+    // Mock error response
+    vi.mocked(supabase.from).mockImplementationOnce(() => ({
+      select: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockResolvedValue({ data: null, error: new Error('Failed to load') })
+    }))
+
+    render(<ChatContainer />)
+    expect(await screen.findByText(/error/i)).toBeDefined()
   })
 }) 

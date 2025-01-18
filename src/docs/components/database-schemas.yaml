@@ -1,0 +1,88 @@
+components:
+  schemas:
+    TableInfo:
+      type: object
+      properties:
+        table_name:
+          type: string
+        column_name:
+          type: string
+        data_type:
+          type: string
+        is_nullable:
+          type: boolean
+        column_default:
+          type: string
+        description:
+          type: string
+
+    Relationship:
+      type: object
+      properties:
+        table_name:
+          type: string
+        column_name:
+          type: string
+        foreign_table_name:
+          type: string
+        foreign_column_name:
+          type: string
+        update_rule:
+          type: string
+        delete_rule:
+          type: string
+
+    IndexInfo:
+      type: object
+      properties:
+        table_name:
+          type: string
+        index_name:
+          type: string
+        index_type:
+          type: string
+        is_unique:
+          type: boolean
+        indexed_columns:
+          type: array
+          items:
+            type: string
+        index_size:
+          type: integer
+        index_usage:
+          type: integer
+
+    QueryPattern:
+      type: object
+      properties:
+        name:
+          type: string
+        pattern:
+          type: string
+        description:
+          type: string
+        indexUsed:
+          type: string
+        frequency:
+          type: string
+
+    DatabaseDiagram:
+      type: object
+      properties:
+        format:
+          type: string
+          enum: [mermaid, svg]
+          description: The format of the diagram
+        content:
+          type: string
+          description: The diagram content in the specified format
+        metadata:
+          type: object
+          properties:
+            generatedAt:
+              type: string
+              format: date-time
+            tableCount:
+              type: integer
+            relationshipCount:
+              type: integer 

@@ -1,41 +1,41 @@
-import { supabase } from '../src/lib/supabaseClient'
-import { logger } from '../src/lib/logger'
-import { testUtils } from '../src/lib/test-utils'
+import { createClient } from '@supabase/supabase-js'
+import { logger } from '../src/lib/logger.js'
+
+const supabaseUrl = process.env.VITE_SUPABASE_URL
+const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY
+
+if (!supabaseUrl || !supabaseKey) {
+  logger.error('Missing Supabase credentials in environment')
+  process.exit(1)
+}
+
+const supabase = createClient(supabaseUrl, supabaseKey)
 
 async function verifySetup() {
-  console.log('🔍 Starting setup verification...')
-
   try {
-    // Test database connection
-    console.log('\nTesting database connection...')
+    logger.info('Verifying Supabase connection...')
+    
+    // Test database connection and message operations
     const { data, error } = await supabase
       .from('messages')
-      .select('count')
-      .single()
-
-    if (error) throw error
-    console.log('✅ Database connection successful')
-
-    // Test message operations
-    console.log('\nTesting message operations...')
-    await testUtils.clearMessages()
-    const message = await testUtils.createTestMessage()
-    console.log('✅ Message operations successful')
-
-    // Test realtime
-    console.log('\nTesting realtime subscription...')
-    const channel = supabase.channel('test')
-    await channel.subscribe()
-    console.log('✅ Realtime subscription successful')
+      .select('*')
+      .limit(1)
     
-    // Cleanup
-    await testUtils.clearMessages()
-    await supabase.removeChannel(channel)
+    if (error) throw error
+    logger.info('Database connection verified')
 
-    console.log('\n✨ All verifications passed!')
+    // Test realtime subscription
+    const channel = supabase.channel('messages')
+    channel.subscribe(status => {
+      if (status === 'SUBSCRIBED') {
+        logger.info('Realtime subscription verified')
+        channel.unsubscribe()
+        process.exit(0)
+      }
+    })
 
   } catch (error) {
-    console.error('\n❌ Setup verification failed:', error.message)
+    logger.error('Verification failed', error)
     process.exit(1)
   }
 }

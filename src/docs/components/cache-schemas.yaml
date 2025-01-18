@@ -1,0 +1,56 @@
+components:
+  schemas:
+    CacheConfig:
+      type: object
+      properties:
+        dataCacheConfig:
+          $ref: '#/components/schemas/DataCacheConfig'
+        responseCacheConfig:
+          $ref: '#/components/schemas/ResponseCacheConfig'
+        policyConfig:
+          $ref: '#/components/schemas/CachePolicyConfig'
+    DataCacheConfig:
+      type: object
+      properties:
+        defaultTTL:
+          type: number
+        maxSize:
+          type: number
+        compression:
+          type: boolean
+    ResponseCacheConfig:
+      type: object
+      properties:
+        defaultTTL:
+          type: number
+        maxEntries:
+          type: number
+        excludePaths:
+          type: array
+          items:
+            type: string
+    CachePolicyConfig:
+      type: object
+      properties:
+        noCachePatterns:
+          type: array
+          items:
+            type: string
+        maxValueSize:
+          type: number
+        defaultPolicy:
+          type: string
+          enum: [cache, no-cache]
+    CacheStats:
+      type: object
+      properties:
+        hits:
+          type: number
+        misses:
+          type: number
+        sets:
+          type: number
+        errors:
+          type: number
+        hitRate:
+          type: number 
