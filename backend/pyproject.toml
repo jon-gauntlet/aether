@@ -1,0 +1,33 @@
+[tool.poetry]
+name = "aether-backend"
+version = "0.1.0"
+description = "Aether backend services"
+authors = ["Your Name <your.email@example.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+fastapi = "^0.109.0"
+uvicorn = "^0.27.0"
+supabase = "^2.3.0"
+pytest = "^7.4.4"
+pytest-asyncio = "^0.23.3"
+
+[tool.poetry.dev-dependencies]
+black = "^23.12.1"
+isort = "^5.13.2"
+flake8 = "^7.0.0"
+pytest-cov = "^4.1.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 100
+target-version = ['py39']
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 100 

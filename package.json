@@ -8,12 +8,25 @@
   "scripts": {
     "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
     "dev:frontend": "cd frontend && npm run dev",
-    "dev:backend": "cd backend && python -m uvicorn main:app --reload",
+    "dev:backend": "cd backend && poetry run uvicorn src.main:app --reload --port 8000",
+    "build": "cd frontend && npm run build",
+    "start": "concurrently \"npm run start:frontend\" \"npm run start:backend\"",
+    "start:frontend": "cd frontend && npm run preview",
+    "start:backend": "cd backend && poetry run uvicorn src.main:app --port 8000",
     "test": "npm run test:frontend && npm run test:backend",
     "test:frontend": "cd frontend && npm run test",
-    "test:backend": "cd backend && pytest",
-    "lint": "eslint .",
-    "format": "prettier --write ."
+    "test:backend": "cd backend && poetry run pytest",
+    "test:coverage": "npm run test:frontend:coverage && npm run test:backend:coverage",
+    "test:frontend:coverage": "cd frontend && npm run test:coverage",
+    "test:backend:coverage": "cd backend && poetry run pytest --cov",
+    "lint": "npm run lint:frontend && npm run lint:backend",
+    "lint:frontend": "cd frontend && npm run lint",
+    "lint:backend": "cd backend && poetry run black . && poetry run isort .",
+    "format": "npm run format:frontend && npm run format:backend",
+    "format:frontend": "cd frontend && npm run format",
+    "format:backend": "cd backend && poetry run black . && poetry run isort .",
+    "clean": "rm -rf frontend/dist backend/__pycache__ backend/.pytest_cache",
+    "setup": "npm install && cd frontend && npm install && cd ../backend && poetry install"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
@@ -25,7 +38,7 @@
   },
   "husky": {
     "hooks": {
-      "pre-commit": "npm run lint"
+      "pre-commit": "npm run lint && npm run test"
     }
   }
 }
