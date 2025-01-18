@@ -1,1 +1,0 @@
-# Shared Resources\n\nThis directory contains resources used across all domains:\n\n## Types\n- Message types\n- User types\n- Channel types\n\n## Interfaces\n- API interfaces\n- Service interfaces\n\n## Constants\n- API endpoints\n- Configuration values\n- Feature flags

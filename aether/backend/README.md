@@ -1,1 +1,0 @@
-# Backend Domain (Claude 2)\n\nCore Features:\n- RAG system implementation\n- Vector search\n- OpenAI integration\n- Cache management\n- API endpoints\n\nKey Files:\n- src/rag/: RAG implementation\n- src/api/: FastAPI endpoints\n- src/services/: Business logic\n- tests/: Backend tests

@@ -1,8 +1,0 @@
-{
-  "contextDir": "/home/jon/projects/aether/.flow/contexts",
-  "logsDir": "/home/jon/projects/aether/.flow/logs",
-  "flowThreshold": 1800000,
-  "focusInterval": 2700000,
-  "breakInterval": 900000,
-  "idleThreshold": 180000
-}

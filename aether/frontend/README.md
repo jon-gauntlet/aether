@@ -1,1 +1,0 @@
-# Frontend Domain (Claude 1)\n\nCore Features:\n- Real-time messaging\n- Channel management\n- File handling\n- User presence\n- Thread support\n- Error handling\n\nKey Files:\n- src/components/: React components\n- src/features/: Feature implementations\n- src/hooks/: Custom React hooks\n- tests/: Frontend tests
