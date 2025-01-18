@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ThemeToggle } from '../components/ThemeToggle';
+import { ThemeToggle } from '../shared/components/ThemeToggle';
 import { TestWrapper } from './setup';
 
 describe('ThemeToggle', () => {
@@ -12,7 +12,7 @@ describe('ThemeToggle', () => {
       </TestWrapper>
     );
     
-    expect(screen.getByRole('button', { name: /toggle theme/i })).toBeInTheDocument();
+    expect(screen.getByTestId('theme-toggle')).toBeInTheDocument();
   });
 
   it('toggles theme on click', async () => {
@@ -23,14 +23,14 @@ describe('ThemeToggle', () => {
       </TestWrapper>
     );
     
-    const button = screen.getByRole('button', { name: /toggle theme/i });
-    await user.click(button);
+    const button = screen.getByTestId('theme-toggle');
     
-    // Check if theme class is applied to body
-    expect(document.body).toHaveClass('light-theme');
+    // Initial state (light theme)
+    expect(screen.getByTestId('moon-icon')).toBeInTheDocument();
     
+    // Click to toggle to dark theme
     await user.click(button);
-    expect(document.body).toHaveClass('dark-theme');
+    expect(screen.getByTestId('sun-icon')).toBeInTheDocument();
   });
 
   it('shows correct icon based on theme', async () => {
@@ -41,12 +41,12 @@ describe('ThemeToggle', () => {
       </TestWrapper>
     );
     
-    const button = screen.getByRole('button', { name: /toggle theme/i });
+    const button = screen.getByTestId('theme-toggle');
     
-    // Initial state (dark theme)
+    // Initial state (light theme)
     expect(screen.getByTestId('moon-icon')).toBeInTheDocument();
     
-    // After toggle (light theme)
+    // After toggle (dark theme)
     await user.click(button);
     expect(screen.getByTestId('sun-icon')).toBeInTheDocument();
   });
@@ -59,7 +59,7 @@ describe('ThemeToggle', () => {
       </TestWrapper>
     );
     
-    const button = screen.getByRole('button', { name: /toggle theme/i });
+    const button = screen.getByTestId('theme-toggle');
     await user.click(button);
     
     // Unmount and remount
@@ -70,7 +70,6 @@ describe('ThemeToggle', () => {
     );
     
     // Theme should persist
-    expect(document.body).toHaveClass('light-theme');
     expect(screen.getByTestId('sun-icon')).toBeInTheDocument();
   });
 
@@ -82,19 +81,13 @@ describe('ThemeToggle', () => {
       </TestWrapper>
     );
     
-    const button = screen.getByRole('button', { name: /toggle theme/i });
+    const button = screen.getByTestId('theme-toggle');
     
-    // Dark theme
-    expect(button).toHaveStyle({
-      backgroundColor: 'var(--background-secondary)',
-      color: 'var(--text-primary)'
-    });
+    // Initial theme (light)
+    expect(button).toHaveAttribute('data-theme', 'light');
     
-    // Light theme
+    // Toggle to dark theme
     await user.click(button);
-    expect(button).toHaveStyle({
-      backgroundColor: 'var(--background-secondary)',
-      color: 'var(--text-primary)'
-    });
+    expect(button).toHaveAttribute('data-theme', 'dark');
   });
 }); 

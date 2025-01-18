@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
-import { TestWrapper } from './TestWrapper';
-import { Message } from '../components/Message';
+import { TestWrapper } from './setup';
+import { Message } from '../shared/components/Message';
 
 describe('Message', () => {
   describe('Basic Rendering', () => {

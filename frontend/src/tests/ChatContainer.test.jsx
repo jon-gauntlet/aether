@@ -2,11 +2,11 @@ import React from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
-import { ChatContainer } from '../components/ChatContainer'
-import { TestWrapper } from './setup/setup'
-import * as apiClient from '../services/apiClient'
+import { ChatContainer } from '../shared/components/ChatContainer'
+import { TestWrapper } from './setup'
+import * as apiClient from '../api/client'
 
-vi.mock('../services/apiClient', () => ({
+vi.mock('../api/client', () => ({
   fetchMessages: vi.fn(),
   sendMessage: vi.fn(),
   subscribeToMessages: vi.fn()

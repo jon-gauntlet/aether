@@ -1,11 +1,11 @@
 import React, { useCallback } from 'react'
 import { Box, Input, Button, Text } from '@chakra-ui/react'
 
-const MAX_LENGTH = 500
+const DEFAULT_MAX_LENGTH = 500
 
-const ChatInput = ({ onSendMessage, isLoading }) => {
+const ChatInput = ({ onSendMessage, isLoading, maxLength = DEFAULT_MAX_LENGTH }) => {
   const [message, setMessage] = React.useState('')
-  const remainingChars = MAX_LENGTH - message.length
+  const remainingChars = maxLength - message.length
   const showCharCount = remainingChars <= 50
 
   const handleSend = useCallback(() => {
@@ -29,10 +29,10 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
 
   const handleChange = useCallback((e) => {
     const newValue = e.target.value
-    if (newValue.length <= MAX_LENGTH) {
+    if (newValue.length <= maxLength) {
       setMessage(newValue)
     }
-  }, [])
+  }, [maxLength])
 
   return (
     <Box position="relative">
@@ -64,6 +64,7 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
       </Box>
       {showCharCount && (
         <Text 
+          data-testid="char-count"
           fontSize="sm" 
           color="gray.500" 
           position="absolute"

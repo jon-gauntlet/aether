@@ -2,8 +2,8 @@ import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
-import { ChatInput } from '../components/ChatInput'
-import { TestWrapper } from './TestWrapper'
+import ChatInput from '../shared/components/ChatInput'
+import { TestWrapper } from './setup'
 import { act } from '@testing-library/react'
 
 describe('ChatInput', () => {
@@ -90,6 +90,9 @@ describe('ChatInput', () => {
       await userEvent.type(input, '12345678')
     })
 
-    expect(screen.getByText('2 characters remaining')).toBeInTheDocument()
+    await waitFor(() => {
+      const charCount = screen.getByTestId('char-count')
+      expect(charCount).toHaveTextContent('2 characters remaining')
+    })
   })
 }) 

@@ -1,5 +1,7 @@
+import React from 'react'
 import { Box, VStack, Text, Skeleton, Fade } from '@chakra-ui/react';
-import { withErrorBoundary } from './ErrorBoundary';
+import { ErrorBoundary } from '../shared/components/ErrorBoundary';
+import { Message } from '../shared/components/Message';
 
 function ChatMessage({ message, isUser }) {
   return (
@@ -88,4 +90,8 @@ function ChatMessageListComponent({ messages = [], isLoading, error }) {
   );
 }
 
-export const ChatMessageList = withErrorBoundary(ChatMessageListComponent); 
+export const ChatMessageList = (props) => (
+  <ErrorBoundary>
+    <ChatMessageListComponent {...props} />
+  </ErrorBoundary>
+); 

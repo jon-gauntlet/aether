@@ -12,7 +12,9 @@ export class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    this.props.onError?.(error, errorInfo)
+    if (this.props.onError) {
+      this.props.onError(error)
+    }
   }
 
   handleTryAgain = () => {
@@ -22,13 +24,11 @@ export class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <Box p={4} data-testid="error-boundary">
-          <VStack spacing={4}>
-            <Text color="red.500">Something went wrong</Text>
-            <Text fontSize="sm" color="gray.500">
-              {this.state.error?.message}
-            </Text>
-            <Button onClick={this.handleTryAgain} colorScheme="blue">
+        <Box p={4} borderRadius="md" bg="red.100" color="red.900">
+          <VStack spacing={4} align="stretch">
+            <Text fontWeight="bold">Something went wrong</Text>
+            <Text fontSize="sm">{this.state.error?.message}</Text>
+            <Button onClick={this.handleTryAgain} colorScheme="red" size="sm">
               Try again
             </Button>
           </VStack>

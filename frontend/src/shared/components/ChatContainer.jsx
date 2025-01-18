@@ -1,19 +1,17 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { Box, VStack, useToast } from '@chakra-ui/react'
-import { ChatMessageList } from './ChatMessageList'
+import { ChatMessageList } from '../../components/ChatMessageList'
 import { ChatInput } from './ChatInput'
-import { FileUpload } from './FileUpload'
-import { useQuery, useMutation } from '@tanstack/react-query'
-import { fetchMessages, sendMessage, subscribeToMessages, uploadFile as uploadFileApi } from '../services/apiClient'
+import * as apiClient from '../../api/client'
 
 export function ChatContainer() {
   const [messages, setMessages] = useState([])
   const [channel, setChannel] = useState('general')
   const toast = useToast()
 
-  const { data: chatHistory, isLoading: isLoadingHistory } = useQuery({
+  const { data: chatHistory, isLoading: isLoadingHistory } = apiClient.useQuery({
     queryKey: ['chatHistory', channel],
-    queryFn: () => fetchMessages(channel),
+    queryFn: () => apiClient.fetchMessages(channel),
     onError: () => {
       toast({
         title: 'Failed to load chat history',
@@ -31,7 +29,7 @@ export function ChatContainer() {
 
   useEffect(() => {
     // Subscribe to real-time updates
-    const subscription = subscribeToMessages(channel, (newMessage) => {
+    const subscription = apiClient.subscribeToMessages(channel, (newMessage) => {
       setMessages(prev => [...prev, newMessage])
     })
 
@@ -40,8 +38,8 @@ export function ChatContainer() {
     }
   }, [channel])
 
-  const { mutate: sendMessageMutation, isLoading: isSending } = useMutation({
-    mutationFn: (message) => sendMessage(message, channel),
+  const { mutate: sendMessageMutation, isLoading: isSending } = apiClient.useMutation({
+    mutationFn: (message) => apiClient.sendMessage(message, channel),
     onError: () => {
       toast({
         title: 'Failed to send message',
@@ -51,8 +49,8 @@ export function ChatContainer() {
     },
   })
 
-  const { mutate: uploadFile, isLoading: isUploading } = useMutation({
-    mutationFn: (file) => uploadFileApi(file, channel),
+  const { mutate: uploadFile, isLoading: isUploading } = apiClient.useMutation({
+    mutationFn: (file) => apiClient.uploadFile(file, channel),
     onSuccess: () => {
       toast({
         title: 'File uploaded successfully',

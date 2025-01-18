@@ -9,10 +9,16 @@ export function ThemeToggle() {
   return (
     <IconButton
       data-testid="theme-toggle"
+      data-theme={colorMode}
       aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-      icon={isDark ? <SunIcon /> : <MoonIcon />}
+      icon={isDark ? 
+        <SunIcon data-testid="sun-icon" /> : 
+        <MoonIcon data-testid="moon-icon" />
+      }
       onClick={toggleColorMode}
       size="md"
+      variant="ghost"
+      colorScheme={isDark ? 'yellow' : 'purple'}
     />
   )
 } 

@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { TestWrapper } from './TestWrapper';
+import { TestWrapper } from './setup';
 import { ChatMessageList } from '../components/ChatMessageList';
 
 describe('ChatMessageList', () => {
