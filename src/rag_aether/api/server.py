@@ -1,124 +1,119 @@
-from typing import Optional, Dict, Any, List
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
+"""FastAPI server setup."""
+
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
+from fastapi.middleware.cors import CORSMiddleware
 import logging
-import asyncio
-from rag_aether.ai.rag import RAGSystem
+from typing import Dict, Any
+
+from ..ai.rag_system import RAGSystem
+from .routes import router
+from .websocket import manager
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("rag_api")
+logger = logging.getLogger(__name__)
 
-# Initialize FastAPI app
-app = FastAPI(
-    title="Aether RAG API",
-    description="Professional-grade RAG system with Firebase integration",
-    version="0.1.0"
-)
-
-# Initialize RAG system
-rag: Optional[RAGSystem] = None
-initialization_lock = asyncio.Lock()
-
-class QueryRequest(BaseModel):
-    query: str = Field(..., description="The query to search for")
-    max_results: Optional[int] = Field(3, description="Maximum number of results to return")
-    relevant_ids: Optional[List[str]] = Field(None, description="List of relevant document IDs for metric calculation")
-
-class RetrievalResult(BaseModel):
-    text: str = Field(..., description="Retrieved text chunk")
-    metadata: Dict[str, Any] = Field(..., description="Associated metadata")
-    score: Optional[float] = Field(None, description="Retrieval score")
-
-class RetrievalMetricsResponse(BaseModel):
-    mrr: float = Field(..., description="Mean Reciprocal Rank")
-    ndcg: float = Field(..., description="Normalized Discounted Cumulative Gain")
-    recall_at_k: Dict[int, float] = Field(..., description="Recall@K for different K values")
-    latency_ms: float = Field(..., description="Retrieval latency in milliseconds")
-    num_results: int = Field(..., description="Number of results returned")
-
-class QueryMetricsResponse(BaseModel):
-    retrieval: RetrievalMetricsResponse = Field(..., description="Retrieval metrics")
-    generation_time_ms: float = Field(..., description="Generation time in milliseconds")
-    total_time_ms: float = Field(..., description="Total query time in milliseconds")
-    num_tokens: int = Field(..., description="Number of tokens in response")
-
-class QueryResponse(BaseModel):
-    answer: str = Field(..., description="Generated answer")
-    context: List[RetrievalResult] = Field(..., description="Retrieved context chunks with metadata")
-    model: str = Field(..., description="Model used for generation")
-    metrics: QueryMetricsResponse = Field(..., description="Query performance metrics")
-
-@app.on_event("startup")
-async def startup_event():
-    """Initialize RAG system on startup."""
-    global rag
-    async with initialization_lock:
-        if rag is None:
-            logger.info("Initializing RAG system...")
-            rag = RAGSystem(use_mock=True)
-            await rag.initialize_from_firebase()
-            logger.info("RAG system initialized")
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Cleanup RAG system on shutdown."""
-    global rag
-    if rag:
-        logger.info("Cleaning up RAG system...")
-        await rag._cleanup()
-        rag = None
-        logger.info("RAG system cleaned up")
-
-@app.get("/health")
-async def health_check() -> Dict[str, Any]:
-    """Get system health status."""
-    try:
-        status = rag.get_health_status()
-        
-        # Set response status code based on health status
-        if status["status"] == "unhealthy":
-            response.status_code = 503  # Service Unavailable
-        elif status["status"] == "degraded":
-            response.status_code = 200  # OK, but with warning
-            response.headers["X-System-Status"] = "degraded"
-        else:
-            response.status_code = 200  # OK
-        
-        return status
-        
-    except Exception as e:
-        logger.error(f"Health check failed: {str(e)}")
-        response.status_code = 500
+def create_app() -> FastAPI:
+    """Create and configure FastAPI application."""
+    app = FastAPI(title="RAG Aether API")
+    
+    # Configure CORS
+    origins = [
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:5175",
+        "http://localhost:5176",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",
+        "http://127.0.0.1:5175",
+        "http://127.0.0.1:5176",
+    ]
+    
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+        expose_headers=["*"],
+        max_age=3600,
+    )
+    
+    @app.middleware("http")
+    async def log_requests(request: Request, call_next):
+        """Log all incoming requests."""
+        logger.info(f"Request: {request.method} {request.url}")
+        logger.info(f"Headers: {dict(request.headers)}")
+        response = await call_next(request)
+        logger.info(f"Response status: {response.status_code}")
+        return response
+    
+    # Include router
+    app.include_router(router)
+    
+    @app.get("/")
+    async def root():
+        """Root endpoint."""
         return {
-            "status": "error",
-            "message": str(e)
+            "name": "RAG API",
+            "version": "1.0.0",
+            "status": "running",
+            "docs_url": "/docs"
         }
 
-@app.get("/metrics")
-async def get_metrics():
-    """Get system metrics."""
-    if not rag:
-        raise HTTPException(status_code=503, detail="RAG system not initialized")
-    return rag.metrics.get_average_metrics()
+    async def verify_client(headers: Dict[str, Any], client_host: str) -> bool:
+        """Verify WebSocket client connection."""
+        origin = headers.get('origin', '')
+        if not origin:
+            logger.error(f"No origin header from {client_host}")
+            return False
+            
+        if origin.replace('http://', 'ws://') not in [f"ws://{o.replace('http://', '')}" for o in origins]:
+            logger.error(f"Invalid origin {origin} from {client_host}")
+            return False
+            
+        return True
 
-@app.post("/query", response_model=QueryResponse)
-async def query(request: QueryRequest):
-    """Query the RAG system with fusion retrieval."""
-    if not rag:
-        raise HTTPException(status_code=503, detail="RAG system not initialized")
+    @app.websocket("/ws/{channel}")
+    async def websocket_endpoint(websocket: WebSocket, channel: str):
+        """WebSocket endpoint for real-time chat."""
+        client = f"{websocket.client.host}:{websocket.client.port}"
+        logger.info(f"WebSocket connection attempt from {client} for channel {channel}")
+        logger.info(f"Headers: {dict(websocket.headers)}")
+        
+        # Verify client before accepting connection
+        if not await verify_client(dict(websocket.headers), client):
+            logger.error(f"Client verification failed for {client}")
+            return
+        
+        try:
+            # Accept the connection first
+            await websocket.accept()
+            logger.info(f"WebSocket connection accepted for {client}")
+            
+            # Then add to manager
+            await manager.connect(websocket, channel)
+            logger.info(f"Client {client} added to channel {channel}")
+            
+            try:
+                while True:
+                    message = await websocket.receive_json()
+                    logger.info(f"Received message from {client} in channel {channel}: {message}")
+                    await manager.broadcast_to_channel(message, channel)
+                    logger.info(f"Broadcasted message to channel {channel}")
+                    
+            except WebSocketDisconnect:
+                logger.info(f"WebSocket disconnected for {client}")
+                manager.disconnect(websocket, channel)
+            except Exception as e:
+                logger.error(f"Error in WebSocket message handling: {str(e)}", exc_info=True)
+                manager.disconnect(websocket, channel)
+                
+        except Exception as e:
+            logger.error(f"Error in WebSocket connection: {str(e)}", exc_info=True)
+            try:
+                manager.disconnect(websocket, channel)
+            except:
+                pass
     
-    try:
-        # Get answer and metrics
-        result = await rag.query(
-            request.query, 
-            request.max_results,
-            request.relevant_ids
-        )
-        
-        # Create response with detailed context
-        return QueryResponse(**result)
-        
-    except Exception as e:
-        logger.error(f"Error processing query: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e)) 
+    return app 
