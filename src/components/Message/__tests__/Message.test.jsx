@@ -21,6 +21,7 @@ import React from 'react';
 import { render, screen, fireEvent } from '../../../test/utils';
 import { vi } from 'vitest';
 import { Message } from '../Message';
+import { useAuth } from '../../../contexts/AuthContext';
 
 vi.mock('@chakra-ui/react', () => ({
   Box: ({ children, ...props }) => <div {...props}>{children}</div>,
@@ -61,10 +62,23 @@ vi.mock('../../reactions/ReactionDisplay', () => ({
   ReactionDisplay: () => <div data-testid="reaction-display">Reactions</div>,
 }));
 
+vi.mock('../../../contexts/AuthContext', () => ({
+  useAuth: vi.fn()
+}));
+
+vi.mock('../../FormattedMessage', () => ({
+  default: ({ text }) => <div data-testid="formatted-message">{text}</div>
+}));
+
 describe('Message Component', () => {
+  const mockUser = {
+    id: 'user-1',
+    email: 'test@example.com'
+  }
+
   beforeEach(() => {
-    vi.clearAllMocks();
-  });
+    useAuth.mockReturnValue({ user: mockUser })
+  })
 
   describe('Content Rendering', () => {
     it('renders message content', () => {
@@ -150,4 +164,149 @@ describe('Message Component', () => {
       expect(handleThreadClick).toHaveBeenCalledWith('thread-1');
     });
   });
-}); 
+
+  describe('Message Status', () => {
+    it('renders own message with sending status', () => {
+      const message = {
+        id: '1',
+        text: 'Hello',
+        status: 'sending',
+        user_id: mockUser.id,
+        user_email: mockUser.email,
+        read_receipts: []
+      }
+
+      render(<Message message={message} />)
+
+      expect(screen.getByText('Sending')).toBeInTheDocument()
+      expect(screen.getByTestId('formatted-message')).toHaveTextContent('Hello')
+    })
+
+    it('renders own message with sent status', () => {
+      const message = {
+        id: '1',
+        text: 'Hello',
+        status: 'sent',
+        user_id: mockUser.id,
+        user_email: mockUser.email,
+        read_receipts: []
+      }
+
+      render(<Message message={message} />)
+
+      expect(screen.getByText('Sent')).toBeInTheDocument()
+    })
+
+    it('renders own message with delivered status', () => {
+      const message = {
+        id: '1',
+        text: 'Hello',
+        status: 'delivered',
+        user_id: mockUser.id,
+        user_email: mockUser.email,
+        read_receipts: []
+      }
+
+      render(<Message message={message} />)
+
+      expect(screen.getByText('Delivered')).toBeInTheDocument()
+    })
+
+    it('renders own message with read receipts', () => {
+      const message = {
+        id: '1',
+        text: 'Hello',
+        status: 'delivered',
+        user_id: mockUser.id,
+        user_email: mockUser.email,
+        read_receipts: [
+          { user_id: 'user-2', read_at: new Date().toISOString() },
+          { user_id: 'user-3', read_at: new Date().toISOString() }
+        ]
+      }
+
+      render(<Message message={message} />)
+
+      expect(screen.getByText('Read by 2')).toBeInTheDocument()
+    })
+
+    it('renders other user message with email', () => {
+      const message = {
+        id: '1',
+        text: 'Hello',
+        status: 'sent',
+        user_id: 'other-user',
+        user_email: 'other@example.com',
+        read_receipts: []
+      }
+
+      render(<Message message={message} onRead={vi.fn()} />)
+
+      expect(screen.getByText('other@example.com')).toBeInTheDocument()
+    })
+
+    it('calls onRead when rendering other user message', () => {
+      const onRead = vi.fn()
+      const message = {
+        id: '1',
+        text: 'Hello',
+        status: 'sent',
+        user_id: 'other-user',
+        user_email: 'other@example.com',
+        read_receipts: []
+      }
+
+      render(<Message message={message} onRead={onRead} />)
+
+      expect(onRead).toHaveBeenCalledWith(message.id)
+    })
+
+    it('renders message with attachments', () => {
+      const message = {
+        id: '1',
+        text: 'Check this out',
+        status: 'sent',
+        user_id: mockUser.id,
+        user_email: mockUser.email,
+        read_receipts: [],
+        attachments: [
+          {
+            name: 'test.pdf',
+            url: 'https://example.com/test.pdf',
+            type: 'application/pdf'
+          }
+        ]
+      }
+
+      render(<Message message={message} />)
+
+      const attachment = screen.getByText('test.pdf')
+      expect(attachment).toBeInTheDocument()
+      expect(attachment.closest('a')).toHaveAttribute('href', 'https://example.com/test.pdf')
+    })
+
+    it('renders image attachments inline', () => {
+      const message = {
+        id: '1',
+        text: 'Check this image',
+        status: 'sent',
+        user_id: mockUser.id,
+        user_email: mockUser.email,
+        read_receipts: [],
+        attachments: [
+          {
+            name: 'test.jpg',
+            url: 'https://example.com/test.jpg',
+            type: 'image/jpeg'
+          }
+        ]
+      }
+
+      render(<Message message={message} />)
+
+      const image = screen.getByAltText('test.jpg')
+      expect(image).toBeInTheDocument()
+      expect(image).toHaveAttribute('src', 'https://example.com/test.jpg')
+    })
+  })
+}) 
