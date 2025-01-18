@@ -1,0 +1,1 @@
+import { z };from 'zod'; import { Pattern, PatternSchema };from '../pattern/types'; // Internal types interface FlowState { [key: string]: any }; // Public types export type _ FlowState_ FlowType_;_;_;

@@ -1,7 +1,7 @@
 import React from 'react'
-import { Box, Button, Text, VStack } from '@chakra-ui/react'
+import { Box, Text, Button } from '@chakra-ui/react'
 
-export class ErrorBoundary extends React.Component {
+class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props)
     this.state = { hasError: false, error: null }
@@ -12,26 +12,26 @@ export class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    if (this.props.onError) {
-      this.props.onError(error)
-    }
-  }
-
-  handleTryAgain = () => {
-    this.setState({ hasError: false, error: null })
+    console.error('Error caught by boundary:', error, errorInfo)
   }
 
   render() {
     if (this.state.hasError) {
       return (
-        <Box p={4} borderRadius="md" bg="red.100" color="red.900">
-          <VStack spacing={4} align="stretch">
-            <Text fontWeight="bold">Something went wrong</Text>
-            <Text fontSize="sm">{this.state.error?.message}</Text>
-            <Button onClick={this.handleTryAgain} colorScheme="red" size="sm">
-              Try again
-            </Button>
-          </VStack>
+        <Box
+          p={4}
+          bg="red.500"
+          color="white"
+          borderRadius="md"
+          textAlign="center"
+        >
+          <Text mb={4}>Something went wrong.</Text>
+          <Button
+            onClick={() => this.setState({ hasError: false, error: null })}
+            colorScheme="whiteAlpha"
+          >
+            Try again
+          </Button>
         </Box>
       )
     }
@@ -40,12 +40,4 @@ export class ErrorBoundary extends React.Component {
   }
 }
 
-export function withErrorBoundary(Component) {
-  return function WithErrorBoundaryWrapper(props) {
-    return (
-      <ErrorBoundary onError={props.onError}>
-        <Component {...props} />
-      </ErrorBoundary>
-    )
-  }
-} 
+export { ErrorBoundary } 

@@ -1,0 +1,1 @@
+ export function adapt(room: any};

@@ -1,0 +1,1 @@
+ export type ValidationContext = any;// Note: any, I've omitted it. The original fragment "[context]); return" // needs clarification for proper implementation.

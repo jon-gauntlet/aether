@@ -1,0 +1,1 @@
+import type { BaseState, BaseMetrics };from '@core/types/base/index'; import { createTypeGuard, createValidator, type ValidationResult };from '@core/types;'; // Space-specific metrics export interface SpaceMetrics{ [key: string]: any };return { [key: string]: any } } ] } );

@@ -1,54 +1,17 @@
 import React, { useEffect, useState, useCallback } from 'react'
+import { Box, VStack, useToast } from '@chakra-ui/react'
 import { useAuth } from '../contexts/AuthContext'
+import { ChatMessageList } from './ChatMessageList'
+import ChatInput from './ChatInput'
+import * as apiClient from '../api/client'
+import { FileUpload } from './FileUpload'
 
-const ChatMessageList = ({ messages }) => (
-  <div className="chat-messages">
-    {messages.map((message, index) => (
-      <div key={`${message.id || message.timestamp || index}`} className="message">
-        <strong>{message.sender}: </strong>
-        {message.content}
-      </div>
-    ))}
-  </div>
-);
-
-function ChatInput({ onSendMessage, isLoading }) {
-  const [message, setMessage] = useState('')
-
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    if (message.trim()) {
-      onSendMessage(message)
-      setMessage('')
-    }
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="chat-input">
-      <input
-        type="text"
-        value={message}
-        onChange={(e) => setMessage(e.target.value)}
-        placeholder="Type a message..."
-        disabled={isLoading}
-        data-testid="message-input"
-      />
-      <button 
-        type="submit" 
-        disabled={isLoading || !message.trim()}
-        data-testid="send-button"
-      >
-        Send
-      </button>
-    </form>
-  )
-}
-
-export function ChatContainer() {
+function ChatContainer() {
   const [messages, setMessages] = useState([])
   const [channel, setChannel] = useState('general')
   const [error, setError] = useState(null)
   const { user, loading, logout } = useAuth()
+  const toast = useToast()
 
   useEffect(() => {
     if (!user) return
@@ -88,27 +51,30 @@ export function ChatContainer() {
 
   const handleSendMessage = useCallback(async (content) => {
     try {
-      const token = localStorage.getItem('auth_token')
-      const response = await fetch('/api/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          content,
-          channel,
-          username: user.email,
-        }),
+      const result = await apiClient.sendMessage({
+        content,
+        channel,
+        username: user.email,
       })
-
-      if (!response.ok) {
-        throw new Error('Failed to send message')
+      
+      if (result.error) {
+        throw new Error(result.error)
       }
+      
+      toast({
+        title: 'Message sent',
+        status: 'success',
+        duration: 1000,
+      })
     } catch (err) {
-      setError('Failed to send message')
+      toast({
+        title: 'Failed to send message',
+        description: err.message,
+        status: 'error',
+        duration: 3000,
+      })
     }
-  }, [channel, user])
+  }, [channel, user, toast])
 
   const handleChannelChange = (e) => {
     setChannel(e.target.value)
@@ -119,17 +85,17 @@ export function ChatContainer() {
   }
 
   if (loading) {
-    return <div>Loading...</div>
+    return <Box>Loading...</Box>
   }
 
   if (!user) {
-    return <div>Please log in to access the chat.</div>
+    return <Box>Please log in to access the chat.</Box>
   }
 
   return (
-    <div className="chat-container" data-testid="chat-container">
-      <div className="chat-header">
-        <div className="channel-select">
+    <Box className="chat-container" data-testid="chat-container">
+      <VStack spacing={4} align="stretch">
+        <Box className="chat-header">
           <select 
             value={channel} 
             onChange={handleChannelChange}
@@ -138,22 +104,26 @@ export function ChatContainer() {
             <option value="general">General</option>
             <option value="random">Random</option>
           </select>
-        </div>
-        <button onClick={handleLogout} data-testid="logout-button">
-          Logout
-        </button>
-      </div>
+          <button onClick={handleLogout} data-testid="logout-button">
+            Logout
+          </button>
+        </Box>
 
-      {error && <div className="error" role="alert">{error}</div>}
+        {error && <Box role="alert" color="red.500">{error}</Box>}
 
-      <div className="messages">
-        <ChatMessageList messages={messages} />
-      </div>
+        <Box flex="1" overflowY="auto">
+          <ChatMessageList messages={messages} />
+        </Box>
 
-      <ChatInput 
-        onSendMessage={handleSendMessage}
-        isLoading={loading}
-      />
-    </div>
+        <FileUpload channel={channel} />
+
+        <ChatInput 
+          onSendMessage={handleSendMessage}
+          isLoading={loading}
+        />
+      </VStack>
+    </Box>
   )
-} 
+}
+
+export default ChatContainer 

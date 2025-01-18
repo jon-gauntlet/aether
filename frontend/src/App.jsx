@@ -1,25 +1,29 @@
-import { Link, Routes, Route } from 'react-router-dom'
-import Home from './views/Home'
-import About from './views/About'
+import React from 'react'
+import { ChakraProvider, Box } from '@chakra-ui/react'
+import { AuthProvider } from './contexts/AuthContext'
+import { EnergyProvider } from './core/energy/EnergyProvider'
+import { FlowProvider } from './core/flow/FlowProvider'
+import { SpaceProvider } from './core/space/SpaceProvider'
+import ChatContainer from './components/ChatContainer'
+import { ErrorBoundary } from './components/ErrorBoundary'
 
 function App() {
   return (
-    <div className="app">
-      <header>
-        <h1>Welcome to Aether</h1>
-        <nav>
-          <Link to="/" aria-label="home">Home</Link>
-          <Link to="/about" aria-label="about">About</Link>
-        </nav>
-      </header>
-
-      <main>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/about" element={<About />} />
-        </Routes>
-      </main>
-    </div>
+    <ChakraProvider>
+      <ErrorBoundary>
+        <AuthProvider>
+          <EnergyProvider>
+            <FlowProvider>
+              <SpaceProvider>
+                <Box p={4}>
+                  <ChatContainer />
+                </Box>
+              </SpaceProvider>
+            </FlowProvider>
+          </EnergyProvider>
+        </AuthProvider>
+      </ErrorBoundary>
+    </ChakraProvider>
   )
 }
 

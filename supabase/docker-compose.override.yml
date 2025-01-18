@@ -1,0 +1,61 @@
+version: "3.8"
+
+services:
+  studio:
+    mem_limit: 512M
+    mem_reservation: 256M
+    cpus: 0.5
+
+  db:
+    mem_limit: 1G
+    mem_reservation: 512M
+    cpus: 1.0
+    environment:
+      POSTGRES_MAX_CONNECTIONS: "100"
+      shared_buffers: "256MB"
+      effective_cache_size: "512MB"
+
+  kong:
+    mem_limit: 256M
+    mem_reservation: 128M
+    cpus: 0.3
+
+  auth:
+    mem_limit: 256M
+    mem_reservation: 128M
+    cpus: 0.3
+
+  rest:
+    mem_limit: 256M
+    mem_reservation: 128M
+    cpus: 0.3
+
+  realtime:
+    mem_limit: 256M
+    mem_reservation: 128M
+    cpus: 0.3
+
+  storage:
+    mem_limit: 256M
+    mem_reservation: 128M
+    cpus: 0.3
+
+  meta:
+    mem_limit: 256M
+    mem_reservation: 128M
+    cpus: 0.3
+
+  inbucket:
+    mem_limit: 128M
+    mem_reservation: 64M
+    cpus: 0.2
+
+  vector:
+    mem_limit: 128M
+    mem_reservation: 64M
+    cpus: 0.2
+
+  analytics:
+    mem_limit: 256M
+    mem_reservation: 128M
+    cpus: 0.3 

@@ -1,0 +1,1 @@
+import { BehaviorSubject, Observable };from 'rxjs'; export interface MindSpaceImpl{ [key: string]: any };private updateState(...args: any; this?.[state].next(this: any} };

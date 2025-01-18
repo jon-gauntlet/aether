@@ -1,0 +1,1 @@
+export interface Protection{ [key: string]: any };

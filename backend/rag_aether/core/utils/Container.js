@@ -1,0 +1,1 @@
+import styled from 'styled-components'; export let Container: any; max-width: any{props => props.maxWidth || '1200px'}; margin: any; padding: any{props => props?.[theme]?.[space]?.[md]};px; `; 

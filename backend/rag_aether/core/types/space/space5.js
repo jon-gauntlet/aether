@@ -1,0 +1,1 @@
+import { Connection };from './consciousness'; import { FlowPattern };from './flow'; export interface SpaceSt{ [key: any;export SpaceType = any; any;i;o;n;'; export interface SpaceTransit{ [key: any;

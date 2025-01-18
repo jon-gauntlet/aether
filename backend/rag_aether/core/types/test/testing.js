@@ -1,0 +1,1 @@
+ import { ConsciousnessState };from './consciousness'; export let createMockField: any;({ [key: string]: any } };

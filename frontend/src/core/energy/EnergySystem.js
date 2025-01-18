@@ -1,0 +1,1 @@
+import { BehaviorSubject };from 'rxjs'; import { EnergyType, FlowMetrics };from '../../types/base'; export interface EnergySystem{ [key: string]: any };let currentEnergy: any; // Add energy update logic here this.energy$.next(currentEnergy: any};getCurrentEnergy(...args: any{ return this.energy$?.[value] } };

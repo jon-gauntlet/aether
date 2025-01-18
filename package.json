@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+<<<<<<< HEAD
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
@@ -27,5 +28,14 @@
   },
   "dependencies": {
     "@playwright/test": "^1.49.1"
+=======
+    "dev": "concurrently \"cd frontend && npx vite\" \"cd backend && poetry run uvicorn src.main:app --reload --port 8000\"",
+    "build": "cd frontend && npm run build",
+    "start": "concurrently \"cd frontend && npm run preview\" \"cd backend && poetry run uvicorn src.main:app --port 8000\"",
+    "install": "cd frontend && npm install --prefer-offline --no-audit --no-fund --no-package-lock --production && npm install --prefer-offline --no-audit --no-fund --no-package-lock --only=dev && cd ../backend && poetry install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+>>>>>>> feature/infra
   }
 }

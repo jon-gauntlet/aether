@@ -1,83 +1,84 @@
 import React, { useState } from 'react'
+import {
+  Box,
+  Button,
+  FormControl,
+  FormLabel,
+  Input,
+  VStack,
+  Text,
+  useToast
+} from '@chakra-ui/react'
 import { useAuth } from '../contexts/AuthContext'
 
 export function Auth() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [localError, setLocalError] = useState(null)
-  const { login, loading, error: authError } = useAuth()
+  const [isLoading, setIsLoading] = useState(false)
+  const { login } = useAuth()
+  const toast = useToast()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    setLocalError(null)
-    
-    if (!email || !password) {
-      setLocalError('Email and password are required')
-      return
-    }
+    setIsLoading(true)
 
     try {
       const { error } = await login({ email, password })
       if (error) {
-        setLocalError(error)
+        throw new Error(error)
       }
+      toast({
+        title: 'Login successful',
+        status: 'success',
+        duration: 2000,
+      })
     } catch (err) {
-      setLocalError(err.message)
+      toast({
+        title: 'Login failed',
+        description: err.message,
+        status: 'error',
+        duration: 3000,
+      })
+    } finally {
+      setIsLoading(false)
     }
   }
 
-  const errorMessage = localError || authError
-
   return (
-    <div className="auth-container">
-      <div className="auth-box">
-        <h1>Welcome to Aether Chat</h1>
-        
-        <form onSubmit={handleSubmit} className="auth-form">
-          {errorMessage && (
-            <div className="error" role="alert">
-              {errorMessage}
-            </div>
-          )}
-          
-          <div className="form-group">
-            <label htmlFor="email">Email</label>
-            <input
-              id="email"
+    <Box maxW="md" mx="auto" mt={8}>
+      <form onSubmit={handleSubmit}>
+        <VStack spacing={4}>
+          <FormControl isRequired>
+            <FormLabel>Email</FormLabel>
+            <Input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your email"
-              required
-              disabled={loading}
               data-testid="email-input"
             />
-          </div>
+          </FormControl>
 
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
-            <input
-              id="password"
+          <FormControl isRequired>
+            <FormLabel>Password</FormLabel>
+            <Input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter your password"
-              required
-              disabled={loading}
               data-testid="password-input"
             />
-          </div>
+          </FormControl>
 
-          <button
+          <Button
             type="submit"
-            className="auth-button"
-            disabled={loading || !email || !password}
+            colorScheme="blue"
+            width="full"
+            isLoading={isLoading}
             data-testid="login-button"
           >
-            {loading ? 'Logging in...' : 'Login'}
-          </button>
-        </form>
-      </div>
-    </div>
+            Login
+          </Button>
+        </VStack>
+      </form>
+    </Box>
   )
 } 
