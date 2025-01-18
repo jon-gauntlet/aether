@@ -1,130 +1,216 @@
 # Contributing to Aether
 
-Thank you for your interest in contributing to Aether! This document provides guidelines and instructions for contributing to the project.
+Thank you for your interest in contributing to Aether! This guide will help you understand our development process and how to contribute effectively.
 
-## Code of Conduct
+## Development Process
 
-By participating in this project, you agree to abide by our Code of Conduct. Please read [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) before contributing.
+### 1. Setting Up Development Environment
 
-## Development Setup
+```bash
+# Fork and clone the repository
+git clone https://github.com/your-username/aether.git
+cd aether
 
-1. Fork and clone the repository
-2. Install dependencies: `npm install`
-3. Create a branch for your changes: `git checkout -b feature/my-feature`
-4. Make your changes
-5. Run tests: `npm test`
-6. Submit a pull request
+# Install dependencies
+npm install
+poetry install
 
-## Project Structure
+# Set up environment
+cp config/env/.env.example .env
+source scripts/setup_env.sh
 
-The project follows a modular structure:
+# Start development server
+npm run dev
+```
 
+### 2. Understanding the Codebase
+
+1. **Project Structure**
+   - See [PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md) for detailed layout
+   - Review [DEVELOPMENT.md](docs/DEVELOPMENT.md) for patterns and practices
+
+2. **Core Systems**
+   - RAG System: Document processing and AI interactions
+   - Space System: Workspace and context management
+   - Reaction System: Real-time adaptations
+
+3. **Component Architecture**
+   - React components in `/src/components`
+   - Custom hooks in `/src/hooks`
+   - Utilities in `/src/utils`
+
+### 3. Making Changes
+
+1. **Create a Branch**
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+
+2. **Follow Code Standards**
+   - Use consistent naming conventions
+   - Write clear commit messages
+   - Add appropriate documentation
+   - Include tests for new features
+
+3. **Testing**
+   ```bash
+   # Run all tests
+   npm test
+   
+   # Run specific test file
+   npm test path/to/test
+   
+   # Run with coverage
+   npm run test:coverage
+   ```
+
+### 4. Submitting Changes
+
+1. **Before Submitting**
+   - Ensure all tests pass
+   - Update documentation if needed
+   - Follow commit message conventions
+   - Check for clean code and no debug statements
+
+2. **Pull Request Process**
+   - Create a pull request from your fork
+   - Fill out the PR template completely
+   - Link relevant issues
+   - Add appropriate labels
+
+## Code Standards
+
+### 1. File Structure
 ```
 src/
-  components/   # React components
-  services/     # Application services
-  hooks/        # React hooks
-  utils/        # Utility functions
+  components/
+    ComponentName/
+      ComponentName.jsx      # Main component
+      index.jsx             # Export file
+      __tests__/           # Test directory
+        ComponentName.test.jsx
 ```
 
-## Coding Standards
+### 2. Naming Conventions
+- Components: PascalCase
+- Files: PascalCase for components
+- Functions: camelCase
+- Variables: camelCase
+- Constants: UPPER_SNAKE_CASE
 
-### JavaScript
-
-- Use ES6+ features
-- Follow the existing code style
-- Use named exports instead of default exports
-- Use JSDoc for documentation
-
-Example:
+### 3. Component Template
 ```javascript
-/**
- * @typedef {Object} Props
- * @property {string} name - The name property
- */
+import React from 'react';
+import PropTypes from 'prop-types';
 
-/**
- * A component that does something
- * @param {Props} props - Component props
- */
-export const MyComponent = ({ name }) => {
+export const ComponentName = ({ prop1, prop2 }) => {
   // Implementation
+  return (
+    <div>
+      {/* Component content */}
+    </div>
+  );
+};
+
+ComponentName.propTypes = {
+  prop1: PropTypes.string.required,
+  prop2: PropTypes.number,
+};
+
+ComponentName.defaultProps = {
+  prop2: 0,
 };
 ```
 
-### Error Handling
-
-Use the centralized error handling system:
-
-```javascript
-import { RAGError } from '../utils/errors';
-
-try {
-  // Your code
-} catch (error) {
-  throw new RAGError('Operation failed', 'OPERATION_ERROR');
-}
-```
-
-### Testing
-
-- Write tests for new features
-- Update tests when modifying existing features
-- Maintain high test coverage
-
-Example test:
+### 4. Test Template
 ```javascript
 import { render, screen } from '@testing-library/react';
-import { MyComponent } from './MyComponent';
+import { ComponentName } from '../ComponentName';
 
-describe('MyComponent', () => {
+describe('ComponentName', () => {
   it('renders correctly', () => {
-    render(<MyComponent name="test" />);
-    expect(screen.getByText('test')).toBeInTheDocument();
+    render(<ComponentName />);
+    // Assertions
+  });
+
+  it('handles interactions', () => {
+    // Interaction tests
   });
 });
 ```
 
-## Pull Request Process
-
-1. Update documentation for any changes
-2. Add tests for new features
-3. Ensure all tests pass
-4. Update the README.md if needed
-5. Submit the pull request with a clear description
-
 ## Commit Messages
 
-Follow conventional commits:
+Follow the conventional commits specification:
 
 ```
-feat: add new feature
-fix: fix bug in component
-docs: update documentation
-test: add tests for feature
-refactor: refactor code
+type(scope): description
+
+[optional body]
+
+[optional footer]
 ```
 
-## Documentation
+Types:
+- feat: New feature
+- fix: Bug fix
+- docs: Documentation changes
+- style: Code style changes
+- refactor: Code refactoring
+- test: Adding tests
+- chore: Maintenance tasks
 
-- Update JSDoc comments for code changes
-- Update README.md for new features
-- Add inline comments for complex logic
+Example:
+```
+feat(space): add workspace transition animations
 
-## Review Process
+- Add fade transition between spaces
+- Implement smooth scrolling
+- Update documentation
 
-1. Automated checks must pass
-2. Code review by maintainers
-3. Changes requested must be addressed
-4. Final approval and merge
+Closes #123
+```
 
-## Questions?
+## Pull Request Template
 
-Feel free to open an issue for:
-- Bug reports
-- Feature requests
-- Questions about the codebase
+```markdown
+## Description
+Brief description of the changes
+
+## Type of Change
+- [ ] Bug fix
+- [ ] New feature
+- [ ] Breaking change
+- [ ] Documentation update
+
+## Testing
+- [ ] Added unit tests
+- [ ] Added integration tests
+- [ ] Tested manually
+
+## Checklist
+- [ ] Code follows style guidelines
+- [ ] Documentation updated
+- [ ] Tests added/updated
+- [ ] All tests passing
+```
+
+## Getting Help
+
+1. **Documentation**
+   - Check [PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md)
+   - Review [DEVELOPMENT.md](docs/DEVELOPMENT.md)
+
+2. **Community**
+   - Open an issue for questions
+   - Join discussions in existing issues
+   - Review existing pull requests
+
+3. **Contact**
+   - GitHub Issues
+   - Project maintainers
+   - Community channels
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the project's MIT License. 
+By contributing, you agree that your contributions will be licensed under the MIT License. 

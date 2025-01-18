@@ -1,183 +1,108 @@
-# Supabase CLI (v1)
+# Aether
 
-[![Coverage Status](https://coveralls.io/repos/github/supabase/cli/badge.svg?branch=main)](https://coveralls.io/github/supabase/cli?branch=main) [![Bitbucket Pipelines](https://img.shields.io/bitbucket/pipelines/supabase-cli/setup-cli/master?style=flat-square&label=Bitbucket%20Canary)](https://bitbucket.org/supabase-cli/setup-cli/pipelines) [![Gitlab Pipeline Status](https://img.shields.io/gitlab/pipeline-status/sweatybridge%2Fsetup-cli?label=Gitlab%20Canary)
-](https://gitlab.com/sweatybridge/setup-cli/-/pipelines)
+A next-generation development environment that integrates AI-first principles with natural system design.
 
-[Supabase](https://supabase.io) is an open source Firebase alternative. We're building the features of Firebase using enterprise-grade open source tools.
+## Overview
 
-This repository contains all the functionality for Supabase CLI.
+Aether is built on three core principles:
+1. **AI-First Development**: Designed to work seamlessly with AI assistants
+2. **Natural System Design**: Systems that evolve and adapt naturally
+3. **Flow State Optimization**: Enhancing developer productivity through flow state
 
-- [x] Running Supabase locally
-- [x] Managing database migrations
-- [x] Creating and deploying Supabase Functions
-- [x] Generating types directly from your database schema
-- [x] Making authenticated HTTP requests to [Management API](https://supabase.com/docs/reference/api/introduction)
-
-## Getting started
-
-### Install the CLI
-
-Available via [NPM](https://www.npmjs.com) as dev dependency. To install:
+## Quick Start
 
 ```bash
-npm i supabase --save-dev
+# Clone the repository
+git clone https://github.com/jon-gauntlet/aether.git
+cd aether
+
+# Install dependencies
+npm install  # Frontend dependencies
+poetry install  # Python dependencies
+
+# Set up environment
+cp config/env/.env.example .env
+source scripts/setup_env.sh
+
+# Start development server
+npm run dev
 ```
 
-To install the beta release channel:
+## Project Structure
 
+See [PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md) for a detailed breakdown of the codebase.
+
+Key components:
+- `/src` - Core application code
+- `/frontend` - Frontend application
+- `/config` - Configuration files
+- `/docs` - Documentation
+- `/tests` - Test suite
+- `/scripts` - Utility scripts
+
+## Core Features
+
+### 1. RAG System
+- Advanced document retrieval and generation
+- Semantic search capabilities
+- Context-aware responses
+
+### 2. Space Management
+- Dynamic workspace organization
+- Context-aware transitions
+- Pattern-based space optimization
+
+### 3. Reaction System
+- Real-time response handling
+- Energy-aware processing
+- Adaptive feedback loops
+
+### 4. Flow State Enhancement
+- Developer flow state tracking
+- Automatic context preservation
+- Minimal interruption design
+
+## Development
+
+### Prerequisites
+- Node.js 18+
+- Python 3.12+
+- Poetry
+- Cursor IDE (recommended)
+
+### Development Commands
 ```bash
-npm i supabase@beta --save-dev
+# Start development server
+npm run dev
+
+# Run tests
+npm test
+
+# Run specific test file
+npm test path/to/test
+
+# Build for production
+npm run build
 ```
 
-When installing with yarn 4, you need to disable experimental fetch with the following nodejs config.
+### AI Integration
+Aether is designed to work seamlessly with AI assistants:
+1. Clear file structure for easy navigation
+2. Consistent naming conventions
+3. Comprehensive documentation
+4. AI-friendly code organization
 
-```
-NODE_OPTIONS=--no-experimental-fetch yarn add supabase
-```
+## Contributing
 
-> **Note**
-For Bun versions below v1.0.17, you must add `supabase` as a [trusted dependency](https://bun.sh/guides/install/trusted) before running `bun add -D supabase`.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed contribution guidelines.
 
-<details>
-  <summary><b>macOS</b></summary>
+Key points:
+1. Fork the repository
+2. Create a feature branch
+3. Follow coding standards
+4. Write tests
+5. Submit a pull request
 
-  Available via [Homebrew](https://brew.sh). To install:
+## License
 
-  ```sh
-  brew install supabase/tap/supabase
-  ```
-
-  To install the beta release channel:
-  
-  ```sh
-  brew install supabase/tap/supabase-beta
-  brew link --overwrite supabase-beta
-  ```
-  
-  To upgrade:
-
-  ```sh
-  brew upgrade supabase
-  ```
-</details>
-
-<details>
-  <summary><b>Windows</b></summary>
-
-  Available via [Scoop](https://scoop.sh). To install:
-
-  ```powershell
-  scoop bucket add supabase https://github.com/supabase/scoop-bucket.git
-  scoop install supabase
-  ```
-
-  To upgrade:
-
-  ```powershell
-  scoop update supabase
-  ```
-</details>
-
-<details>
-  <summary><b>Linux</b></summary>
-
-  Available via [Homebrew](https://brew.sh) and Linux packages.
-
-  #### via Homebrew
-
-  To install:
-
-  ```sh
-  brew install supabase/tap/supabase
-  ```
-
-  To upgrade:
-
-  ```sh
-  brew upgrade supabase
-  ```
-
-  #### via Linux packages
-
-  Linux packages are provided in [Releases](https://github.com/supabase/cli/releases). To install, download the `.apk`/`.deb`/`.rpm`/`.pkg.tar.zst` file depending on your package manager and run the respective commands.
-
-  ```sh
-  sudo apk add --allow-untrusted <...>.apk
-  ```
-
-  ```sh
-  sudo dpkg -i <...>.deb
-  ```
-
-  ```sh
-  sudo rpm -i <...>.rpm
-  ```
-
-  ```sh
-  sudo pacman -U <...>.pkg.tar.zst
-  ```
-</details>
-
-<details>
-  <summary><b>Other Platforms</b></summary>
-
-  You can also install the CLI via [go modules](https://go.dev/ref/mod#go-install) without the help of package managers.
-
-  ```sh
-  go install github.com/supabase/cli@latest
-  ```
-
-  Add a symlink to the binary in `$PATH` for easier access:
-
-  ```sh
-  ln -s "$(go env GOPATH)/bin/cli" /usr/bin/supabase
-  ```
-
-  This works on other non-standard Linux distros.
-</details>
-
-<details>
-  <summary><b>Community Maintained Packages</b></summary>
-
-  Available via [pkgx](https://pkgx.sh/). Package script [here](https://github.com/pkgxdev/pantry/blob/main/projects/supabase.com/cli/package.yml).
-  To install in your working directory:
-
-  ```bash
-  pkgx install supabase
-  ```
-
-  Available via [Nixpkgs](https://nixos.org/). Package script [here](https://github.com/NixOS/nixpkgs/blob/master/pkgs/development/tools/supabase-cli/default.nix).
-</details>
-
-### Run the CLI
-
-```bash
-supabase bootstrap
-```
-
-Or using npx:
-
-```bash
-npx supabase bootstrap
-```
-
-The bootstrap command will guide you through the process of setting up a Supabase project using one of the [starter](https://github.com/supabase-community/supabase-samples/blob/main/samples.json) templates.
-
-## Docs
-
-Command & config reference can be found [here](https://supabase.com/docs/reference/cli/about).
-
-## Breaking changes
-
-We follow semantic versioning for changes that directly impact CLI commands, flags, and configurations.
-
-However, due to dependencies on other service images, we cannot guarantee that schema migrations, seed.sql, and generated types will always work for the same CLI major version. If you need such guarantees, we encourage you to pin a specific version of CLI in package.json.
-
-## Developing
-
-To run from source:
-
-```sh
-# Go >= 1.22
-go run . help
-```
+MIT License - See [LICENSE](LICENSE) for details
