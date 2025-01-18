@@ -1,84 +1,63 @@
-import { Box, VStack, Text, Progress, useToast } from '@chakra-ui/react';
-import { useDropzone } from 'react-dropzone';
-import { withErrorBoundary } from './ErrorBoundary';
+import React from "react";
+import { Box, VStack, Text, Progress, useToast } from "@chakra-ui/react";
+import { useDropzone } from "react-dropzone";
+import { ErrorBoundary } from "../shared/components/ErrorBoundary";
 
 const FileUploadComponent = ({ onFileUpload, isUploading, progress = 0 }) => {
   const toast = useToast();
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop: async (acceptedFiles) => {
-      const file = acceptedFiles[0];
-      if (!file) return;
-
-      const validTypes = [
-        'application/pdf',
-        'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'text/plain'
-      ];
-
-      if (!validTypes.includes(file.type)) {
+      try {
+        await onFileUpload(acceptedFiles);
+      } catch (error) {
         toast({
-          title: 'Invalid file type',
-          description: 'Please upload a PDF, DOC, DOCX, or TXT file',
-          status: 'error',
-          duration: 3000,
+          title: "Upload failed",
+          description: error.message,
+          status: "error",
+          duration: 5000,
           isClosable: true,
         });
-        return;
       }
-
-      onFileUpload(file);
     },
-    accept: {
-      'application/pdf': ['.pdf'],
-      'application/msword': ['.doc'],
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
-      'text/plain': ['.txt']
-    },
-    multiple: false
   });
 
   return (
     <Box>
       <Box
         {...getRootProps()}
-        data-testid="upload-area"
         p={6}
         border="2px dashed"
-        borderColor={isDragActive ? 'blue.500' : 'gray.300'}
-        borderRadius="lg"
-        bg={isDragActive ? 'blue.50' : 'transparent'}
-        transition="all 0.2s"
+        borderColor={isDragActive ? "blue.400" : "gray.200"}
+        borderRadius="md"
+        bg={isDragActive ? "blue.50" : "transparent"}
         cursor="pointer"
+        transition="all 0.2s"
+        _hover={{ borderColor: "blue.400", bg: "blue.50" }}
       >
-        <input {...getInputProps()} data-testid="file-input" />
+        <input {...getInputProps()} />
         <VStack spacing={2}>
           <Text>
             {isDragActive
-              ? 'Drop the file here'
-              : 'Drag & drop a file here, or click to select'}
+              ? "Drop the files here..."
+              : "Drag and drop files here, or click to select files"}
           </Text>
-          <Text fontSize="sm" color="gray.500">
-            Supported formats: PDF, DOC, DOCX, TXT
-          </Text>
+          {isUploading && (
+            <Progress
+              value={progress}
+              size="sm"
+              width="100%"
+              colorScheme="blue"
+              isAnimated
+            />
+          )}
         </VStack>
       </Box>
-
-      {isUploading && (
-        <Box mt={4}>
-          <Progress
-            data-testid="upload-progress"
-            value={progress}
-            size="sm"
-            colorScheme="blue"
-          />
-          <Text mt={2} fontSize="sm" color="gray.600" data-testid="upload-progress-text">
-            Uploading... {progress}%
-          </Text>
-        </Box>
-      )}
     </Box>
   );
 };
 
-export const FileUpload = withErrorBoundary(FileUploadComponent); 
+export const FileUpload = (props) => (
+  <ErrorBoundary>
+    <FileUploadComponent {...props} />
+  </ErrorBoundary>
+); 

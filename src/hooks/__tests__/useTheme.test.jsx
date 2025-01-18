@@ -13,10 +13,25 @@ const localStorageMock = {
 }
 Object.defineProperty(window, 'localStorage', { value: localStorageMock })
 
+// Mock useColorMode
+const mockToggleColorMode = vi.fn()
+vi.mock('@chakra-ui/react', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    useColorMode: () => ({
+      colorMode: 'light',
+      toggleColorMode: mockToggleColorMode,
+    }),
+    ChakraProvider: ({ children }) => <>{children}</>,
+  }
+})
+
 describe('useTheme', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     localStorageMock.clear()
+    mockToggleColorMode.mockClear()
   })
 
   const wrapper = ({ children }) => (
@@ -36,6 +51,7 @@ describe('useTheme', () => {
     })
 
     expect(result.current.theme).toBe('dark')
+    expect(mockToggleColorMode).toHaveBeenCalled()
   })
 
   it('persists theme preference', () => {
@@ -46,6 +62,7 @@ describe('useTheme', () => {
     })
 
     expect(localStorageMock.setItem).toHaveBeenCalledWith('theme', 'dark')
+    expect(mockToggleColorMode).toHaveBeenCalled()
   })
 
   it('loads persisted theme preference', () => {

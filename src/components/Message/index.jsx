@@ -5,4 +5,4 @@
 
 export { Message } from './Message';
 export { MessageContent } from './MessageContent';
-export { default as MessageCluster } from './MessageCluster'; 
+export { default as MessageCluster } from '../Chat/MessageCluster'; 

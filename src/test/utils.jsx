@@ -1,73 +1,87 @@
 import React from 'react';
+import { render as rtlRender, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ChakraProvider } from '@chakra-ui/react';
-import { BrowserRouter } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { vi } from 'vitest';
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: false,
-    },
-  },
-});
+// Mock Chakra UI components
+vi.mock('@chakra-ui/react', () => ({
+  ChakraProvider: ({ children }) => <>{children}</>,
+  useColorMode: vi.fn(() => ({
+    colorMode: 'light',
+    toggleColorMode: vi.fn(),
+  })),
+  Box: ({ children, ...props }) => <div data-testid="chakra-box" {...props}>{children}</div>,
+  Text: ({ children, ...props }) => <p data-testid="chakra-text" {...props}>{children}</p>,
+  Flex: ({ children, ...props }) => <div data-testid="chakra-flex" {...props}>{children}</div>,
+  IconButton: ({ children, icon, ...props }) => (
+    <button data-testid="chakra-icon-button" {...props}>
+      {icon}
+      {children}
+    </button>
+  ),
+  Button: ({ children, ...props }) => (
+    <button data-testid="chakra-button" {...props}>{children}</button>
+  ),
+  Input: ({ ...props }) => <input data-testid="chakra-input" {...props} />,
+  FormLabel: ({ children, ...props }) => (
+    <label data-testid="chakra-form-label" {...props}>{children}</label>
+  ),
+  FormControl: ({ children, ...props }) => (
+    <div data-testid="chakra-form-control" {...props}>{children}</div>
+  ),
+  Skeleton: ({ children, ...props }) => (
+    <div data-testid="chakra-skeleton" {...props}>{children}</div>
+  ),
+  HStack: ({ children, ...props }) => (
+    <div data-testid="chakra-hstack" {...props}>{children}</div>
+  ),
+  Textarea: ({ ...props }) => (
+    <textarea data-testid="chakra-textarea" {...props} />
+  ),
+}));
 
-export const TestWrapper = ({ children }) => {
+// Mock icons
+vi.mock('@chakra-ui/icons', () => ({
+  ChatIcon: () => <span data-testid="chat-icon">Chat</span>,
+  SunIcon: () => <span data-testid="sun-icon">Sun</span>,
+  MoonIcon: () => <span data-testid="moon-icon">Moon</span>,
+}));
+
+// Mock providers
+vi.mock('../../contexts/ReactionProvider', () => ({
+  ReactionProvider: ({ children }) => <>{children}</>,
+  useReactions: () => ({
+    reactions: [],
+    addReaction: vi.fn(),
+    removeReaction: vi.fn(),
+  }),
+}));
+
+vi.mock('../../contexts/SpaceProvider', () => ({
+  SpaceProvider: ({ children }) => <>{children}</>,
+  useSpaces: () => ({
+    currentSpace: { id: 'test-space', name: 'Test Space' },
+    spaces: [],
+  }),
+}));
+
+// Test wrapper component
+function TestWrapper({ children }) {
   return (
     <ChakraProvider>
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          {children}
-        </BrowserRouter>
-      </QueryClientProvider>
+      {children}
     </ChakraProvider>
   );
-};
-
-// Mock services
-export const mockRAGService = {
-  search: vi.fn(),
-  cleanup: vi.fn(),
-};
-
-export const mockSearchService = {
-  search: vi.fn(),
-};
-
-export const mockApiClient = {
-  sendMessage: vi.fn(),
-  getHistory: vi.fn(),
-  connect: vi.fn(),
-  disconnect: vi.fn(),
-};
-
-// Mock WebSocket
-export class MockWebSocket {
-  constructor() {
-    this.onopen = null;
-    this.onclose = null;
-    this.onmessage = null;
-    this.onerror = null;
-  }
-  
-  send = vi.fn();
-  close = vi.fn();
 }
 
-// Mock localStorage
-export const mockLocalStorage = {
-  getItem: vi.fn(),
-  setItem: vi.fn(),
-  removeItem: vi.fn(),
-};
+// Custom render function
+function renderWithProviders(ui, options = {}) {
+  return rtlRender(ui, {
+    wrapper: TestWrapper,
+    ...options,
+  });
+}
 
-// Mock matchMedia
-export const mockMatchMedia = (query) => ({
-  matches: false,
-  media: query,
-  onchange: null,
-  addListener: vi.fn(),
-  removeListener: vi.fn(),
-  addEventListener: vi.fn(),
-  removeEventListener: vi.fn(),
-  dispatchEvent: vi.fn(),
-}); 
+// Re-export everything
+export * from '@testing-library/react';
+export { renderWithProviders as render }; 

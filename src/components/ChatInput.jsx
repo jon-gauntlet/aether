@@ -1,23 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Box, Button, Textarea, Text } from '@chakra-ui/react';
 
 const MAX_LENGTH = 500;
 
-export const ChatInput = ({ onSendMessage, isLoading }) => {
+export const ChatInput = ({ onSubmit, disabled, placeholder = 'Type a message...' }) => {
   const [message, setMessage] = useState('');
   const remainingChars = MAX_LENGTH - message.length;
 
   const handleSend = useCallback(() => {
     if (message.trim()) {
-      onSendMessage(message.trim());
+      onSubmit(message.trim());
       setMessage('');
     }
-  }, [message, onSendMessage]);
+  }, [message, onSubmit]);
 
   const handleKeyDown = useCallback((e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
+    } else if (e.key === 'Escape') {
+      setMessage('');
     }
   }, [handleSend]);
 
@@ -35,8 +37,8 @@ export const ChatInput = ({ onSendMessage, isLoading }) => {
         value={message}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
-        placeholder="Type a message..."
-        disabled={isLoading}
+        placeholder={placeholder}
+        disabled={disabled}
         resize="none"
       />
       {remainingChars <= 50 && (
@@ -47,8 +49,7 @@ export const ChatInput = ({ onSendMessage, isLoading }) => {
       <Button
         data-testid="send-button"
         onClick={handleSend}
-        isLoading={isLoading}
-        isDisabled={!message.trim() || isLoading}
+        disabled={disabled}
         mt={2}
       >
         Send

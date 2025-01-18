@@ -1,67 +1,80 @@
 import '@testing-library/jest-dom';
-import '@testing-library/jest-dom/extend-expect';
-import { expect } from 'vitest';
+import { vi } from 'vitest';
+import { cleanup } from '@testing-library/react';
 import * as matchers from '@testing-library/jest-dom/matchers';
+import { expect } from 'vitest';
+import { act } from 'react';
 
-// Extend Vitest's expect with Testing Library's matchers
-expect.extend(matchers); 
+// Extend Vitest's expect with React Testing Library's matchers
+expect.extend(matchers);
+
+// Mock ResizeObserver
+global.ResizeObserver = vi.fn().mockImplementation(() => ({
+  observe: vi.fn(),
+  unobserve: vi.fn(),
+  disconnect: vi.fn(),
+}));
+
+// Mock IntersectionObserver
+global.IntersectionObserver = vi.fn().mockImplementation(() => ({
+  observe: vi.fn(),
+  unobserve: vi.fn(),
+  disconnect: vi.fn(),
+}));
 
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
-  value: jest.fn().mockImplementation(query => ({
+  value: vi.fn().mockImplementation(query => ({
     matches: false,
     media: query,
     onchange: null,
-    addListener: jest.fn(),
-    removeListener: jest.fn(),
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
-    dispatchEvent: jest.fn(),
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
   })),
 });
 
-// Mock localStorage
-const localStorageMock = {
-  getItem: jest.fn(),
-  setItem: jest.fn(),
-  removeItem: jest.fn(),
-  clear: jest.fn(),
+// Mock React 18 rendering
+const ReactDOM = require('react-dom');
+const ReactDOMClient = require('react-dom/client');
+
+// Create a root container for testing
+const rootContainer = document.createElement('div');
+document.body.appendChild(rootContainer);
+
+let root = null;
+
+// Mock ReactDOM methods
+ReactDOM.render = (element, container, callback) => {
+  act(() => {
+    if (!root) {
+      root = ReactDOMClient.createRoot(container || rootContainer);
+    }
+    root.render(element);
+    if (callback) callback();
+  });
 };
-Object.defineProperty(window, 'localStorage', { value: localStorageMock });
 
-// Mock IntersectionObserver
-class IntersectionObserverMock {
-  constructor(callback) {
-    this.callback = callback;
-  }
-  observe = jest.fn();
-  unobserve = jest.fn();
-  disconnect = jest.fn();
-}
-Object.defineProperty(window, 'IntersectionObserver', {
-  writable: true,
-  value: IntersectionObserverMock,
-});
+ReactDOM.unmountComponentAtNode = container => {
+  act(() => {
+    if (root) {
+      root.unmount();
+      root = null;
+    }
+  });
+  return true;
+};
 
-// Mock ResizeObserver
-class ResizeObserverMock {
-  constructor(callback) {
-    this.callback = callback;
-  }
-  observe = jest.fn();
-  unobserve = jest.fn();
-  disconnect = jest.fn();
-}
-Object.defineProperty(window, 'ResizeObserver', {
-  writable: true,
-  value: ResizeObserverMock,
-});
+global.ReactDOM = ReactDOM;
 
-// Mock fetch
-global.fetch = jest.fn();
-
-// Clean up after each test
+// Cleanup after each test
 afterEach(() => {
-  jest.clearAllMocks();
+  cleanup();
+  if (root) {
+    root.unmount();
+    root = null;
+  }
 }); 

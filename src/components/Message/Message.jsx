@@ -25,7 +25,7 @@ import { ChatIcon } from '@chakra-ui/icons';
 import { MessageContent } from './MessageContent';
 import { ReactionDisplay } from '../reactions/ReactionDisplay';
 
-export function Message({ content, timestamp, attachments, isLoading, messageId, threadId, onThreadClick }) {
+export function Message({ content, timestamp, attachments, isLoading, messageId, threadId, onThreadClick, className }) {
   const formatTimestamp = (ts) => {
     if (!ts) return '';
     const date = new Date(ts);
@@ -42,7 +42,7 @@ export function Message({ content, timestamp, attachments, isLoading, messageId,
   }
 
   return (
-    <Box p={4} mb={2} borderRadius="md" borderWidth="1px" data-testid="message-container">
+    <Box p={4} mb={2} borderRadius="md" borderWidth="1px" data-testid="message-container" className={className}>
       <MessageContent 
         content={content} 
         attachments={attachments}

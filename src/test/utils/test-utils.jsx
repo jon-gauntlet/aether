@@ -2,91 +2,82 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { render } from '@testing-library/react'
 import { vi } from 'vitest'
-import { AuthProvider } from '../../contexts/AuthContext'
-import { MessageProvider } from '../../contexts/MessageContext'
-import { FlowProvider } from '../../contexts/FlowContext'
-import { EnergyProvider } from '../../contexts/EnergyContext'
-import { ProtectionProvider } from '../../contexts/ProtectionContext'
+import { ChakraProvider, extendTheme, useColorMode, useTheme } from '@chakra-ui/react'
 
-const mockAuthValue = {
-  user: null,
-  loading: false,
-  error: null,
-  login: vi.fn(),
-  logout: vi.fn(),
-  signup: vi.fn(),
+// Create a test theme with required configuration
+const theme = extendTheme({
+  config: {
+    initialColorMode: 'light',
+    useSystemColorMode: false,
+  },
+  colors: {
+    primary: '#3182ce',
+    secondary: '#718096',
+    success: '#48bb78',
+    error: '#e53e3e',
+    warning: '#ecc94b',
+  },
+  fonts: {
+    body: 'system-ui, sans-serif',
+    heading: 'system-ui, sans-serif',
+  },
+  space: {
+    sm: '0.5rem',
+    md: '1rem',
+    lg: '1.5rem',
+  },
+  borderRadius: {
+    sm: '0.125rem',
+    md: '0.25rem',
+    lg: '0.5rem',
+  },
+  transitions: {
+    normal: '0.2s ease',
+  },
+});
+
+// Mock contexts
+const MessageContext = React.createContext({})
+const AuthContext = React.createContext({})
+const FlowContext = React.createContext({})
+const EnergyContext = React.createContext({})
+
+// Mock Chakra hooks
+export const useColorModeValue = (lightValue, darkValue) => {
+  const { colorMode } = useColorMode()
+  return colorMode === 'light' ? lightValue : darkValue
 }
 
-const mockMessageValue = {
-  messages: [],
-  sendMessage: vi.fn(),
-  deleteMessage: vi.fn(),
-  updateMessage: vi.fn(),
-}
+// Mock components
+const MockButton = ({ children, ...props }) => <button {...props}>{children}</button>
+const MockBox = ({ children, ...props }) => <div {...props}>{children}</div>
 
-const mockFlowValue = {
-  isInFlow: false,
-  flowMetrics: {},
-  startFlow: vi.fn(),
-  endFlow: vi.fn(),
-}
-
-const mockEnergyValue = {
-  energyLevel: 100,
-  updateEnergy: vi.fn(),
-}
-
-const mockProtectionValue = {
-  isProtected: true,
-  boundaries: {},
-  updateBoundaries: vi.fn(),
-}
-
-const AllProviders = ({ children, customProviders = {} }) => {
-  const {
-    auth = mockAuthValue,
-    message = mockMessageValue,
-    flow = mockFlowValue,
-    energy = mockEnergyValue,
-    protection = mockProtectionValue,
-  } = customProviders
-
+// Wrapper component
+export const TestWrapper = ({ children }) => {
   return (
-    <AuthProvider value={auth}>
-      <MessageProvider value={message}>
-        <FlowProvider value={flow}>
-          <EnergyProvider value={energy}>
-            <ProtectionProvider value={protection}>
+    <ChakraProvider theme={theme}>
+      <AuthContext.Provider value={{ user: null, loading: false }}>
+        <MessageContext.Provider value={{ messages: [], loading: false }}>
+          <FlowContext.Provider value={{ flowState: 'default', setFlowState: () => {} }}>
+            <EnergyContext.Provider value={{ energy: 100, setEnergy: () => {} }}>
               {children}
-            </ProtectionProvider>
-          </EnergyProvider>
-        </FlowProvider>
-      </MessageProvider>
-    </AuthProvider>
+            </EnergyContext.Provider>
+          </FlowContext.Provider>
+        </MessageContext.Provider>
+      </AuthContext.Provider>
+    </ChakraProvider>
   )
 }
 
-AllProviders.propTypes = {
-  children: PropTypes.node.isRequired,
-  customProviders: PropTypes.shape({
-    auth: PropTypes.object,
-    message: PropTypes.object,
-    flow: PropTypes.object,
-    energy: PropTypes.object,
-    protection: PropTypes.object,
-  }),
-}
-
+// Custom render method
 const customRender = (ui, options = {}) => {
-  const { customProviders, ...renderOptions } = options
-  return render(ui, {
-    wrapper: (props) => <AllProviders {...props} customProviders={customProviders} />,
-    ...renderOptions,
-  })
+  return render(ui, { wrapper: TestWrapper, ...options })
 }
 
+// Re-export everything
 export * from '@testing-library/react'
 export { customRender as render }
+export { MessageContext, AuthContext, FlowContext, EnergyContext }
 
 export const verifyShape = (obj, shape) => {
   Object.entries(shape).forEach(([key, type]) => {

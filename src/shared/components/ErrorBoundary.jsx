@@ -1,59 +1,124 @@
 import React from 'react';
+import { Box, Text, Button, useColorModeValue } from '@chakra-ui/react';
 
-// Natural flow: error → capture → display
+// Separate functional component for error UI
+const ErrorUI = ({ error, errorInfo, onReset }) => {
+  const bgColor = useColorModeValue('red.50', 'red.900');
+  const textColor = useColorModeValue('red.800', 'red.200');
+  const subTextColor = useColorModeValue('red.700', 'red.300');
+  const stackBgColor = useColorModeValue('red.100', 'red.800');
+
+  return (
+    <Box
+      p={4}
+      bg={bgColor}
+      borderRadius="md"
+      role="alert"
+      data-testid="error-boundary"
+    >
+      <Text
+        fontSize="lg"
+        fontWeight="semibold"
+        color={textColor}
+        mb={2}
+      >
+        Something went wrong
+      </Text>
+      <Text
+        fontSize="sm"
+        color={subTextColor}
+        mb={4}
+      >
+        {error?.message}
+      </Text>
+      {process.env.NODE_ENV === 'development' && (
+        <Box
+          mt={2}
+          p={3}
+          bg={stackBgColor}
+          borderRadius="sm"
+        >
+          <Text
+            fontSize="sm"
+            fontWeight="medium"
+            color={textColor}
+            cursor="pointer"
+            mb={2}
+          >
+            Stack trace
+          </Text>
+          <Box
+            as="pre"
+            fontSize="xs"
+            color={subTextColor}
+            overflowX="auto"
+            whiteSpace="pre-wrap"
+          >
+            {errorInfo?.componentStack}
+          </Box>
+        </Box>
+      )}
+      <Button
+        mt={4}
+        colorScheme="red"
+        size="sm"
+        onClick={onReset}
+        data-testid="error-retry-button"
+      >
+        Try again
+      </Button>
+    </Box>
+  );
+};
+
 export class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
     this.state = { 
+      hasError: false,
       error: null,
-      errorInfo: null 
+      errorInfo: null
     };
   }
 
   static getDerivedStateFromError(error) {
-    // Natural capture flow
-    return { error };
+    return { hasError: true, error };
   }
 
   componentDidCatch(error, errorInfo) {
-    // Natural logging flow
-    this.setState({ errorInfo });
-    this.props.onError?.(error, errorInfo);
+    this.setState({
+      error,
+      errorInfo
+    });
+    
+    if (this.props.onError) {
+      this.props.onError(error, errorInfo);
+    }
+  }
+
+  handleReset = () => {
+    this.setState({
+      hasError: false,
+      error: null,
+      errorInfo: null
+    });
   }
 
   render() {
-    const { error, errorInfo } = this.state;
-    const { fallback, children } = this.props;
-
-    // Natural display flow
-    if (error) {
-      if (fallback) {
-        return fallback(error, errorInfo);
+    if (this.state.hasError) {
+      if (this.props.FallbackComponent) {
+        return <this.props.FallbackComponent error={this.state.error} errorInfo={this.state.errorInfo} />;
       }
-
       return (
-        <div className="p-4 bg-red-50 rounded-lg" role="alert">
-          <h2 className="text-lg font-semibold text-red-800 mb-2">
-            Something went wrong
-          </h2>
-          <div className="text-sm text-red-700">
-            {error.toString()}
-          </div>
-          {process.env.NODE_ENV === 'development' && errorInfo && (
-            <details className="mt-2">
-              <summary className="text-sm text-red-600 cursor-pointer">
-                Stack trace
-              </summary>
-              <pre className="mt-2 text-xs text-red-600 overflow-auto">
-                {errorInfo.componentStack}
-              </pre>
-            </details>
-          )}
-        </div>
+        <ErrorUI
+          error={this.state.error}
+          errorInfo={this.state.errorInfo}
+          onReset={this.handleReset}
+        />
       );
     }
 
-    return children;
+    return this.props.children;
   }
 }
 
