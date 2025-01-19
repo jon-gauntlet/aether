@@ -70,3 +70,4 @@ Thumbs.db
 # Firebase
 .firebase/
 *.log
+test-results/
