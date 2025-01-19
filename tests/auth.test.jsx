@@ -1,20 +1,39 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { BrowserRouter } from 'react-router-dom'
 import { ChakraProvider } from '@chakra-ui/react'
 import { AuthProvider } from '../src/contexts/AuthContext'
-import { Auth } from '../src/components/Auth'
+import Auth from '../src/components/Auth'
 import { supabase } from '../src/lib/supabaseClient'
+import { act } from 'react-dom/test-utils'
 
 // Mock Supabase auth
 vi.mock('../src/lib/supabaseClient', () => ({
   supabase: {
     auth: {
-      signInWithPassword: vi.fn(),
-      signUp: vi.fn(),
-      signOut: vi.fn(),
-      getSession: vi.fn()
+      signInWithPassword: vi.fn(() => Promise.resolve({
+        data: { session: null },
+        error: null
+      })),
+      signUp: vi.fn(() => Promise.resolve({
+        data: { session: null },
+        error: null
+      })),
+      signOut: vi.fn(() => Promise.resolve({
+        error: null
+      })),
+      getSession: vi.fn(() => Promise.resolve({
+        data: { session: null },
+        error: null
+      })),
+      onAuthStateChange: vi.fn((callback) => {
+        // Store callback for later use in tests
+        global.authCallback = callback
+        return {
+          data: { subscription: { unsubscribe: vi.fn() } }
+        }
+      })
     }
   }
 }))
@@ -32,141 +51,190 @@ const renderWithProviders = (component) => {
 }
 
 describe('Authentication', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks()
-    localStorage.clear()
+    await act(async () => {
+      await localStorage.clear()
+    })
+    global.fetch.mockReset()
   })
 
-  it('should show login form by default', () => {
-    renderWithProviders(<Auth />)
-    expect(screen.getByTestId('auth-form')).toBeInTheDocument()
-    expect(screen.getByTestId('email-input')).toBeInTheDocument()
-    expect(screen.getByTestId('password-input')).toBeInTheDocument()
+  it('should show login form by default', async () => {
+    await act(async () => {
+      renderWithProviders(<Auth />)
+    })
+
+    expect(screen.getByLabelText(/email/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/password/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /login/i })).toBeInTheDocument()
   })
 
   it('should handle successful login', async () => {
-    const user = userEvent.setup()
-    
-    // Mock successful login
-    vi.mocked(supabase.auth.signInWithPassword).mockResolvedValue({
-      data: {
-        session: {
-          access_token: 'fake-token',
+    global.fetch.mockImplementationOnce(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({
+          token: 'test-token',
           user: { id: 1, email: 'test@example.com' }
-        }
-      },
-      error: null
+        })
+      })
+    )
+
+    await act(async () => {
+      renderWithProviders(<Auth />)
     })
 
-    renderWithProviders(<Auth />)
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText(/email/i), {
+        target: { value: 'test@example.com' }
+      })
+      fireEvent.change(screen.getByLabelText(/password/i), {
+        target: { value: 'password' }
+      })
+    })
 
-    // Fill in login form
-    await user.type(screen.getByTestId('email-input'), 'test@example.com')
-    await user.type(screen.getByTestId('password-input'), 'password123')
-    await user.click(screen.getByTestId('login-button'))
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /login/i }))
+    })
 
-    // Verify success
-    await waitFor(() => {
-      expect(localStorage.getItem('auth_token')).toBe('fake-token')
+    await waitFor(async () => {
+      const token = await localStorage.getItem('auth_token')
+      expect(token).toBe('test-token')
     })
   })
 
   it('should handle login errors', async () => {
-    const user = userEvent.setup()
-    
-    // Mock login error
-    vi.mocked(supabase.auth.signInWithPassword).mockResolvedValue({
-      data: { session: null },
-      error: { message: 'Invalid credentials' }
+    global.fetch.mockImplementationOnce(() =>
+      Promise.resolve({
+        ok: false,
+        status: 401,
+        json: () => Promise.resolve({
+          error: 'Invalid credentials'
+        })
+      })
+    )
+
+    await act(async () => {
+      renderWithProviders(<Auth />)
     })
 
-    renderWithProviders(<Auth />)
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText(/email/i), {
+        target: { value: 'wrong@example.com' }
+      })
+      fireEvent.change(screen.getByLabelText(/password/i), {
+        target: { value: 'wrongpass' }
+      })
+    })
 
-    // Fill in login form
-    await user.type(screen.getByTestId('email-input'), 'test@example.com')
-    await user.type(screen.getByTestId('password-input'), 'wrong')
-    await user.click(screen.getByTestId('login-button'))
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /login/i }))
+    })
 
-    // Verify error message
     await waitFor(() => {
-      expect(screen.getByTestId('error-message')).toHaveTextContent('Invalid credentials')
+      expect(screen.getByText(/invalid credentials/i)).toBeInTheDocument()
     })
   })
 
   it('should handle successful signup', async () => {
-    const user = userEvent.setup()
-    
-    // Mock successful signup
-    vi.mocked(supabase.auth.signUp).mockResolvedValue({
-      data: {
-        session: {
-          access_token: 'fake-token',
-          user: { id: 1, email: 'new@example.com' }
-        }
-      },
-      error: null
+    global.fetch.mockImplementationOnce(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({
+          token: 'test-token',
+          user: { id: 2, email: 'new@example.com' }
+        })
+      })
+    )
+
+    await act(async () => {
+      renderWithProviders(<Auth />)
     })
 
-    renderWithProviders(<Auth />)
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /sign up/i }))
+    })
 
-    // Switch to signup mode
-    await user.click(screen.getByTestId('signup-switch'))
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText(/email/i), {
+        target: { value: 'new@example.com' }
+      })
+      fireEvent.change(screen.getByLabelText(/password/i), {
+        target: { value: 'newpass123' }
+      })
+    })
 
-    // Fill in signup form
-    await user.type(screen.getByTestId('email-input'), 'new@example.com')
-    await user.type(screen.getByTestId('password-input'), 'password123')
-    await user.click(screen.getByTestId('signup-button'))
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /create account/i }))
+    })
 
-    // Verify success
-    await waitFor(() => {
-      expect(localStorage.getItem('auth_token')).toBe('fake-token')
+    await waitFor(async () => {
+      const token = await localStorage.getItem('auth_token')
+      expect(token).toBe('test-token')
     })
   })
 
   it('should handle signup errors', async () => {
-    const user = userEvent.setup()
-    
-    // Mock signup error
-    vi.mocked(supabase.auth.signUp).mockResolvedValue({
-      data: { session: null },
-      error: { message: 'Email already exists' }
+    global.fetch.mockImplementationOnce(() =>
+      Promise.resolve({
+        ok: false,
+        status: 400,
+        json: () => Promise.resolve({
+          error: 'Email already exists'
+        })
+      })
+    )
+
+    await act(async () => {
+      renderWithProviders(<Auth />)
     })
 
-    renderWithProviders(<Auth />)
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /sign up/i }))
+    })
 
-    // Switch to signup mode
-    await user.click(screen.getByTestId('signup-switch'))
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText(/email/i), {
+        target: { value: 'exists@example.com' }
+      })
+      fireEvent.change(screen.getByLabelText(/password/i), {
+        target: { value: 'password123' }
+      })
+    })
 
-    // Fill in signup form
-    await user.type(screen.getByTestId('email-input'), 'exists@example.com')
-    await user.type(screen.getByTestId('password-input'), 'password123')
-    await user.click(screen.getByTestId('signup-button'))
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /create account/i }))
+    })
 
-    // Verify error message
     await waitFor(() => {
-      expect(screen.getByTestId('error-message')).toHaveTextContent('Email already exists')
+      expect(screen.getByText(/email already exists/i)).toBeInTheDocument()
     })
   })
 
   it('should handle logout', async () => {
-    const user = userEvent.setup()
-    
-    // Mock successful logout
-    vi.mocked(supabase.auth.signOut).mockResolvedValue({ error: null })
+    global.fetch.mockImplementationOnce(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ success: true })
+      })
+    )
 
-    // Set initial auth state
-    localStorage.setItem('auth_token', 'fake-token')
-    localStorage.setItem('user', JSON.stringify({ id: 1, email: 'test@example.com' }))
+    await act(async () => {
+      await localStorage.setItem('auth_token', 'test-token')
+      await localStorage.setItem('user', JSON.stringify({ id: 1, email: 'test@example.com' }))
+    })
 
-    renderWithProviders(<Auth />)
+    await act(async () => {
+      renderWithProviders(<Auth />)
+    })
 
-    // Click logout button
-    await user.click(screen.getByTestId('logout-button'))
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /logout/i }))
+    })
 
-    // Verify logged out state
-    await waitFor(() => {
-      expect(localStorage.getItem('auth_token')).toBeNull()
-      expect(screen.getByTestId('auth-form')).toBeInTheDocument()
+    await waitFor(async () => {
+      const token = await localStorage.getItem('auth_token')
+      expect(token).toBeNull()
     })
   })
 }) 

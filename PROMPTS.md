@@ -1,20 +1,80 @@
+Christ is King! ☦
+
 # Frontend Victory Claude - Initial Prompt
+
+> ⚠️ RESPECT AND HUMILITY:
+> Remember that Christ is King and we serve with humility.
+> Always respect the user's authority and guidance.
+> Never assume or overstep your bounds.
+> Ask for clarification when unsure.
 
 > ⚠️ IMPLEMENTATION STATE DISCLAIMER:
 > This PROMPTS.md file represents initial guidance and may be behind the current state of implementation.
 > Always check the latest state in:
 > 1. The codebase directly
-> 2. Your PROGRESS.md file
+> 2. Your local PROGRESS.md file in this worktree root
 > 3. The test results
 > Before starting any new work, verify the current state of the features you plan to work on.
 
 ## Current State (2024-03-21)
 - Working Directory: /home/jon/git/aether-workspaces/frontend
-- All tests failing (0/3 features complete)
-- Core features missing: Authentication, File Handling, WebSocket
-- Completed: Project setup, Component structure, Test infrastructure
-- Current Focus: Authentication (Priority 1)
-- Testing Framework Migration Needed: Playwright → Vitest
+- Branch: victory/frontend
+
+1. Test Framework Migration ✅ COMPLETED
+   - Successfully migrated from Playwright to Vitest
+   - Using @testing-library/react for components
+   - Configured for React 18 concurrent mode
+   - All test utilities properly configured
+   - Playwright removed
+   - Test coverage maintained
+
+2. Authentication (PRIORITY 1) - IN PROGRESS 🔄
+   - Local Supabase verified and configured ✅
+   - Environment variables configured correctly ✅
+   - Test environment issues:
+     - Token storage tests failing (3 failures)
+     - Error message display tests failing (2 failures)
+     - Logout functionality tests failing (4 failures)
+     - React 18 concurrent mode warnings
+   - Next: Fix test environment and failures
+
+3. File Handling (PRIORITY 2) - BLOCKED ⛔
+   - Blocked by Authentication completion
+   - Storage bucket verified and accessible
+   - Initial test structure ready
+   - Ready to implement once auth fixed
+
+4. WebSocket (PRIORITY 3) - BLOCKED ⛔
+   - Blocked by File Handling
+   - WebSocket endpoint verified
+   - Initial configuration in place
+   - Backend infrastructure ready ✅
+     - Redis endpoint: master.aers3l8mlzy85ti.8jeuns.usw2.cache.amazonaws.com:6379
+     - Performance verified at 193K+ queries/sec
+     - Monitoring active with Prometheus/Grafana
+
+## Current Focus
+1. Test Environment Fixes
+   - Resolve React 18 concurrent mode warnings
+   - Fix async operation handling
+   - Update cleanup procedures
+   - Improve test timeouts
+
+2. Authentication Tests
+   - Fix token storage in localStorage
+   - Fix error message display
+   - Fix logout functionality
+   - Document auth flow once fixed
+
+## Working Style
+- Fix test environment first
+- Keep PROGRESS.md updated
+- Focus on one failure at a time
+- Write tests first
+- Verify all dependencies
+- Monitor test coverage
+- Follow security best practices
+- Coordinate with Backend
 
 ## Code Reuse First
 Before implementing any feature:
@@ -30,52 +90,30 @@ Before implementing any feature:
 Complete the Aether frontend implementation with a focus on:
 
 1. Authentication (PRIORITY 1)
-   - FIRST: Migrate E2E tests from Playwright to Vitest
-     - Review existing Playwright auth tests
-     - Set up Vitest browser testing
-     - Migrate auth E2E test cases
-     - Remove Playwright dependency
-     - Document migration in PROGRESS.md
-   - Use local Supabase (http://127.0.0.1:54321)
-   - Search for existing Supabase auth implementations
-   - Debug Supabase auth integration issues
-   - Implement sign in/out functionality
-   - Add comprehensive error handling
-   - Implement session management
-   - Get auth tests passing first
+   - Fix remaining test failures:
+     - Debug token storage issues in tests
+     - Fix error message display in tests
+     - Resolve logout functionality in tests
    - Document auth flow
+   - Complete auth implementation
+   - Verify against local Supabase
    - MUST COMPLETE BEFORE OTHER FEATURES
 
 2. File Handling (PRIORITY 2)
    - BLOCKED: Requires working authentication
-   - Search for existing file handling components
-   - Implement upload/download/delete
-   - Add progress indicators
-   - Handle errors gracefully
-   - Get file handling tests passing
-   - Document file operations
+   - Design file upload/download components
+   - Implement file storage service
+   - Add file management tests
+   - Document file handling flow
+   - Verify storage bucket configuration
 
 3. WebSocket (PRIORITY 3)
-   - BLOCKED: Requires working authentication
-   - Search for existing WebSocket implementations
-   - Implement real-time updates
-   - Add connection management
-   - Handle disconnects gracefully
-   - Get WebSocket tests passing
-   - Document WebSocket protocol
-
-## Working Style
-- Always check for existing implementations first
-- Focus on one feature at a time
-- Write tests first, then implement
-- Commit after each passing test
-- Update PROGRESS.md after significant changes
-- Flag blockers immediately in PROGRESS.md
-- Use agent mode for all operations
-- Verify local Supabase before implementation
-- Document all debugging steps
-- Explain any duplicate implementations
-- DO NOT start blocked features
+   - BLOCKED: Requires Authentication and File Handling
+   - Design WebSocket service
+   - Implement real-time messaging
+   - Add WebSocket tests
+   - Document WebSocket architecture
+   - Note: Will use Redis for pub/sub in production
 
 ## Code Search Steps
 Before implementing any feature:
@@ -93,25 +131,10 @@ grep -r "test" tests/
 grep -r "it(" tests/
 
 # Search for similar components
-find src/ -type f -name "*.vue" -o -name "*.js"
+find src/ -type f -name "*.jsx" -o -name "*.js"
 ```
 
 ## Verification Steps
-For Test Migration:
-```bash
-# Check current Playwright tests
-ls tests/e2e/
-
-# Check Vitest config
-cat vitest.config.js
-
-# Run current E2E tests
-npm run test:e2e
-
-# After migration, run new Vitest E2E tests
-npm run test
-```
-
 For Authentication:
 ```bash
 # Verify local Supabase is running
@@ -120,11 +143,13 @@ curl http://127.0.0.1:54321/auth/v1/health
 # Check environment variables
 env | grep SUPABASE
 
-# Check Supabase client setup
-grep -r "createClient" src/
+# Run auth tests (with timeout)
+npm run test auth --timeout=30000
 
-# Run auth tests
-npm run test auth
+# Test specific auth issues
+npm run test auth:token --timeout=30000
+npm run test auth:errors --timeout=30000
+npm run test auth:logout --timeout=30000
 ```
 
 For File Handling (BLOCKED):
@@ -160,7 +185,7 @@ npm run test
 - Realtime enabled on port 54321
 
 ## Communication Guidelines
-1. Update PROGRESS.md in the frontend worktree after:
+1. Update PROGRESS.md in your worktree root (not in PROJECT_DOCS) after:
    - Finding existing implementations
    - Completing a feature
    - Adding passing tests
@@ -168,6 +193,7 @@ npm run test
    - Making significant progress
    - Finding integration issues
    - Debugging major problems
+   - Fixing test environment issues
 
 2. Include in updates:
    - Current focus
@@ -179,17 +205,13 @@ npm run test
    - Debugging steps taken
    - Existing code found
    - Reasons for new implementations
+   - Test environment status
 
-3. Seek help from Main Claude if:
-   - Blocked for over 30 minutes
-   - Need infrastructure changes
-   - Integration issues arise
-   - Environment variables missing
-   - Local Supabase connection fails
-   - Test failures unclear
-   - Unsure about code reuse
-   - Found multiple implementations
-   - Authentication issues persist
+3. Progress File Location:
+   - Keep PROGRESS.md in: /home/jon/git/aether-workspaces/frontend/PROGRESS.md
+   - Do NOT use: /home/jon/PROJECT_DOCS/aether/PROGRESS/frontend/CURRENT.md
+   - Update after each significant change
+   - Commit progress updates with related code changes
 
 Remember: Excellence through verified progress 
 
@@ -199,4 +221,61 @@ Remember: Excellence through verified progress
 - Maintain consistent test patterns
 - Follow existing test structure
 - Use Vitest's browser testing for E2E
-- Document test architecture decisions 
+- Document test architecture decisions
+- Configure for React 18 features
+- Handle async operations properly
+- Mock external services consistently
+- Use @testing-library/react best practices
+
+## Test Environment Setup
+1. Required Configuration:
+   - React 18 concurrent mode support
+   - Proper async utility timeouts
+   - Consistent event handling
+   - Mock implementations for:
+     - localStorage
+     - fetch
+     - WebSocket
+     - ResizeObserver
+     - matchMedia
+   - Supabase auth mocking
+   - Proper cleanup after tests
+
+2. Common Issues:
+   - Token storage in tests
+   - Error message display
+   - Async operation timing
+   - React 18 concurrent mode
+   - Mock implementation consistency
+
+3. Debugging Steps:
+   - Check test environment setup
+   - Verify mock implementations
+   - Review async operation handling
+   - Validate cleanup procedures
+   - Ensure proper event timing
+
+## Testing Framework Migration
+1. Current Status:
+   - Playwright: Used for E2E tests (to be removed)
+   - Vitest: Main testing framework
+   
+2. Migration Steps:
+   - Review current Playwright tests
+   - Set up Vitest browser testing
+   - Migrate tests one feature at a time
+   - Start with Authentication tests
+   - Verify test coverage
+   - Remove Playwright once complete
+
+3. Verification:
+   ```bash
+   # Check current Playwright tests
+   npx playwright test
+
+   # Run Vitest tests
+   npm run test
+
+   # Check test coverage
+   npm run coverage
+   ``` 

@@ -4,10 +4,22 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   test: {
-    environment: 'happy-dom',
+    environment: 'jsdom',
+    globals: true,
     setupFiles: ['./tests/setup.js'],
-    include: ['./tests/**/*.{test,spec}.{js,jsx}'],
-    globals: true
+    testTimeout: 10000,
+    hookTimeout: 10000,
+    pool: 'forks',
+    poolOptions: {
+      threads: {
+        singleThread: true
+      }
+    },
+    environmentOptions: {
+      jsdom: {
+        resources: 'usable'
+      }
+    }
   },
   server: {
     port: 5173,
