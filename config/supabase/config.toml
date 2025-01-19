@@ -21,6 +21,14 @@ max_rows = 1000
 # Enable HTTPS endpoints locally using a self-signed certificate.
 enabled = false
 
+[api.cors]
+enabled = true
+allowed_origins = ["http://localhost:3000"]
+allowed_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"]
+allowed_headers = ["Authorization", "Content-Type", "Origin", "Accept", "X-Client-Info", "apikey"]
+exposed_headers = ["Content-Range", "Range"]
+max_age = 600  # 10 minutes
+
 [db]
 # Port to use for the local database URL.
 port = 54322
@@ -82,6 +90,37 @@ enabled = true
 # The maximum file size allowed (e.g. "5MB", "500KB").
 file_size_limit = "50MiB"
 
+# Configure storage buckets
+[storage.cors]
+enabled = true
+allowed_origins = ["http://localhost:3000"]
+allowed_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"]
+allowed_headers = ["Authorization", "Content-Type", "Origin", "Accept", "X-Client-Info", "apikey"]
+exposed_headers = ["Content-Range", "Range"]
+max_age = 600  # 10 minutes
+
+[storage.buckets.documents]
+public = false
+file_size_limit = "50MiB"
+allowed_mime_types = ["application/pdf", "text/plain", "text/markdown", "application/json"]
+
+# Configure rate limiting
+[storage.buckets.documents.rate_limits]
+max_requests_per_minute = 60
+max_uploads_per_minute = 10
+
+# Configure JWT validation
+[storage.jwt]
+enabled = true
+secret = "env(SUPABASE_JWT_SECRET)"
+exp = 3600  # 1 hour
+
+# Configure virus scanning (if available)
+[storage.security]
+enabled = true
+allowed_mime_types = ["application/pdf", "text/plain", "text/markdown", "application/json"]
+file_size_limit = "50MiB"
+
 # Image transformation API is available to Supabase Pro plan.
 # [storage.image_transformation]
 # enabled = true
@@ -97,9 +136,9 @@ file_size_limit = "50MiB"
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
-site_url = "http://127.0.0.1:3000"
+site_url = "http://localhost:3000"
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://127.0.0.1:3000"]
+additional_redirect_urls = ["http://localhost:3000"]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # If disabled, the refresh token will never expire.
