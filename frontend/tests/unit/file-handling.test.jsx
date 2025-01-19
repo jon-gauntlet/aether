@@ -1,8 +1,9 @@
 import React from 'react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { supabase } from '../../src/lib/supabaseClient'
-import { FileUpload } from '../../src/components/FileUpload'
+import { ChakraProvider } from '@chakra-ui/react'
+import { supabase } from '../../../src/lib/supabaseClient'
+import { FileUpload } from '../../../src/components/FileUpload'
 
 // Mock URL.createObjectURL
 const mockCreateObjectURL = vi.fn()
@@ -11,18 +12,26 @@ global.URL.createObjectURL = mockCreateObjectURL
 global.URL.revokeObjectURL = mockRevokeObjectURL
 
 // Mock Supabase storage
-vi.mock('../../src/lib/supabaseClient', () => ({
+vi.mock('../../../src/lib/supabaseClient', () => ({
   supabase: {
     storage: {
       from: vi.fn(() => ({
-        upload: vi.fn(() => ({ data: { path: 'test.pdf' }, error: null })),
-        download: vi.fn(() => ({ data: new Blob(['test content']), error: null })),
-        remove: vi.fn(() => ({ data: { path: 'test.pdf' }, error: null })),
-        list: vi.fn(() => ({ data: [{ name: 'test.pdf' }], error: null }))
+        upload: vi.fn(() => Promise.resolve({ data: { path: 'test.pdf' }, error: null })),
+        download: vi.fn(() => Promise.resolve({ data: new Blob(['test content']), error: null })),
+        remove: vi.fn(() => Promise.resolve({ data: { path: 'test.pdf' }, error: null })),
+        list: vi.fn(() => Promise.resolve({ data: [{ name: 'test.pdf' }], error: null }))
       }))
     }
   }
 }))
+
+const renderWithChakra = (component) => {
+  return render(
+    <ChakraProvider>
+      {component}
+    </ChakraProvider>
+  )
+}
 
 describe('File Handling', () => {
   beforeEach(() => {
@@ -34,26 +43,29 @@ describe('File Handling', () => {
     it('should upload file successfully', async () => {
       const file = new File(['test content'], 'test.pdf', { type: 'application/pdf' })
       
-      render(<FileUpload />)
+      renderWithChakra(<FileUpload />)
       
       const input = screen.getByTestId('file-input')
       fireEvent.change(input, { target: { files: [file] } })
+
+      const uploadButton = screen.getByTestId('upload-button')
+      fireEvent.click(uploadButton)
       
       await waitFor(() => {
-        expect(screen.getByText('File uploaded successfully')).toBeInTheDocument()
+        expect(screen.queryByText('File uploaded successfully')).toBeInTheDocument()
       })
     })
 
     it('should validate file size', async () => {
       const largeFile = new File(['x'.repeat(11 * 1024 * 1024)], 'large.pdf', { type: 'application/pdf' })
       
-      render(<FileUpload />)
+      renderWithChakra(<FileUpload />)
       
       const input = screen.getByTestId('file-input')
       fireEvent.change(input, { target: { files: [largeFile] } })
       
       await waitFor(() => {
-        expect(screen.getByText(/file size exceeds/i)).toBeInTheDocument()
+        expect(screen.getByTestId('message')).toHaveTextContent(/file size exceeds/i)
       })
     })
 
@@ -61,104 +73,128 @@ describe('File Handling', () => {
       const file = new File(['test content'], 'test.pdf', { type: 'application/pdf' })
       
       // Mock upload error
+      const mockUpload = vi.fn(() => Promise.resolve({ data: null, error: { message: 'Upload failed' } }))
       const mockFrom = vi.fn(() => ({
-        upload: vi.fn(() => ({ data: null, error: { message: 'Upload failed' } })),
+        upload: mockUpload,
         download: vi.fn(),
         remove: vi.fn(),
-        list: vi.fn(() => ({ data: [], error: null }))
+        list: vi.fn(() => Promise.resolve({ data: [], error: null }))
       }))
       vi.mocked(supabase.storage.from).mockImplementation(mockFrom)
       
-      render(<FileUpload />)
+      renderWithChakra(<FileUpload />)
       
       const input = screen.getByTestId('file-input')
       fireEvent.change(input, { target: { files: [file] } })
+
+      const uploadButton = screen.getByTestId('upload-button')
+      fireEvent.click(uploadButton)
       
       await waitFor(() => {
-        expect(screen.getByText('Upload failed')).toBeInTheDocument()
+        expect(screen.getByTestId('message')).toHaveTextContent('Upload failed')
       })
     })
   })
 
   describe('Download', () => {
     it('should download file successfully', async () => {
-      render(<FileUpload />)
+      // Mock initial list call
+      const mockFrom = vi.fn(() => ({
+        upload: vi.fn(),
+        download: vi.fn(() => Promise.resolve({ data: new Blob(['test content']), error: null })),
+        remove: vi.fn(),
+        list: vi.fn(() => Promise.resolve({ data: [{ name: 'test.pdf' }], error: null }))
+      }))
+      vi.mocked(supabase.storage.from).mockImplementation(mockFrom)
+      
+      renderWithChakra(<FileUpload />)
       
       await waitFor(() => {
-        expect(screen.getByTestId('download-button')).toBeInTheDocument()
+        expect(screen.getByTestId('file-name')).toHaveTextContent('test.pdf')
       })
       
       fireEvent.click(screen.getByTestId('download-button'))
       
       await waitFor(() => {
         expect(mockCreateObjectURL).toHaveBeenCalled()
-        expect(screen.getByText('File downloaded successfully')).toBeInTheDocument()
+        expect(screen.queryByText('File downloaded successfully')).toBeInTheDocument()
       })
     })
 
     it('should handle download errors', async () => {
       // Mock download error
+      const mockDownload = vi.fn(() => Promise.resolve({ data: null, error: { message: 'File not found' } }))
       const mockFrom = vi.fn(() => ({
         upload: vi.fn(),
-        download: vi.fn(() => ({ data: null, error: { message: 'File not found' } })),
+        download: mockDownload,
         remove: vi.fn(),
-        list: vi.fn(() => ({ data: [{ name: 'test.pdf' }], error: null }))
+        list: vi.fn(() => Promise.resolve({ data: [{ name: 'test.pdf' }], error: null }))
       }))
       vi.mocked(supabase.storage.from).mockImplementation(mockFrom)
       
-      render(<FileUpload />)
+      renderWithChakra(<FileUpload />)
       
       await waitFor(() => {
-        expect(screen.getByTestId('download-button')).toBeInTheDocument()
+        expect(screen.getByTestId('file-name')).toHaveTextContent('test.pdf')
       })
       
       fireEvent.click(screen.getByTestId('download-button'))
       
       await waitFor(() => {
-        expect(screen.getByText('File not found')).toBeInTheDocument()
+        expect(screen.getByTestId('message')).toHaveTextContent('File not found')
       })
     })
   })
 
   describe('Delete', () => {
     it('should delete file successfully', async () => {
-      render(<FileUpload />)
+      // Mock initial list call and delete
+      const mockFrom = vi.fn(() => ({
+        upload: vi.fn(),
+        download: vi.fn(),
+        remove: vi.fn(() => Promise.resolve({ data: { path: 'test.pdf' }, error: null })),
+        list: vi.fn(() => Promise.resolve({ data: [{ name: 'test.pdf' }], error: null }))
+      }))
+      vi.mocked(supabase.storage.from).mockImplementation(mockFrom)
+      
+      renderWithChakra(<FileUpload />)
       
       await waitFor(() => {
-        expect(screen.getByTestId('delete-button')).toBeInTheDocument()
+        expect(screen.getByTestId('file-name')).toHaveTextContent('test.pdf')
       })
       
       fireEvent.click(screen.getByTestId('delete-button'))
       
       await waitFor(() => {
-        expect(screen.getByText('File deleted successfully')).toBeInTheDocument()
+        expect(screen.queryByText('File deleted successfully')).toBeInTheDocument()
       })
     })
   })
 
   describe('List Files', () => {
     it('should list files on mount', async () => {
-      render(<FileUpload />)
+      renderWithChakra(<FileUpload />)
       
       await waitFor(() => {
-        expect(screen.getByText('test.pdf')).toBeInTheDocument()
+        expect(screen.getByTestId('file-name')).toHaveTextContent('test.pdf')
       })
     })
 
     it('should handle list errors', async () => {
       // Mock list error
+      const mockList = vi.fn(() => Promise.resolve({ data: null, error: { message: 'Failed to list files' } }))
       const mockFrom = vi.fn(() => ({
         upload: vi.fn(),
         download: vi.fn(),
         remove: vi.fn(),
-        list: vi.fn(() => ({ data: null, error: { message: 'Failed to list files' } }))
+        list: mockList
       }))
       vi.mocked(supabase.storage.from).mockImplementation(mockFrom)
       
-      render(<FileUpload />)
+      renderWithChakra(<FileUpload />)
       
       await waitFor(() => {
-        expect(screen.getByText('Failed to list files')).toBeInTheDocument()
+        expect(screen.getByTestId('message')).toHaveTextContent('Failed to list files')
       })
     })
   })

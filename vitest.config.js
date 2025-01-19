@@ -1,32 +1,20 @@
-import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
+import { defineConfig } from 'vitest/config'
+import react from '@vitejs/plugin-react'
 
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [react()],
   test: {
-    globals: true,
-    environment: 'node',
-    environmentOptions: {
-      jsdom: {
-        // JSDOM options for other tests
-      }
-    },
-    include: ['**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
-    exclude: ['**/node_modules/**', '**/dist/**'],
-    coverage: {
-      reporter: ['text', 'json', 'html'],
-      exclude: [
-        'coverage/**',
-        'dist/**',
-        '**/[.]**',
-        'packages/*/test?(s)/**',
-        '**/*.d.ts',
-        '**/virtual:*',
-        '**/__x00__*',
-        '**/\x00*',
-        'cypress/**',
-      ]
-    },
-    testTimeout: 30000,
+    environment: 'happy-dom',
+    setupFiles: ['./tests/setup.js'],
+    include: ['./tests/**/*.{test,spec}.{js,jsx}'],
+    globals: true
+  },
+  server: {
+    port: 5173,
+    host: 'localhost'
+  },
+  define: {
+    'import.meta.env.VITE_SUPABASE_URL': JSON.stringify('http://localhost:54321'),
+    'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify('test-anon-key')
   }
 }) 

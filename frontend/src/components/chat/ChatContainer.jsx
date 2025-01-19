@@ -5,13 +5,13 @@
 
 import React, { useEffect, useState, useCallback } from 'react'
 import { Box, VStack, useToast } from '@chakra-ui/react'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from '../../contexts/AuthContext'
 import { ChatMessageList } from './ChatMessageList'
 import ChatInput from './ChatInput'
-import * as apiClient from '../api/client'
+import * as apiClient from '../../api/client'
 import { FileUpload } from './FileUpload'
 
-function ChatContainer() {
+export const ChatContainer = () => {
   const [messages, setMessages] = useState([])
   const [channel, setChannel] = useState('general')
   const [error, setError] = useState(null)
@@ -129,6 +129,4 @@ function ChatContainer() {
       </VStack>
     </Box>
   )
-}
-
-export default ChatContainer 
+} 

@@ -6,9 +6,9 @@ import {
   FormLabel,
   Input,
   VStack,
-  Text,
-  useToast,
-  Container,
+  Alert,
+  AlertIcon,
+  AlertDescription
 } from '@chakra-ui/react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -16,32 +16,36 @@ export function Auth() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { signIn } = useAuth();
-  const toast = useToast();
+  const [error, setError] = useState('');
+  const { login } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
+    setError('');
+
     try {
-      await signIn(email, password);
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to sign in',
-        status: 'error',
-        duration: 3000,
-        isClosable: true,
-      });
+      const { error: loginError } = await login({ email, password });
+      if (loginError) {
+        setError(loginError);
+      }
+    } catch (err) {
+      setError(err.message || 'Network error');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <Container maxW="container.sm" py={10}>
-      <Box p={8} borderWidth={1} borderRadius="lg" boxShadow="lg">
-        <VStack spacing={4} as="form" onSubmit={handleSubmit}>
-          <Text fontSize="2xl" fontWeight="bold">Sign In</Text>
+    <Box maxW="md" mx="auto" mt={8}>
+      <form onSubmit={handleSubmit} noValidate>
+        <VStack spacing={4}>
+          {error && (
+            <Alert status="error" role="alert">
+              <AlertIcon />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
           
           <FormControl isRequired>
             <FormLabel>Email</FormLabel>
@@ -49,7 +53,10 @@ export function Auth() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your email"
+              data-testid="email-input"
+              disabled={isLoading}
+              required
+              aria-invalid={!email && 'true'}
             />
           </FormControl>
 
@@ -59,7 +66,10 @@ export function Auth() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter your password"
+              data-testid="password-input"
+              disabled={isLoading}
+              required
+              aria-invalid={!password && 'true'}
             />
           </FormControl>
 
@@ -68,11 +78,13 @@ export function Auth() {
             colorScheme="blue"
             width="full"
             isLoading={isLoading}
+            data-testid="login-button"
+            disabled={isLoading}
           >
-            Sign In
+            Login
           </Button>
         </VStack>
-      </Box>
-    </Container>
+      </form>
+    </Box>
   );
 } 

@@ -1,99 +1,75 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react'
-import { supabase } from '../services/supabase'
+import React, { createContext, useContext, useState, useEffect } from 'react'
+import { supabase } from '../lib/supabaseClient'
 
-const AuthContext = createContext(null)
+const AuthContext = createContext({})
 
-export function AuthProvider({ children }) {
+export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
 
-  // Check for existing auth on mount
-  useEffect(() => {
-    const token = localStorage.getItem('auth_token')
-    if (token) {
-      checkAuth()
-    } else {
-      setLoading(false)
-    }
-  }, [])
-
-  const checkAuth = async () => {
+  const checkSession = async () => {
     try {
-      const token = localStorage.getItem('auth_token')
-      const response = await fetch('/api/auth/me', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
-      
-      if (!response.ok) {
-        throw new Error('Auth check failed')
+      const { data: { session }, error } = await supabase.auth.getSession()
+      if (error) throw error
+      if (session?.access_token) {
+        localStorage.setItem('auth_token', session.access_token)
       }
-
-      const data = await response.json()
-      setUser(data.user)
-    } catch (err) {
-      setError(err.message)
-      localStorage.removeItem('auth_token')
+      setUser(session?.user || null)
+    } catch (error) {
+      console.error('Session check error:', error)
       setUser(null)
     } finally {
       setLoading(false)
     }
   }
 
-  async function login({ email, password }) {
+  useEffect(() => {
+    checkSession()
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.access_token) {
+        localStorage.setItem('auth_token', session.access_token)
+      } else {
+        localStorage.removeItem('auth_token')
+      }
+      setUser(session?.user || null)
+    })
+
+    return () => {
+      subscription?.unsubscribe()
+    }
+  }, [])
+
+  const login = async (email, password) => {
     try {
-      setLoading(true)
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       })
-      
-      if (error) {
-        setUser(null)
-        localStorage.removeItem('auth_token')
-        return { user: null, error: error.message || 'Invalid credentials' }
+      if (error) throw error
+      if (data.session?.access_token) {
+        localStorage.setItem('auth_token', data.session.access_token)
       }
-      
-      if (!data?.session?.access_token) {
-        return { user: null, error: 'Invalid response from server' }
-      }
-
-      // Store token and user data
-      localStorage.setItem('auth_token', data.session.access_token)
       setUser(data.user)
-      return { user: data.user, error: null }
+      return data
     } catch (error) {
-      console.error('Login error:', error)
-      setUser(null)
-      localStorage.removeItem('auth_token')
-      return { user: null, error: error.message || 'An error occurred during login' }
-    } finally {
-      setLoading(false)
+      throw error
     }
   }
 
-  const logout = useCallback(async () => {
+  const logout = async () => {
     try {
+      const { error } = await supabase.auth.signOut()
+      if (error) throw error
       localStorage.removeItem('auth_token')
       setUser(null)
-    } catch (err) {
-      setError(err.message)
+    } catch (error) {
+      console.error('Error logging out:', error)
     }
-  }, [])
-
-  const value = {
-    user,
-    loading,
-    error,
-    login,
-    logout,
-    checkAuth
   }
 
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider value={{ user, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   )

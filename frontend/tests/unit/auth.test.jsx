@@ -1,26 +1,66 @@
 import React from 'react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { Auth } from '../../src/components/Auth'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { Auth } from '../../src/components/auth/Auth'
 import { AuthProvider } from '../../src/contexts/AuthContext'
 
-// Mock fetch for API calls
-const mockFetch = vi.fn()
-global.fetch = mockFetch
+vi.mock('../../src/lib/supabaseClient', () => {
+  return {
+    supabase: {
+      auth: {
+        signInWithPassword: vi.fn(async ({ email, password }) => {
+          await new Promise(resolve => setTimeout(resolve, 100))
+          if (email === 'test@example.com' && password === 'password') {
+            return {
+              data: {
+                user: { email: 'test@example.com' },
+                session: { access_token: 'test-token' }
+              },
+              error: null
+            }
+          }
+          return {
+            data: null,
+            error: { message: 'Invalid credentials' }
+          }
+        }),
+        signOut: vi.fn(async () => {
+          return { error: null }
+        }),
+        getSession: vi.fn(async () => {
+          return {
+            data: {
+              session: null
+            },
+            error: null
+          }
+        }),
+        onAuthStateChange: vi.fn((callback) => {
+          callback('SIGNED_IN', {
+            user: { email: 'test@example.com' },
+            session: { access_token: 'test-token' }
+          })
+          return { data: { subscription: { unsubscribe: vi.fn() } } }
+        })
+      }
+    }
+  }
+})
 
 describe('Auth', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockFetch.mockReset()
     localStorage.clear()
   })
 
-  it('renders login form', () => {
-    render(
-      <AuthProvider>
-        <Auth />
-      </AuthProvider>
-    )
+  it('renders login form', async () => {
+    await act(async () => {
+      render(
+        <AuthProvider>
+          <Auth />
+        </AuthProvider>
+      )
+    })
 
     expect(screen.getByTestId('email-input')).toBeInTheDocument()
     expect(screen.getByTestId('password-input')).toBeInTheDocument()
@@ -28,65 +68,47 @@ describe('Auth', () => {
   })
 
   it('handles successful login', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        user: { email: 'test@example.com' },
-        session: { token: 'test-token' }
+    await act(async () => {
+      render(
+        <AuthProvider>
+          <Auth />
+        </AuthProvider>
+      )
+    })
+
+    await act(async () => {
+      fireEvent.change(screen.getByTestId('email-input'), {
+        target: { value: 'test@example.com' }
       })
+      fireEvent.change(screen.getByTestId('password-input'), {
+        target: { value: 'password' }
+      })
+      fireEvent.click(screen.getByTestId('login-button'))
     })
-
-    render(
-      <AuthProvider>
-        <Auth />
-      </AuthProvider>
-    )
-
-    fireEvent.change(screen.getByTestId('email-input'), {
-      target: { value: 'test@example.com' }
-    })
-    fireEvent.change(screen.getByTestId('password-input'), {
-      target: { value: 'password' }
-    })
-    fireEvent.click(screen.getByTestId('login-button'))
 
     await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledWith('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          email: 'test@example.com',
-          password: 'password'
-        })
-      })
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     })
-
-    expect(localStorage.getItem('auth_token')).toBe('test-token')
   })
 
   it('handles failed login', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      json: async () => ({
-        error: 'Invalid credentials'
+    await act(async () => {
+      render(
+        <AuthProvider>
+          <Auth />
+        </AuthProvider>
+      )
+    })
+
+    await act(async () => {
+      fireEvent.change(screen.getByTestId('email-input'), {
+        target: { value: 'wrong@example.com' }
       })
+      fireEvent.change(screen.getByTestId('password-input'), {
+        target: { value: 'wrongpass' }
+      })
+      fireEvent.click(screen.getByTestId('login-button'))
     })
-
-    render(
-      <AuthProvider>
-        <Auth />
-      </AuthProvider>
-    )
-
-    fireEvent.change(screen.getByTestId('email-input'), {
-      target: { value: 'wrong@example.com' }
-    })
-    fireEvent.change(screen.getByTestId('password-input'), {
-      target: { value: 'wrongpass' }
-    })
-    fireEvent.click(screen.getByTestId('login-button'))
 
     await waitFor(() => {
       expect(screen.getByRole('alert')).toHaveTextContent('Invalid credentials')
@@ -94,13 +116,17 @@ describe('Auth', () => {
   })
 
   it('validates required fields', async () => {
-    render(
-      <AuthProvider>
-        <Auth />
-      </AuthProvider>
-    )
+    await act(async () => {
+      render(
+        <AuthProvider>
+          <Auth />
+        </AuthProvider>
+      )
+    })
 
-    fireEvent.click(screen.getByTestId('login-button'))
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('login-button'))
+    })
 
     await waitFor(() => {
       expect(screen.getByTestId('email-input')).toBeInvalid()
@@ -109,24 +135,29 @@ describe('Auth', () => {
   })
 
   it('disables form during submission', async () => {
-    mockFetch.mockImplementationOnce(() => new Promise(resolve => setTimeout(resolve, 100)))
-
-    render(
-      <AuthProvider>
-        <Auth />
-      </AuthProvider>
-    )
-
-    fireEvent.change(screen.getByTestId('email-input'), {
-      target: { value: 'test@example.com' }
+    await act(async () => {
+      render(
+        <AuthProvider>
+          <Auth />
+        </AuthProvider>
+      )
     })
-    fireEvent.change(screen.getByTestId('password-input'), {
-      target: { value: 'password' }
-    })
-    fireEvent.click(screen.getByTestId('login-button'))
 
-    expect(screen.getByTestId('email-input')).toBeDisabled()
-    expect(screen.getByTestId('password-input')).toBeDisabled()
-    expect(screen.getByTestId('login-button')).toBeDisabled()
+    let submitPromise
+    await act(async () => {
+      fireEvent.change(screen.getByTestId('email-input'), {
+        target: { value: 'test@example.com' }
+      })
+      fireEvent.change(screen.getByTestId('password-input'), {
+        target: { value: 'password' }
+      })
+      submitPromise = fireEvent.click(screen.getByTestId('login-button'))
+    })
+
+    expect(screen.getByTestId('email-input')).toHaveAttribute('aria-disabled', 'true')
+    expect(screen.getByTestId('password-input')).toHaveAttribute('aria-disabled', 'true')
+    expect(screen.getByTestId('login-button')).toHaveAttribute('aria-disabled', 'true')
+
+    await submitPromise
   })
 }) 

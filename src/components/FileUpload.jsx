@@ -1,180 +1,243 @@
 import React, { useState, useEffect } from 'react'
+import {
+  Box,
+  Button,
+  Text,
+  VStack,
+  HStack,
+  Input,
+  Alert,
+  AlertIcon,
+  Progress,
+  useToast
+} from '@chakra-ui/react'
 import { supabase } from '../lib/supabaseClient'
 
-const FileUpload = () => {
-  const [error, setError] = useState(null)
-  const [success, setSuccess] = useState(null)
+const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+const BUCKET_NAME = 'documents'
+
+export function FileUpload() {
+  const [selectedFile, setSelectedFile] = useState(null)
   const [files, setFiles] = useState([])
+  const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-
-  const validateFile = (file) => {
-    const maxSize = 10 // 10MB
-    const allowedTypes = ['.pdf', '.doc', '.docx']
-    
-    if (file.size > maxSize * 1024 * 1024) {
-      throw new Error(`File size exceeds ${maxSize}MB limit`)
-    }
-    
-    const ext = '.' + file.name.split('.').pop().toLowerCase()
-    if (!allowedTypes.includes(ext)) {
-      throw new Error('Invalid file type. Allowed types: PDF, DOC, DOCX')
-    }
-  }
-
-  const handleFileChange = async (e) => {
-    const file = e.target.files[0]
-    if (!file) return
-
-    try {
-      setLoading(true)
-      setError(null)
-      setSuccess(null)
-      validateFile(file)
-
-      const { data, error: uploadError } = await supabase.storage
-        .from('files')
-        .upload(`${Date.now()}-${file.name}`, file)
-
-      if (uploadError) {
-        throw new Error('Upload failed')
-      }
-      
-      setSuccess('File uploaded successfully')
-      await listFiles()
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const listFiles = async () => {
-    try {
-      setError(null)
-      setSuccess(null)
-      setLoading(true)
-      const { data, error } = await supabase.storage.from('files').list()
-      if (error) {
-        throw new Error('Failed to list files')
-      }
-      setFiles(data || [])
-    } catch (err) {
-      setError(err.message)
-      setFiles([])
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleDownload = async (path) => {
-    try {
-      setError(null)
-      setSuccess(null)
-      setLoading(true)
-      const { data, error } = await supabase.storage.from('files').download(path)
-      if (error) {
-        throw new Error('File not found')
-      }
-      
-      // Handle URL.createObjectURL in test environment
-      const url = typeof URL.createObjectURL === 'function' 
-        ? URL.createObjectURL(data)
-        : '#test-download-url'
-        
-      const a = document.createElement('a')
-      a.href = url
-      a.download = path.split('/').pop()
-      a.click()
-      
-      if (typeof URL.revokeObjectURL === 'function') {
-        URL.revokeObjectURL(url)
-      }
-      
-      setSuccess('File downloaded successfully')
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleDelete = async (path) => {
-    try {
-      setError(null)
-      setSuccess(null)
-      setLoading(true)
-      const { error } = await supabase.storage.from('files').remove([path])
-      if (error) {
-        throw new Error('Failed to delete file')
-      }
-      setSuccess('File deleted successfully')
-      await listFiles()
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
-    }
-  }
+  const toast = useToast()
 
   useEffect(() => {
     listFiles()
   }, [])
 
-  return (
-    <div className="p-4">
-      {error && (
-        <div className="text-red-500 mb-4" role="alert">
-          {error}
-        </div>
-      )}
-      {success && (
-        <div className="text-green-500 mb-4" role="alert">
-          {success}
-        </div>
-      )}
-      <div className="mb-4">
-        <input
-          type="file"
-          accept=".pdf,.doc,.docx"
-          onChange={handleFileChange}
-          className="mb-2"
-          data-testid="file-input"
-          disabled={loading}
-        />
-        <button
-          onClick={listFiles}
-          className="bg-blue-500 text-white px-4 py-2 rounded"
-          data-testid="list-button"
-          disabled={loading}
-        >
-          Refresh Files
-        </button>
-      </div>
-      <div className="space-y-2">
-        {files.map((file) => (
-          <div key={file.name} className="flex items-center space-x-2">
-            <span>{file.name}</span>
-            <button
-              onClick={() => handleDownload(file.name)}
-              className="bg-green-500 text-white px-2 py-1 rounded"
-              data-testid="download-button"
-              disabled={loading}
-            >
-              Download
-            </button>
-            <button
-              onClick={() => handleDelete(file.name)}
-              className="bg-red-500 text-white px-2 py-1 rounded"
-              data-testid="delete-button"
-              disabled={loading}
-            >
-              Delete
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
+  const listFiles = async () => {
+    try {
+      const { data, error } = await supabase.storage.from(BUCKET_NAME).list()
+      
+      if (error) throw error
+      
+      setFiles(data || [])
+    } catch (err) {
+      setError('Failed to list files')
+      toast({
+        title: 'Error',
+        description: err.message,
+        status: 'error',
+        duration: 5000,
+        isClosable: true
+      })
+    }
+  }
 
-export default FileUpload 
+  const handleFileChange = (event) => {
+    const file = event.target.files[0]
+    if (!file) return
+
+    if (file.size > MAX_FILE_SIZE) {
+      setError('File size exceeds 10MB limit')
+      return
+    }
+
+    setSelectedFile(file)
+    setError('')
+  }
+
+  const handleUpload = async () => {
+    if (!selectedFile) return
+    
+    setLoading(true)
+    setError('')
+
+    try {
+      const { error } = await supabase.storage
+        .from(BUCKET_NAME)
+        .upload(selectedFile.name, selectedFile)
+
+      if (error) throw error
+
+      toast({
+        title: 'Success',
+        description: 'File uploaded successfully',
+        status: 'success',
+        duration: 3000,
+        isClosable: true
+      })
+      
+      await listFiles()
+    } catch (err) {
+      setError(err.message)
+      toast({
+        title: 'Error',
+        description: err.message,
+        status: 'error',
+        duration: 5000,
+        isClosable: true
+      })
+    } finally {
+      setSelectedFile(null)
+      setLoading(false)
+    }
+  }
+
+  const handleDownload = async (fileName) => {
+    setLoading(true)
+    setError('')
+
+    try {
+      const { data, error } = await supabase.storage
+        .from(BUCKET_NAME)
+        .download(fileName)
+
+      if (error) throw error
+
+      const url = URL.createObjectURL(data)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = fileName
+      a.click()
+      URL.revokeObjectURL(url)
+      
+      toast({
+        title: 'Success',
+        description: 'File downloaded successfully',
+        status: 'success',
+        duration: 3000,
+        isClosable: true
+      })
+    } catch (err) {
+      setError(err.message)
+      toast({
+        title: 'Error',
+        description: err.message,
+        status: 'error',
+        duration: 5000,
+        isClosable: true
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDelete = async (fileName) => {
+    setLoading(true)
+    setError('')
+
+    try {
+      const { error } = await supabase.storage
+        .from(BUCKET_NAME)
+        .remove([fileName])
+
+      if (error) throw error
+
+      toast({
+        title: 'Success',
+        description: 'File deleted successfully',
+        status: 'success',
+        duration: 3000,
+        isClosable: true
+      })
+      
+      await listFiles()
+    } catch (err) {
+      setError(err.message)
+      toast({
+        title: 'Error',
+        description: err.message,
+        status: 'error',
+        duration: 5000,
+        isClosable: true
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Box p={4}>
+      <VStack spacing={4} align="stretch">
+        {loading && <Progress size="xs" isIndeterminate />}
+        
+        {error && (
+          <Alert status="error" data-testid="message">
+            <AlertIcon />
+            {error}
+          </Alert>
+        )}
+
+        <Box className="upload-section">
+          <Input
+            type="file"
+            onChange={handleFileChange}
+            data-testid="file-input"
+            disabled={loading}
+            accept="image/*,application/pdf,.doc,.docx,.txt"
+          />
+          {selectedFile && (
+            <Button
+              mt={2}
+              colorScheme="blue"
+              onClick={handleUpload}
+              isLoading={loading}
+              data-testid="upload-button"
+            >
+              Upload
+            </Button>
+          )}
+        </Box>
+
+        <VStack spacing={2} align="stretch">
+          {files.map((file) => (
+            <Box
+              key={file.name}
+              p={2}
+              borderWidth={1}
+              borderRadius="md"
+              data-testid="file-item"
+            >
+              <HStack justify="space-between">
+                <Text data-testid="file-name">{file.name}</Text>
+                <HStack>
+                  <Button
+                    size="sm"
+                    colorScheme="green"
+                    onClick={() => handleDownload(file.name)}
+                    isLoading={loading}
+                    data-testid="download-button"
+                  >
+                    Download
+                  </Button>
+                  <Button
+                    size="sm"
+                    colorScheme="red"
+                    onClick={() => handleDelete(file.name)}
+                    isLoading={loading}
+                    data-testid="delete-button"
+                  >
+                    Delete
+                  </Button>
+                </HStack>
+              </HStack>
+            </Box>
+          ))}
+        </VStack>
+      </VStack>
+    </Box>
+  )
+} 
