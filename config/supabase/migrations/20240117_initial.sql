@@ -27,15 +27,61 @@ CREATE TABLE IF NOT EXISTS document_chunks (
 );
 
 -- Create storage bucket for documents
-INSERT INTO storage.buckets (id, name)
-VALUES ('documents', 'Document Storage')
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('documents', 'Document Storage', false)
 ON CONFLICT (id) DO NOTHING;
 
 -- Set storage policies
-CREATE POLICY "Documents are publicly accessible"
+CREATE POLICY "Documents are accessible by authenticated users only"
 ON storage.objects FOR SELECT
-USING ( bucket_id = 'documents' );
+USING (
+    bucket_id = 'documents' 
+    AND auth.role() = 'authenticated'
+);
 
-CREATE POLICY "Anyone can upload documents"
+CREATE POLICY "Authenticated users can upload documents"
 ON storage.objects FOR INSERT
-WITH CHECK ( bucket_id = 'documents' ); 
+WITH CHECK (
+    bucket_id = 'documents'
+    AND auth.role() = 'authenticated'
+    AND (OCTET_LENGTH(file) <= 52428800)  -- 50MB in bytes
+    AND (
+        LOWER(SUBSTRING(name FROM '\.([^\.]+)$')) IN (
+            'pdf', 'txt', 'md', 'json'
+        )
+    )
+);
+
+CREATE POLICY "Users can only delete their own documents"
+ON storage.objects FOR DELETE
+USING (
+    bucket_id = 'documents'
+    AND auth.uid()::text = (storage.foldername(name))[1]
+);
+
+-- Rate limiting function
+CREATE OR REPLACE FUNCTION check_upload_rate_limit()
+RETURNS TRIGGER AS $$
+DECLARE
+    upload_count INTEGER;
+BEGIN
+    -- Count uploads in the last minute for this user
+    SELECT COUNT(*)
+    INTO upload_count
+    FROM storage.objects
+    WHERE auth.uid()::text = (storage.foldername(name))[1]
+    AND created_at > NOW() - INTERVAL '1 minute';
+
+    IF upload_count >= 10 THEN
+        RAISE EXCEPTION 'Upload rate limit exceeded';
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create trigger for rate limiting
+CREATE TRIGGER enforce_upload_rate_limit
+    BEFORE INSERT ON storage.objects
+    FOR EACH ROW
+    EXECUTE FUNCTION check_upload_rate_limit(); 
