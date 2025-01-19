@@ -1,0 +1,112 @@
+import { Meta, ColorPalette, ColorItem, Title, Subtitle, Story } from '@storybook/blocks'
+import { ThemeShowcase } from '../components/examples/ThemeShowcase'
+import { ThemeUsage } from '../components/examples/ThemeUsage'
+import { colors, typography, spacing, borderRadius, shadows } from './tokens'
+
+<Meta title="Theme/Overview" />
+
+<Title>Theme System</Title>
+
+Our theme system provides a comprehensive set of design tokens and utilities for creating consistent, dark-mode ready components.
+
+<Subtitle>Color Palette</Subtitle>
+
+<ColorPalette>
+  <ColorItem 
+    title="Primary" 
+    subtitle="Primary brand colors"
+    colors={colors.primary} 
+  />
+  <ColorItem 
+    title="Neutral" 
+    subtitle="Neutral grays"
+    colors={colors.neutral} 
+  />
+  <ColorItem 
+    title="Success" 
+    subtitle="Success states"
+    colors={colors.success} 
+  />
+  <ColorItem 
+    title="Warning" 
+    subtitle="Warning states"
+    colors={colors.warning} 
+  />
+  <ColorItem 
+    title="Error" 
+    subtitle="Error states"
+    colors={colors.error} 
+  />
+</ColorPalette>
+
+<Subtitle>Typography</Subtitle>
+
+### Font Families
+- Body: `{typography.fonts.body}`
+- Heading: `{typography.fonts.heading}`
+- Mono: `{typography.fonts.mono}`
+
+### Font Sizes
+{Object.entries(typography.fontSizes).map(([name, size]) => (
+  <div key={name} style={{ fontSize: size, marginBottom: '0.5rem' }}>
+    {name} ({size}) - The quick brown fox jumps over the lazy dog
+  </div>
+))}
+
+<Subtitle>Spacing Scale</Subtitle>
+
+<div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
+  {Object.entries(spacing).map(([name, value]) => (
+    <div key={name} style={{ 
+      width: value, 
+      height: '20px', 
+      background: colors.primary[500],
+      borderRadius: '4px'
+    }}>
+      <div style={{ fontSize: '12px', marginTop: '24px' }}>{name} ({value})</div>
+    </div>
+  ))}
+</div>
+
+<Subtitle>Border Radius</Subtitle>
+
+<div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
+  {Object.entries(borderRadius).map(([name, value]) => (
+    <div key={name} style={{ 
+      width: '100px', 
+      height: '100px', 
+      background: colors.primary[500],
+      borderRadius: value
+    }}>
+      <div style={{ fontSize: '12px', marginTop: '110px' }}>{name} ({value})</div>
+    </div>
+  ))}
+</div>
+
+<Subtitle>Shadows</Subtitle>
+
+<div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', padding: '2rem' }}>
+  {Object.entries(shadows).map(([name, value]) => (
+    <div key={name} style={{ 
+      width: '150px', 
+      height: '150px', 
+      background: 'white',
+      boxShadow: value,
+      borderRadius: '8px'
+    }}>
+      <div style={{ padding: '1rem' }}>{name}</div>
+    </div>
+  ))}
+</div>
+
+<Subtitle>Component Showcase</Subtitle>
+
+<Story name="Theme Showcase">
+  <ThemeShowcase />
+</Story>
+
+<Subtitle>Usage Guide</Subtitle>
+
+<Story name="Theme Usage">
+  <ThemeUsage />
+</Story> 
