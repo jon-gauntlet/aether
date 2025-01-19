@@ -1,6 +1,68 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import WebSocketService from './WebSocketService';
 
+// Mock WebSocket
+class MockWebSocket {
+  constructor(url) {
+    this.url = url;
+    this.readyState = WebSocket.CONNECTING;
+    this.CONNECTING = WebSocket.CONNECTING;
+    this.OPEN = WebSocket.OPEN;
+    this.CLOSING = WebSocket.CLOSING;
+    this.CLOSED = WebSocket.CLOSED;
+  }
+
+  send(data) {
+    if (this.readyState !== WebSocket.OPEN) {
+      throw new Error('WebSocket is not open');
+    }
+    if (this.mockSendError) {
+      throw new Error('Mock send error');
+    }
+    this.lastSentMessage = data;
+  }
+
+  close() {
+    this.readyState = WebSocket.CLOSED;
+    if (this.onclose) {
+      this.onclose();
+    }
+  }
+
+  simulateOpen() {
+    this.readyState = WebSocket.OPEN;
+    if (this.onopen) {
+      this.onopen();
+    }
+  }
+
+  simulateMessage(data) {
+    if (this.onmessage) {
+      this.onmessage({ data: JSON.stringify(data) });
+    }
+  }
+
+  simulateError(error) {
+    if (this.onerror) {
+      this.onerror(error);
+    }
+  }
+
+  simulateClose() {
+    this.readyState = WebSocket.CLOSED;
+    if (this.onclose) {
+      this.onclose();
+    }
+  }
+}
+
+// Mock global WebSocket
+global.WebSocket = MockWebSocket;
+global.WebSocket.CONNECTING = 0;
+global.WebSocket.OPEN = 1;
+global.WebSocket.CLOSING = 2;
+global.WebSocket.CLOSED = 3;
+
 describe('WebSocketService', () => {
   let webSocketService;
   const mockUrl = 'ws://localhost:8080';
