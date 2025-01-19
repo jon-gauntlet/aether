@@ -1,0 +1,23 @@
+MIME-Version: 1.0
+Content-Type: application/msword
+Content-Transfer-Encoding: binary
+
+PERFORMANCE TEST DOCUMENT 2
+
+1. Test Overview
+   - Category: performance
+   - ID: 2
+   - Priority: 2
+
+2. Test Objectives
+   - Verify system functionality
+   - Validate data processing
+   - Measure performance
+
+3. Expected Results
+   - All tests should pass
+   - Performance within thresholds
+   - No errors reported
+
+4. Notes
+   This is a simulated Word document for testing purposes.

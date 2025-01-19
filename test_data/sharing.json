@@ -1,0 +1,46 @@
+[
+  {
+    "file_id": "unit_test_1.txt",
+    "owner": "test1",
+    "shared_with": [
+      "test2"
+    ],
+    "permissions": [
+      "read"
+    ],
+    "shared_at": "2025-01-19T13:07:58.835965",
+    "expires_at": null,
+    "access_count": 8,
+    "status": "active"
+  },
+  {
+    "file_id": "integration_test_2.pdf",
+    "owner": "test2",
+    "shared_with": [
+      "test1",
+      "test3"
+    ],
+    "permissions": [
+      "read",
+      "write"
+    ],
+    "shared_at": "2025-01-19T13:07:58.835969",
+    "expires_at": "2025-01-26T13:07:58.835970",
+    "access_count": 5,
+    "status": "active"
+  },
+  {
+    "file_id": "performance_test_3.json",
+    "owner": "test1",
+    "shared_with": [
+      "test4"
+    ],
+    "permissions": [
+      "read"
+    ],
+    "shared_at": "2025-01-19T13:07:58.835977",
+    "expires_at": null,
+    "access_count": 0,
+    "status": "pending"
+  }
+]

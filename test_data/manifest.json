@@ -1,0 +1,473 @@
+{
+  "files": [
+    {
+      "path": "files/unit/unit_test_0.pdf",
+      "size": 371,
+      "type": "application/pdf",
+      "created_at": "2025-01-19T13:07:58.833585",
+      "metadata": {
+        "test_category": "unit",
+        "complexity": "complex",
+        "priority": 3,
+        "tags": [
+          "unit",
+          "priority_1",
+          "test"
+        ]
+      }
+    },
+    {
+      "path": "files/unit/unit_test_1.pdf",
+      "size": 371,
+      "type": "application/pdf",
+      "created_at": "2025-01-19T13:07:58.833718",
+      "metadata": {
+        "test_category": "unit",
+        "complexity": "complex",
+        "priority": 3,
+        "tags": [
+          "unit",
+          "priority_2",
+          "test"
+        ]
+      }
+    },
+    {
+      "path": "files/unit/unit_test_2.txt",
+      "size": 188,
+      "type": "text/plain",
+      "created_at": "2025-01-19T13:07:58.833823",
+      "metadata": {
+        "test_category": "unit",
+        "complexity": "medium",
+        "priority": 1,
+        "tags": [
+          "unit",
+          "priority_3",
+          "test"
+        ]
+      }
+    },
+    {
+      "path": "files/unit/unit_test_3.txt",
+      "size": 188,
+      "type": "text/plain",
+      "created_at": "2025-01-19T13:07:58.833916",
+      "metadata": {
+        "test_category": "unit",
+        "complexity": "simple",
+        "priority": 2,
+        "tags": [
+          "unit",
+          "priority_2",
+          "test"
+        ]
+      }
+    },
+    {
+      "path": "files/unit/unit_test_4.pdf",
+      "size": 371,
+      "type": "application/pdf",
+      "created_at": "2025-01-19T13:07:58.834009",
+      "metadata": {
+        "test_category": "unit",
+        "complexity": "simple",
+        "priority": 3,
+        "tags": [
+          "unit",
+          "priority_3",
+          "test"
+        ]
+      }
+    },
+    {
+      "path": "files/unit/unit_test_5.json",
+      "size": 871,
+      "type": "application/json",
+      "created_at": "2025-01-19T13:07:58.834185",
+      "metadata": {
+        "test_category": "unit",
+        "complexity": "simple",
+        "priority": 3,
+        "tags": [
+          "unit",
+          "priority_3",
+          "test"
+        ]
+      }
+    },
+    {
+      "path": "files/unit/unit_test_6.txt",
+      "size": 188,
+      "type": "text/plain",
+      "created_at": "2025-01-19T13:07:58.834273",
+      "metadata": {
+        "test_category": "unit",
+        "complexity": "simple",
+        "priority": 2,
+        "tags": [
+          "unit",
+          "priority_1",
+          "test"
+        ]
+      }
+    },
+    {
+      "path": "files/integration/integration_test_0.doc",
+      "size": 471,
+      "type": "application/msword",
+      "created_at": "2025-01-19T13:07:58.834367",
+      "metadata": {
+        "test_category": "integration",
+        "complexity": "complex",
+        "priority": 1,
+        "tags": [
+          "integration",
+          "priority_1",
+          "test"
+        ]
+      }
+    },
+    {
+      "path": "files/integration/integration_test_1.json",
+      "size": 899,
+      "type": "application/json",
+      "created_at": "2025-01-19T13:07:58.834513",
+      "metadata": {
+        "test_category": "integration",
+        "complexity": "complex",
+        "priority": 3,
+        "tags": [
+          "integration",
+          "priority_3",
+          "test"
+        ]
+      }
+    },
+    {
+      "path": "files/integration/integration_test_2.json",
+      "size": 899,
+      "type": "application/json",
+      "created_at": "2025-01-19T13:07:58.834660",
+      "metadata": {
+        "test_category": "integration",
+        "complexity": "complex",
+        "priority": 1,
+        "tags": [
+          "integration",
+          "priority_3",
+          "test"
+        ]
+      }
+    },
+    {
+      "path": "files/integration/integration_test_3.txt",
+      "size": 198,
+      "type": "text/plain",
+      "created_at": "2025-01-19T13:07:58.834743",
+      "metadata": {
+        "test_category": "integration",
+        "complexity": "medium",
+        "priority": 2,
+        "tags": [
+          "integration",
+          "priority_2",
+          "test"
+        ]
+      }
+    },
+    {
+      "path": "files/integration/integration_test_4.json",
+      "size": 899,
+      "type": "application/json",
+      "created_at": "2025-01-19T13:07:58.834879",
+      "metadata": {
+        "test_category": "integration",
+        "complexity": "complex",
+        "priority": 3,
+        "tags": [
+          "integration",
+          "priority_2",
+          "test"
+        ]
+      }
+    },
+    {
+      "path": "files/integration/integration_test_5.txt",
+      "size": 198,
+      "type": "text/plain",
+      "created_at": "2025-01-19T13:07:58.834970",
+      "metadata": {
+        "test_category": "integration",
+        "complexity": "complex",
+        "priority": 3,
+        "tags": [
+          "integration",
+          "priority_2",
+          "test"
+        ]
+      }
+    },
+    {
+      "path": "files/integration/integration_test_6.md",
+      "size": 755,
+      "type": "text/markdown",
+      "created_at": "2025-01-19T13:07:58.835059",
+      "metadata": {
+        "test_category": "integration",
+        "complexity": "complex",
+        "priority": 2,
+        "tags": [
+          "integration",
+          "priority_2",
+          "test"
+        ]
+      }
+    },
+    {
+      "path": "files/performance/performance_test_0.md",
+      "size": 755,
+      "type": "text/markdown",
+      "created_at": "2025-01-19T13:07:58.835151",
+      "metadata": {
+        "test_category": "performance",
+        "complexity": "medium",
+        "priority": 1,
+        "tags": [
+          "performance",
+          "priority_2",
+          "test"
+        ]
+      }
+    },
+    {
+      "path": "files/performance/performance_test_1.json",
+      "size": 899,
+      "type": "application/json",
+      "created_at": "2025-01-19T13:07:58.835288",
+      "metadata": {
+        "test_category": "performance",
+        "complexity": "simple",
+        "priority": 3,
+        "tags": [
+          "performance",
+          "priority_2",
+          "test"
+        ]
+      }
+    },
+    {
+      "path": "files/performance/performance_test_2.doc",
+      "size": 471,
+      "type": "application/msword",
+      "created_at": "2025-01-19T13:07:58.835370",
+      "metadata": {
+        "test_category": "performance",
+        "complexity": "complex",
+        "priority": 1,
+        "tags": [
+          "performance",
+          "priority_3",
+          "test"
+        ]
+      }
+    },
+    {
+      "path": "files/performance/performance_test_3.doc",
+      "size": 471,
+      "type": "application/msword",
+      "created_at": "2025-01-19T13:07:58.835450",
+      "metadata": {
+        "test_category": "performance",
+        "complexity": "simple",
+        "priority": 3,
+        "tags": [
+          "performance",
+          "priority_3",
+          "test"
+        ]
+      }
+    },
+    {
+      "path": "files/performance/performance_test_4.json",
+      "size": 899,
+      "type": "application/json",
+      "created_at": "2025-01-19T13:07:58.835585",
+      "metadata": {
+        "test_category": "performance",
+        "complexity": "simple",
+        "priority": 2,
+        "tags": [
+          "performance",
+          "priority_1",
+          "test"
+        ]
+      }
+    },
+    {
+      "path": "files/performance/performance_test_5.json",
+      "size": 899,
+      "type": "application/json",
+      "created_at": "2025-01-19T13:07:58.835714",
+      "metadata": {
+        "test_category": "performance",
+        "complexity": "complex",
+        "priority": 1,
+        "tags": [
+          "performance",
+          "priority_2",
+          "test"
+        ]
+      }
+    },
+    {
+      "path": "files/performance/performance_test_6.md",
+      "size": 755,
+      "type": "text/markdown",
+      "created_at": "2025-01-19T13:07:58.835793",
+      "metadata": {
+        "test_category": "performance",
+        "complexity": "medium",
+        "priority": 2,
+        "tags": [
+          "performance",
+          "priority_2",
+          "test"
+        ]
+      }
+    }
+  ],
+  "users": [
+    {
+      "id": "test1",
+      "email": "test1@example.com",
+      "name": "Test Admin 1",
+      "role": "admin",
+      "permissions": [
+        "read",
+        "write",
+        "admin",
+        "manage_users"
+      ],
+      "created_at": "2025-01-19T13:07:58.835824",
+      "status": "active",
+      "preferences": {
+        "theme": "light",
+        "notifications": true,
+        "language": "en"
+      }
+    },
+    {
+      "id": "test2",
+      "email": "test2@example.com",
+      "name": "Test Power_User 2",
+      "role": "power_user",
+      "permissions": [
+        "read",
+        "write",
+        "share"
+      ],
+      "created_at": "2025-01-19T13:07:58.835829",
+      "status": "active",
+      "preferences": {
+        "theme": "light",
+        "notifications": true,
+        "language": "en"
+      }
+    },
+    {
+      "id": "test3",
+      "email": "test3@example.com",
+      "name": "Test User 3",
+      "role": "user",
+      "permissions": [
+        "read",
+        "write"
+      ],
+      "created_at": "2025-01-19T13:07:58.835832",
+      "status": "active",
+      "preferences": {
+        "theme": "light",
+        "notifications": true,
+        "language": "en"
+      }
+    },
+    {
+      "id": "test4",
+      "email": "test4@example.com",
+      "name": "Test Viewer 4",
+      "role": "viewer",
+      "permissions": [
+        "read"
+      ],
+      "created_at": "2025-01-19T13:07:58.835834",
+      "status": "active",
+      "preferences": {
+        "theme": "dark",
+        "notifications": true,
+        "language": "en"
+      }
+    }
+  ],
+  "sharing": [
+    {
+      "file_id": "unit_test_1.txt",
+      "owner": "test1",
+      "shared_with": [
+        "test2"
+      ],
+      "permissions": [
+        "read"
+      ],
+      "shared_at": "2025-01-19T13:07:58.835965",
+      "expires_at": null,
+      "access_count": 8,
+      "status": "active"
+    },
+    {
+      "file_id": "integration_test_2.pdf",
+      "owner": "test2",
+      "shared_with": [
+        "test1",
+        "test3"
+      ],
+      "permissions": [
+        "read",
+        "write"
+      ],
+      "shared_at": "2025-01-19T13:07:58.835969",
+      "expires_at": "2025-01-26T13:07:58.835970",
+      "access_count": 5,
+      "status": "active"
+    },
+    {
+      "file_id": "performance_test_3.json",
+      "owner": "test1",
+      "shared_with": [
+        "test4"
+      ],
+      "permissions": [
+        "read"
+      ],
+      "shared_at": "2025-01-19T13:07:58.835977",
+      "expires_at": null,
+      "access_count": 0,
+      "status": "pending"
+    }
+  ],
+  "generated_at": "2025-01-19T13:07:58.836290",
+  "test_suite_version": "1.0.0",
+  "metadata": {
+    "purpose": "Integration and Performance Testing",
+    "environment": "development",
+    "generated_by": "TestDataGenerator",
+    "categories": [
+      "unit",
+      "integration",
+      "performance"
+    ],
+    "total_files": 21,
+    "total_users": 4,
+    "total_sharing_scenarios": 3
+  }
+}
