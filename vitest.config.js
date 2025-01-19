@@ -14,7 +14,8 @@ export default defineConfig({
     include: ['**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     exclude: ['**/node_modules/**', '**/dist/**'],
     coverage: {
-      reporter: ['text', 'json', 'html'],
+      provider: 'v8',
+      reporter: ['text', 'json', 'html', 'lcov'],
       exclude: [
         'coverage/**',
         'dist/**',
@@ -25,7 +26,15 @@ export default defineConfig({
         '**/__x00__*',
         '**/\x00*',
         'cypress/**',
-      ]
+      ],
+      reportsDirectory: './coverage',
+      clean: true,
+      cleanOnRerun: true,
+      enabled: true,
+      lines: 80,
+      functions: 80,
+      branches: 80,
+      statements: 80
     },
     testTimeout: 30000,
   }

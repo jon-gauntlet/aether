@@ -6,6 +6,14 @@ describe('WebSocketService', () => {
   const mockUrl = 'ws://localhost:8080';
   const mockToken = 'valid-token-123';
 
+  // Define WebSocket constants
+  const WS_STATES = {
+    CONNECTING: 0,
+    OPEN: 1,
+    CLOSING: 2,
+    CLOSED: 3
+  };
+
   beforeEach(() => {
     vi.useFakeTimers();
     
@@ -13,31 +21,36 @@ describe('WebSocketService', () => {
     global.WebSocket = class MockWebSocket {
       constructor(url) {
         this.url = url;
-        this.readyState = WebSocket.CONNECTING;
+        this.readyState = WS_STATES.CONNECTING;
         this.sent = [];
+        
+        // Define WebSocket constants on instance
+        Object.assign(this, WS_STATES);
+        
+        // Simulate connection
         setTimeout(() => {
-          this.readyState = WebSocket.OPEN;
+          this.readyState = WS_STATES.OPEN;
           this.onopen?.();
         }, 0);
       }
 
       close() {
-        this.readyState = WebSocket.CLOSED;
+        this.readyState = WS_STATES.CLOSED;
         this.onclose?.();
       }
 
       send(data) {
+        if (this.readyState !== WS_STATES.OPEN) {
+          throw new Error('WebSocket is not open');
+        }
         this.sent.push(data);
       }
 
       simulateMessage(data) {
-        this.onmessage?.({ data: JSON.stringify(data) });
+        if (this.readyState === WS_STATES.OPEN) {
+          this.onmessage?.({ data: JSON.stringify(data) });
+        }
       }
-
-      CONNECTING = 0;
-      OPEN = 1;
-      CLOSING = 2;
-      CLOSED = 3;
     };
 
     webSocketService = new WebSocketService(mockUrl);
@@ -45,6 +58,7 @@ describe('WebSocketService', () => {
 
   afterEach(() => {
     webSocketService.disconnect();
+    vi.clearAllTimers();
     vi.useRealTimers();
   });
 
