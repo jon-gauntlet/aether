@@ -10,22 +10,11 @@
 
 ## Current State (2024-03-21)
 - Working Directory: /home/jon/git/aether-workspaces/backend
-- Dependencies: ✅ All dependencies set up and verified
-  - ✅ Supabase: Connected and verified
-  - ✅ Redis: Installed and responding
-  - ✅ OpenAI: API key configured and working
-- Core Modules:
-  - ✅ cache_manager: Implemented with Redis and LRU cache
-  - ✅ query_expansion: Implemented with T5 model
-  - ⏳ vector_search: In progress
-  - 🔄 rag: Will use existing from src/rag_aether/ai/rag_system.py
-- Performance:
-  - ✅ Basic monitoring implemented
-  - ✅ Cache metrics tracking
-  - ⏳ Memory usage optimization
-  - ⏳ Response time benchmarking
+- All tests failing or erroring
+- Missing core dependencies and modules
 - Completed: Project structure, Test framework, Module stubs
 - CRITICAL: Environment setup needed first
+- Infrastructure Update: Redis being implemented by Infrastructure Claude
 
 ## Code Reuse First
 Before implementing any feature:
@@ -48,10 +37,16 @@ Complete the Aether backend implementation with a focus on:
         - Verify connection
         - Test auth endpoints
         - Configure environment variables
-     2. Redis Installation
-        - Install Redis locally
-        - Verify connection
-        - Test basic operations
+     2. Redis Setup
+        - Local Development:
+          - Install Redis locally
+          - Verify connection
+          - Test basic operations
+        - Production/Staging (Coordinated with Infrastructure Claude):
+          - Use ElastiCache endpoints
+          - Configure SSL/TLS
+          - Use IAM authentication
+          - Follow security guidelines
      3. OpenAI Configuration
         - Set up API key
         - Verify access
@@ -66,6 +61,10 @@ Complete the Aether backend implementation with a focus on:
    - Debug import path issues
    - Implement modules in order:
      1. cache_manager (Redis dependency)
+        - Support both local Redis and ElastiCache
+        - Use connection string from environment
+        - Implement retry logic
+        - Handle SSL/TLS in production
      2. query_expansion (OpenAI dependency)
      3. vector_search (Supabase dependency)
      4. rag (use existing from src/rag_aether/ai/rag_system.py)
@@ -215,3 +214,40 @@ poetry run pytest tests/performance/test_speed.py --benchmark-only
    - RAG implementation questions
 
 Remember: Excellence through verified progress 
+
+## Redis Configuration
+1. Local Development:
+   ```python
+   import redis
+
+   # Local Redis
+   redis_client = redis.Redis(
+       host='localhost',
+       port=6379,
+       decode_responses=True
+   )
+   ```
+
+2. Production/Staging:
+   ```python
+   import redis
+
+   # ElastiCache Redis
+   redis_client = redis.Redis(
+       host=os.getenv('REDIS_HOST'),
+       port=int(os.getenv('REDIS_PORT', 6379)),
+       ssl=True,
+       ssl_cert_reqs=None,  # For self-signed certs
+       decode_responses=True
+   )
+   ```
+
+3. Verification:
+   ```bash
+   # Local Redis
+   redis-cli ping
+   redis-cli info | grep version
+
+   # ElastiCache Redis
+   python -c "import redis; r = redis.Redis(host='YOUR-REDIS.cache.amazonaws.com', port=6379, ssl=True); r.ping()"
+   ``` 
