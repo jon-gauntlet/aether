@@ -5,17 +5,77 @@ import logging
 from supabase import create_client, Client
 from .ml_client import MLClient
 from ..config import load_credentials, SIMILARITY_THRESHOLD
+import faiss
+import numpy as np
+from datetime import datetime, UTC
+from uuid import uuid4
 
 logger = logging.getLogger(__name__)
 
 class VectorStore:
     """Vector store for document embeddings."""
     
-    def __init__(self):
-        """Initialize vector store with Supabase and ML clients."""
+    def __init__(self, dimension: int = 1536):
+        """Initialize vector store.
+        
+        Args:
+            dimension: Dimension of vectors (1536 for OpenAI ada-002)
+        """
+        self.dimension = dimension
+        self.index = faiss.IndexFlatL2(dimension)
+        self.documents = []
+        self.document_vectors = None
+        self.metadata = []
         creds = load_credentials()
         self.supabase = create_client(creds.supabase_url, creds.supabase_key)
         self.ml_client = MLClient()
+        
+    async def add_documents(
+        self,
+        texts: List[str],
+        embeddings: np.ndarray,
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> bool:
+        """Add documents with pre-computed embeddings.
+        
+        Args:
+            texts: List of document texts
+            embeddings: Document embeddings
+            metadata: Optional metadata for the documents
+            
+        Returns:
+            bool: True if successful
+        """
+        try:
+            if not texts or embeddings.size == 0:
+                return False
+                
+            embeddings_array = np.array(embeddings).astype('float32')
+            if len(texts) != embeddings_array.shape[0]:
+                raise ValueError("Number of texts must match number of embeddings")
+                
+            if metadata and len(metadata) != len(texts):
+                raise ValueError("Number of metadata entries must match number of texts")
+                
+            # Add to FAISS index
+            self.index.add(embeddings_array)
+            
+            # Store documents
+            for i, text in enumerate(texts):
+                doc_metadata = metadata[i] if metadata else {}
+                doc_metadata.update({
+                    "document_id": str(uuid4()),
+                    "timestamp": datetime.now(UTC).isoformat(),
+                    "index": len(self.documents)
+                })
+                self.documents.append(text)
+                self.metadata.append(doc_metadata)
+                
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error adding documents: {e}")
+            return False
         
     async def add_texts(
         self,
@@ -49,22 +109,35 @@ class VectorStore:
             batch_embeddings = embeddings[i:i + batch_size]
             batch_metadata = metadata[i:i + batch_size]
             
-            # Prepare batch insert data
-            documents = [
-                {
-                    'content': text,
-                    'embedding': embedding,
-                    'metadata': meta
-                }
-                for text, embedding, meta in zip(
-                    batch_texts,
-                    batch_embeddings,
-                    batch_metadata
-                )
-            ]
+            # Add to FAISS index
+            self.index.add(np.array(batch_embeddings))
             
-            # Insert batch
+            # Store documents
+            for text, meta in zip(batch_texts, batch_metadata):
+                doc_metadata = meta.copy()
+                doc_metadata.update({
+                    "document_id": str(uuid4()),
+                    "timestamp": datetime.now(UTC).isoformat(),
+                    "index": len(self.documents)
+                })
+                self.documents.append(text)
+                self.metadata.append(doc_metadata)
+            
+            # Insert to Supabase
             try:
+                documents = [
+                    {
+                        'content': text,
+                        'embedding': embedding,
+                        'metadata': meta
+                    }
+                    for text, embedding, meta in zip(
+                        batch_texts,
+                        batch_embeddings,
+                        batch_metadata
+                    )
+                ]
+                
                 result = self.supabase.table('embeddings').insert(
                     documents
                 ).execute()
@@ -82,50 +155,42 @@ class VectorStore:
                 
         return doc_ids
         
-    async def similarity_search(
+    async def search(
         self,
-        query: str,
-        k: int = 4,
-        threshold: float = SIMILARITY_THRESHOLD,
-        metadata_filter: Optional[Dict[str, Any]] = None
+        query_embedding: np.ndarray,
+        k: int = 5,
+        min_score: float = 0.0
     ) -> List[Dict[str, Any]]:
         """Search for similar documents.
         
         Args:
-            query: Query text
+            query_embedding: Query vector
             k: Number of results to return
-            threshold: Minimum similarity threshold
-            metadata_filter: Optional metadata filter
+            min_score: Minimum similarity score threshold
             
         Returns:
             List of documents with similarity scores
         """
-        # Get query embedding
-        query_embedding = await self.ml_client.create_embedding(query)
+        if not self.documents:
+            return []
+            
+        query_vector = query_embedding.reshape(1, -1)
+        distances, indices = self.index.search(query_vector, min(k, len(self.documents)))
         
-        try:
-            # Build query
-            query_builder = self.supabase.rpc(
-                'knn_match_embeddings',
-                {
-                    'query_embedding': query_embedding,
-                    'k': k
-                }
-            )
-            
-            # Add metadata filter if provided
-            if metadata_filter:
-                for key, value in metadata_filter.items():
-                    query_builder = query_builder.eq(f'metadata->{key}', value)
+        results = []
+        for distance, idx in zip(distances[0], indices[0]):
+            if idx != -1:  # Valid index
+                score = float(1.0 / (1.0 + distance))  # Convert distance to similarity score
+                if score >= min_score:
+                    result = {
+                        "document_id": self.metadata[idx]["document_id"],
+                        "score": score,
+                        "metadata": self.metadata[idx],
+                        "content": self.documents[idx]
+                    }
+                    results.append(result)
                     
-            # Execute search
-            result = query_builder.execute()
-            
-            return result.data
-            
-        except Exception as e:
-            logger.error(f"Failed to search documents: {e}")
-            raise
+        return sorted(results, key=lambda x: x["score"], reverse=True)
             
     async def delete_texts(
         self,

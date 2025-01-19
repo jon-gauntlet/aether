@@ -1,0 +1,122 @@
+groups:
+  - name: rag_system_alerts
+    rules:
+      - alert: HighMemoryUsage
+        expr: rag_system_memory_usage_percent > 85
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: High memory usage detected
+          description: Memory usage is above 85% for 5 minutes
+          recovery: |
+            1. Check memory-intensive operations
+            2. Review document batch sizes
+            3. Consider scaling up resources
+            4. Verify memory leaks
+            5. Clear cache if necessary
+
+      - alert: HighErrorRate
+        expr: rag_system_error_rate > 5
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: High error rate detected
+          description: Error rate is above 5% for 5 minutes
+          recovery: |
+            1. Check error logs
+            2. Verify API connectivity
+            3. Review recent changes
+            4. Check system resources
+            5. Consider rolling back changes
+
+      - alert: LowDocumentProcessingRate
+        expr: rate(rag_system_doc_ingestion_total[5m]) < 150000
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: Low document processing rate
+          description: Document processing rate below 150K/sec for 5 minutes
+          recovery: |
+            1. Check system resources
+            2. Verify vector store connectivity
+            3. Review batch sizes
+            4. Check for bottlenecks
+            5. Consider scaling resources
+
+      - alert: LowQueryRate
+        expr: rate(rag_system_query_total[5m]) < 150000
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: Low query processing rate
+          description: Query processing rate below 150K/sec for 5 minutes
+          recovery: |
+            1. Check cache performance
+            2. Verify API connectivity
+            3. Review query patterns
+            4. Check system resources
+            5. Consider scaling cache
+
+      - alert: HighQueryLatency
+        expr: histogram_quantile(0.95, rate(rag_system_query_duration_seconds_bucket[5m])) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: High query latency detected
+          description: 95th percentile query latency above 800ms for 5 minutes
+          recovery: |
+            1. Check system load
+            2. Review cache performance
+            3. Verify network latency
+            4. Check for slow queries
+            5. Consider optimization
+
+      - alert: LowCacheHitRatio
+        expr: rag_system_cache_hit_ratio < 0.7
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: Low cache hit ratio
+          description: Cache hit ratio below 70% for 15 minutes
+          recovery: |
+            1. Review cache strategy
+            2. Check cache size
+            3. Verify eviction policy
+            4. Analyze query patterns
+            5. Consider cache warming
+
+      - alert: HighCPUUsage
+        expr: rag_system_cpu_usage_percent > 90
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: High CPU usage detected
+          description: CPU usage above 90% for 5 minutes
+          recovery: |
+            1. Check system load
+            2. Review batch processing
+            3. Verify background tasks
+            4. Consider throttling
+            5. Scale if necessary
+
+      - alert: HighIOWait
+        expr: rag_system_io_wait_percent > 20
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: High IO wait detected
+          description: IO wait above 20% for 5 minutes
+          recovery: |
+            1. Check disk performance
+            2. Review IO patterns
+            3. Verify batch sizes
+            4. Consider IO optimization
+            5. Check for bottlenecks 

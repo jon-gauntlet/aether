@@ -1,125 +1,99 @@
-"""ML API client for embeddings and completions."""
+"""ML client for model interactions."""
 import asyncio
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 import logging
 from openai import AsyncOpenAI
-from ..config import load_credentials, EMBEDDING_MODEL, COMPLETION_MODEL
+from ..config import load_credentials, BATCH_SIZE
 
 logger = logging.getLogger(__name__)
 
 class MLClient:
-    """Client for ML API interactions."""
+    """Client for ML model interactions."""
     
     def __init__(self):
-        """Initialize the ML client with credentials."""
+        """Initialize ML client with OpenAI."""
         creds = load_credentials()
         self.client = AsyncOpenAI(api_key=creds.openai_api_key)
         
     async def create_embedding(self, text: str) -> List[float]:
-        """Create an embedding for the given text.
+        """Create embedding for a single text.
         
         Args:
-            text: The text to embed
+            text: Text to embed
             
         Returns:
-            List of floats representing the embedding vector
+            List of embedding values
         """
         try:
             response = await self.client.embeddings.create(
-                model=EMBEDDING_MODEL,
+                model="text-embedding-3-small",
                 input=text
             )
             return response.data[0].embedding
+            
         except Exception as e:
             logger.error(f"Failed to create embedding: {e}")
             raise
             
     async def create_embeddings_batch(
-        self, 
+        self,
         texts: List[str],
-        batch_size: int = 100
+        batch_size: int = BATCH_SIZE
     ) -> List[List[float]]:
         """Create embeddings for multiple texts in batches.
         
         Args:
             texts: List of texts to embed
-            batch_size: Number of texts to embed in each batch
+            batch_size: Number of texts to process in each batch
             
         Returns:
-            List of embedding vectors
+            List of embeddings
         """
         embeddings = []
+        
         for i in range(0, len(texts), batch_size):
             batch = texts[i:i + batch_size]
+            
             try:
                 response = await self.client.embeddings.create(
-                    model=EMBEDDING_MODEL,
+                    model="text-embedding-3-small",
                     input=batch
                 )
                 batch_embeddings = [data.embedding for data in response.data]
                 embeddings.extend(batch_embeddings)
+                
             except Exception as e:
                 logger.error(f"Failed to create embeddings batch: {e}")
                 raise
                 
         return embeddings
         
-    async def get_completion(
+    async def generate_response(
         self,
-        messages: List[Dict[str, str]],
-        temperature: float = 0.7,
-        max_tokens: Optional[int] = None,
-        top_p: float = 1.0,
-        frequency_penalty: float = 0.0,
-        presence_penalty: float = 0.0,
-        stop: Optional[List[str]] = None
+        system_prompt: str,
+        user_prompt: str,
+        model: str = "gpt-4-turbo-preview"
     ) -> str:
-        """Get a completion from the language model.
+        """Generate response from language model.
         
         Args:
-            messages: List of message dictionaries with 'role' and 'content'
-            temperature: Sampling temperature (0-2)
-            max_tokens: Maximum tokens to generate
-            top_p: Nucleus sampling parameter
-            frequency_penalty: Frequency penalty (-2 to 2)
-            presence_penalty: Presence penalty (-2 to 2)
-            stop: List of strings to stop generation at
+            system_prompt: System context/instruction
+            user_prompt: User query/input
+            model: Model to use
             
         Returns:
-            The generated completion text
+            Generated response text
         """
         try:
             response = await self.client.chat.completions.create(
-                model=COMPLETION_MODEL,
-                messages=messages,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                top_p=top_p,
-                frequency_penalty=frequency_penalty,
-                presence_penalty=presence_penalty,
-                stop=stop
+                model=model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ]
             )
             return response.choices[0].message.content
+            
         except Exception as e:
-            logger.error(f"Failed to get completion: {e}")
-            raise
-            
-    async def get_completions_batch(
-        self,
-        batch_messages: List[List[Dict[str, str]]],
-        **kwargs
-    ) -> List[str]:
-        """Get completions for multiple message sets in parallel.
-        
-        Args:
-            batch_messages: List of message lists
-            **kwargs: Additional arguments passed to get_completion
-            
-        Returns:
-            List of completion texts
-        """
-        tasks = [
-            self.get_completion(messages, **kwargs)
-            for messages in batch_messages
-        ]
-        return await asyncio.gather(*tasks) 
+            logger.error(f"Failed to generate response: {e}")
+            raise 
