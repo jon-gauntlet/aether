@@ -3,9 +3,10 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 class Message(BaseModel):
-    id: str = Field(default_factory=lambda: str(datetime.now().timestamp()))
+    id: str
     channel: str
     content: str
-    user_id: str
+    timestamp: datetime = datetime.now()
+    user_id: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.now)
     file_url: Optional[str] = None 
