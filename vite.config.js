@@ -1,9 +1,9 @@
 import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
+import react from '@vitejs/plugin-react'
 import path from 'path'
 
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [react()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src')
@@ -12,7 +12,21 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    include: ['frontend/tests/unit/**/*.test.js'],
-    setupFiles: ['frontend/tests/setup.js']
+    include: ['tests/**/*.test.{js,jsx}'],
+    setupFiles: ['tests/setup.js']
+  },
+  server: {
+    port: 5173,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/ws': {
+        target: 'ws://localhost:8000',
+        ws: true
+      }
+    }
   }
 }) 

@@ -1,5 +1,5 @@
-import { useState, useCallback, useRef } from 'react';
-import { RAGService } from '../services/rag';
+import { useCallback, useState } from 'react';
+import { queryRAG, ingestText } from '../services/rag';
 
 /**
  * @typedef {Object} UseRAGResult
@@ -50,80 +50,41 @@ import { RAGService } from '../services/rag';
  * @returns {UseRAGResult} The RAG hook interface containing query and ingestion functions, along with state
  */
 export function useRAG() {
-  const [answer, setAnswer] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  
-  // Use ref for service instance to prevent re-creation
-  const ragService = useRef(RAGService.getInstance());
 
-  // Debounce and cache query results
-  const queryCache = useRef(new Map());
-  const queryTimeoutRef = useRef(null);
-
-  const query = useCallback(async (question, context) => {
-    if (!question.trim()) return;
-
-    // Clear previous timeout
-    if (queryTimeoutRef.current) {
-      clearTimeout(queryTimeoutRef.current);
-    }
-
-    // Check cache
-    const cacheKey = JSON.stringify({ question, context });
-    if (queryCache.current.has(cacheKey)) {
-      setAnswer(queryCache.current.get(cacheKey));
-      return;
-    }
-
-    setLoading(true);
+  const query = useCallback(async (text) => {
+    setIsLoading(true);
     setError(null);
-
-    // Debounce query
-    queryTimeoutRef.current = setTimeout(async () => {
-      try {
-        const request = { question, context };
-        const response = await ragService.current.query(request);
-        
-        // Cache result
-        queryCache.current.set(cacheKey, response);
-        if (queryCache.current.size > 100) {
-          // Limit cache size
-          const firstKey = queryCache.current.keys().next().value;
-          queryCache.current.delete(firstKey);
-        }
-        
-        setAnswer(response);
-      } catch (err) {
-        setError(err instanceof Error ? err : new Error('An unknown error occurred'));
-      } finally {
-        setLoading(false);
-      }
-    }, 300); // 300ms debounce
+    try {
+      const result = await queryRAG(text);
+      return result;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  const ingestText = useCallback(async (text, metadata) => {
-    if (!text.trim()) return;
-    
-    setLoading(true);
+  const ingest = useCallback(async (text, metadata) => {
+    setIsLoading(true);
     setError(null);
-    
     try {
-      await ragService.current.ingestText(text, metadata);
-      // Clear cache after ingestion as it might affect future queries
-      queryCache.current.clear();
+      const result = await ingestText(text, metadata);
+      return result;
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('An unknown error occurred'));
+      setError(err.message);
+      throw err;
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   }, []);
 
   return {
     query,
-    ingestText,
-    answer,
-    loading,
+    ingestText: ingest,
+    isLoading,
     error,
   };
 } 
