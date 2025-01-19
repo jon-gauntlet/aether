@@ -182,10 +182,13 @@ class VectorStore:
             if idx != -1:  # Valid index
                 score = float(1.0 / (1.0 + distance))  # Convert distance to similarity score
                 if score >= min_score:
-                    doc = self.documents[idx].copy()
-                    doc["score"] = score
-                    doc["document_id"] = self.metadata[idx]["document_id"]
-                    results.append(doc)
+                    result = {
+                        "document_id": self.metadata[idx]["document_id"],
+                        "score": score,
+                        "metadata": self.metadata[idx],
+                        "content": self.documents[idx]
+                    }
+                    results.append(result)
                     
         return sorted(results, key=lambda x: x["score"], reverse=True)
             

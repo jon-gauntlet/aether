@@ -4,9 +4,7 @@ from unittest.mock import Mock, patch
 import torch
 from rag_aether.ai.query_expansion import (
     QueryProcessor,
-    QueryExpander,
-    expand_query,
-    get_flow_context
+    QueryExpander
 )
 from rag_aether.core.errors import QueryProcessingError, QueryExpansionError
 

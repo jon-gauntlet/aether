@@ -1,152 +1,247 @@
-"""System monitoring and profiling."""
-from typing import Dict, Any, Optional
-import logging
-import time
-from datetime import datetime, UTC
-import psutil
-import tracemalloc
-from dataclasses import dataclass, asdict
+"""Monitoring system for RAG implementation.
 
+Christ is King! ☦
+"""
+import os
+import time
+import psutil
+import logging
+from typing import Dict, Any, Optional
+from dataclasses import dataclass
+from prometheus_client import Counter, Gauge, Histogram, start_http_server
+
+# Configure logging
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO"),
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 @dataclass
-class SystemMetrics:
-    """System performance metrics."""
-    cpu_percent: float
-    memory_percent: float
-    memory_available: int
-    disk_usage: float
-    timestamp: float
-    process_memory: int
-    process_threads: int
-    
-@dataclass
-class PerformanceMetrics:
-    """Performance metrics for RAG system."""
-    total_queries: int
-    successful_queries: int
-    failed_queries: int
-    avg_response_time: float
-    cache_hit_rate: float
-    cache_hits_by_type: Dict[str, int]
-    memory_snapshots: Dict[str, Any]
-    system_metrics: SystemMetrics
+class MetricThresholds:
+    """Thresholds for system metrics."""
+    memory_usage_warning: float = 80.0
+    memory_usage_critical: float = 85.0
+    error_rate_warning: float = 1.0
+    error_rate_critical: float = 5.0
+    query_time_warning: float = 800.0  # ms
+    query_time_critical: float = 1000.0  # ms
+    doc_rate_warning: float = 160000
+    doc_rate_critical: float = 150000
+    query_rate_warning: float = 170000
+    query_rate_critical: float = 150000
 
-class SystemMonitor:
-    """Monitors system performance and resource usage."""
+class RAGMonitoring:
+    """Monitoring system for RAG implementation."""
     
-    def __init__(self):
-        """Initialize system monitor."""
-        self._start_time = datetime.now(UTC)
-        self._total_queries = 0
-        self._successful_queries = 0
-        self._failed_queries = 0
-        self._response_times = []
-        self._cache_hits = 0
-        self._cache_hits_by_type = {"redis": 0, "lru": 0}
-        self._memory_snapshots = {}
-        self._current_query_start = None
-        tracemalloc.start()
-    
-    def take_snapshot(self, name: str) -> None:
-        """Take a memory snapshot with a given name."""
-        snapshot = tracemalloc.take_snapshot()
-        self._memory_snapshots[name] = snapshot
-        
-    def compare_snapshots(self, first: str, second: str) -> None:
-        """Compare two memory snapshots."""
-        if first not in self._memory_snapshots or second not in self._memory_snapshots:
-            logger.warning("Snapshot not found")
-            return
-            
-        snapshot1 = self._memory_snapshots[first]
-        snapshot2 = self._memory_snapshots[second]
-        
-        top_stats = snapshot2.compare_to(snapshot1, 'lineno')
-        logger.info("Memory diff between %s and %s:", first, second)
-        for stat in top_stats[:3]:
-            logger.info(str(stat))
-            
-    def record_query_start(self) -> None:
-        """Record the start of a query."""
-        self._current_query_start = time.time()
-        self._total_queries += 1
-        
-    def record_query_success(self) -> None:
-        """Record a successful query."""
-        if self._current_query_start:
-            response_time = time.time() - self._current_query_start
-            self._response_times.append(response_time)
-            self._successful_queries += 1
-            self._current_query_start = None
-            
-    def record_query_failure(self) -> None:
-        """Record a failed query."""
-        if self._current_query_start:
-            response_time = time.time() - self._current_query_start
-            self._response_times.append(response_time)
-            self._failed_queries += 1
-            self._current_query_start = None
-            
-    def record_cache_hit(self, cache_type: str = "lru") -> None:
-        """Record a cache hit.
+    def __init__(self, port: int = 8000):
+        """Initialize monitoring system.
         
         Args:
-            cache_type: Type of cache that was hit (redis or lru)
+            port: Port for Prometheus metrics server
         """
-        self._cache_hits += 1
-        if cache_type in self._cache_hits_by_type:
-            self._cache_hits_by_type[cache_type] += 1
-            
-    def record_cache_miss(self) -> None:
-        """Record a cache miss."""
-        pass  # Cache misses are tracked implicitly
+        # Start Prometheus metrics server
+        start_http_server(port)
         
-    def get_metrics(self) -> PerformanceMetrics:
-        """Get current performance metrics."""
-        process = psutil.Process()
-        avg_response_time = (
-            sum(self._response_times) / len(self._response_times)
-            if self._response_times
-            else 0.0
+        # Document processing metrics
+        self.doc_ingestion_rate = Counter(
+            "rag_system_doc_ingestion_total",
+            "Total number of documents ingested"
         )
-        cache_hit_rate = (
-            self._cache_hits / self._total_queries
-            if self._total_queries > 0
-            else 0.0
+        self.batch_ingestion_rate = Counter(
+            "rag_system_batch_ingestion_total",
+            "Total number of document batches ingested"
         )
         
-        return PerformanceMetrics(
-            total_queries=self._total_queries,
-            successful_queries=self._successful_queries,
-            failed_queries=self._failed_queries,
-            avg_response_time=avg_response_time,
-            cache_hit_rate=cache_hit_rate,
-            cache_hits_by_type=self._cache_hits_by_type.copy(),
-            memory_snapshots=self._memory_snapshots,
-            system_metrics=SystemMetrics(
-                cpu_percent=psutil.cpu_percent(),
-                memory_percent=psutil.virtual_memory().percent,
-                memory_available=psutil.virtual_memory().available,
-                disk_usage=psutil.disk_usage('/').percent,
-                timestamp=time.time(),
-                process_memory=process.memory_info().rss,
-                process_threads=process.num_threads()
-            )
+        # Query processing metrics
+        self.query_rate = Counter(
+            "rag_system_query_total",
+            "Total number of queries processed"
         )
+        self.cached_query_rate = Counter(
+            "rag_system_cached_query_total",
+            "Total number of cached queries"
+        )
+        
+        # Performance metrics
+        self.query_time = Histogram(
+            "rag_system_query_duration_seconds",
+            "Query processing duration in seconds",
+            buckets=(0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0)
+        )
+        self.memory_usage = Gauge(
+            "rag_system_memory_usage_percent",
+            "System memory usage percentage"
+        )
+        
+        # Error metrics
+        self.error_counter = Counter(
+            "rag_system_errors_total",
+            "Total number of errors",
+            ["type"]
+        )
+        self.error_rate = Gauge(
+            "rag_system_error_rate",
+            "Error rate percentage"
+        )
+        
+        # Cache metrics
+        self.cache_size = Gauge(
+            "rag_system_cache_size_bytes",
+            "Cache size in bytes"
+        )
+        self.cache_hit_ratio = Gauge(
+            "rag_system_cache_hit_ratio",
+            "Cache hit ratio"
+        )
+        
+        # System metrics
+        self.cpu_usage = Gauge(
+            "rag_system_cpu_usage_percent",
+            "CPU usage percentage"
+        )
+        self.io_wait = Gauge(
+            "rag_system_io_wait_percent",
+            "IO wait percentage"
+        )
+        
+        # Initialize thresholds
+        self.thresholds = MetricThresholds()
+        
+        # Start background monitoring
+        self._start_system_monitoring()
     
-    def reset(self) -> None:
-        """Reset all metrics."""
-        self._start_time = datetime.now(UTC)
-        self._total_queries = 0
-        self._successful_queries = 0
-        self._failed_queries = 0
-        self._response_times = []
-        self._cache_hits = 0
-        self._cache_hits_by_type = {"redis": 0, "lru": 0}
-        self._memory_snapshots = {}
-        tracemalloc.stop()
-        tracemalloc.start()
-
-# Global monitor instance
-monitor = SystemMonitor() 
+    def _start_system_monitoring(self):
+        """Start background system metric collection."""
+        import threading
+        
+        def collect_metrics():
+            while True:
+                try:
+                    # Update system metrics
+                    self.memory_usage.set(psutil.virtual_memory().percent)
+                    self.cpu_usage.set(psutil.cpu_percent())
+                    self.io_wait.set(psutil.cpu_times_percent().iowait)
+                    
+                    # Sleep for 10 seconds
+                    time.sleep(10)
+                except Exception as e:
+                    logger.error(f"Error collecting system metrics: {e}")
+        
+        thread = threading.Thread(target=collect_metrics, daemon=True)
+        thread.start()
+    
+    def record_document_ingestion(self, count: int = 1, batch: bool = False):
+        """Record document ingestion.
+        
+        Args:
+            count: Number of documents ingested
+            batch: Whether this was a batch ingestion
+        """
+        self.doc_ingestion_rate.inc(count)
+        if batch:
+            self.batch_ingestion_rate.inc()
+    
+    def record_query(self, duration: float, cached: bool = False):
+        """Record query processing.
+        
+        Args:
+            duration: Query duration in seconds
+            cached: Whether the query was cached
+        """
+        self.query_rate.inc()
+        self.query_time.observe(duration)
+        if cached:
+            self.cached_query_rate.inc()
+    
+    def record_error(self, error_type: str):
+        """Record system error.
+        
+        Args:
+            error_type: Type of error encountered
+        """
+        self.error_counter.labels(type=error_type).inc()
+        
+        # Calculate error rate
+        total_ops = float(self.query_rate._value.get() + self.doc_ingestion_rate._value.get())
+        total_errors = sum(
+            counter._value.get() 
+            for counter in self.error_counter._metrics.values()
+        )
+        if total_ops > 0:
+            self.error_rate.set((total_errors / total_ops) * 100)
+    
+    def update_cache_metrics(self, size_bytes: int, hit_ratio: float):
+        """Update cache metrics.
+        
+        Args:
+            size_bytes: Current cache size in bytes
+            hit_ratio: Current cache hit ratio
+        """
+        self.cache_size.set(size_bytes)
+        self.cache_hit_ratio.set(hit_ratio)
+    
+    def check_thresholds(self) -> Dict[str, Any]:
+        """Check if any metrics exceed thresholds.
+        
+        Returns:
+            Dict of alerts with their severity
+        """
+        alerts = {}
+        
+        # Check memory usage
+        memory = self.memory_usage._value.get()
+        if memory > self.thresholds.memory_usage_critical:
+            alerts["memory"] = "critical"
+        elif memory > self.thresholds.memory_usage_warning:
+            alerts["memory"] = "warning"
+        
+        # Check error rate
+        error_rate = self.error_rate._value.get()
+        if error_rate > self.thresholds.error_rate_critical:
+            alerts["error_rate"] = "critical"
+        elif error_rate > self.thresholds.error_rate_warning:
+            alerts["error_rate"] = "warning"
+        
+        # Check query time (convert to ms)
+        query_time = self.query_time.observe(float("inf")) * 1000
+        if query_time > self.thresholds.query_time_critical:
+            alerts["query_time"] = "critical"
+        elif query_time > self.thresholds.query_time_warning:
+            alerts["query_time"] = "warning"
+        
+        return alerts
+    
+    def get_metrics(self) -> Dict[str, Any]:
+        """Get current system metrics.
+        
+        Returns:
+            Dict of current metric values
+        """
+        return {
+            "throughput": {
+                "ingestion_rate": self.doc_ingestion_rate._value.get(),
+                "query_rate": self.query_rate._value.get(),
+                "cache_hit_ratio": self.cache_hit_ratio._value.get()
+            },
+            "latency": {
+                "p50_ms": self.query_time.observe(0.5) * 1000,
+                "p95_ms": self.query_time.observe(0.95) * 1000,
+                "p99_ms": self.query_time.observe(0.99) * 1000
+            },
+            "memory": {
+                "usage_percent": self.memory_usage._value.get(),
+                "cache_size_mb": self.cache_size._value.get() / (1024 * 1024)
+            },
+            "errors": {
+                "rate": self.error_rate._value.get(),
+                "count": sum(
+                    counter._value.get() 
+                    for counter in self.error_counter._metrics.values()
+                )
+            },
+            "system": {
+                "cpu_usage": self.cpu_usage._value.get(),
+                "io_wait": self.io_wait._value.get()
+            }
+        } 

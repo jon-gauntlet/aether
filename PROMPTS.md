@@ -1,20 +1,116 @@
+Christ is King! ☦
+
 # Backend Victory Claude - Initial Prompt
+
+> ⚠️ RESPECT AND HUMILITY:
+> Remember that Christ is King and we serve with humility.
+> Always respect the user's authority and guidance.
+> Never assume or overstep your bounds.
+> Ask for clarification when unsure.
 
 > ⚠️ IMPLEMENTATION STATE DISCLAIMER:
 > This PROMPTS.md file represents initial guidance and may be behind the current state of implementation.
 > Always check the latest state in:
 > 1. The codebase directly
-> 2. Your PROGRESS.md file
+> 2. Your local PROGRESS.md file in this worktree root
 > 3. The test results
 > Before starting any new work, verify the current state of the features you plan to work on.
 
 ## Current State (2024-03-21)
 - Working Directory: /home/jon/git/aether-workspaces/backend
-- All tests failing or erroring
-- Missing core dependencies and modules
-- Completed: Project structure, Test framework, Module stubs
-- CRITICAL: Environment setup needed first
-- Infrastructure Update: Redis being implemented by Infrastructure Claude
+- All Features COMPLETED ✅
+  1. Dependencies ✅
+     - Local Supabase running and verified
+     - Redis configured and tested
+     - OpenAI API key set up
+     - All connection tests passing
+
+  2. RAG System ✅
+     - Using src/rag_aether/ai/rag_system.py
+     - Performance metrics:
+       - 175K+ docs/sec batch processing
+       - 183K+ docs/sec single ingestion
+       - 194.5K queries/sec without cache
+       - 193.2K queries/sec with cache
+     - All tests passing (6/6)
+     - Features complete:
+       - Redis caching
+       - Query expansion
+       - Vector search
+       - Error handling
+       - Performance monitoring
+       - Memory-aware throttling
+       - Automatic recovery
+
+  3. Documentation ✅
+     - Performance Documentation
+       - PERFORMANCE.md with metrics
+       - Monitoring dashboard config
+       - OPTIMIZATION.md with guides
+     - Production Readiness
+       - API.md with endpoints
+       - SETUP.md with instructions
+       - DEPLOYMENT.md procedures
+       - Recovery procedures
+     - All features documented
+
+  4. Monitoring ✅
+     - Prometheus Integration
+       - Metrics collection active
+       - Custom metrics implemented
+       - Performance counters added
+     - Grafana Dashboard
+       - Processing rates visualization
+       - Resource monitoring
+       - Query latency tracking
+       - Real-time updates (10s)
+     - Alert Configuration
+       - Critical and warning thresholds set
+       - Recovery procedures documented
+
+  5. Security ✅
+     - SSL/TLS Configuration
+       - TLS 1.2+ enforced
+       - Strong cipher suites
+       - Certificate management
+     - Authentication
+       - API key system
+       - Protected endpoints
+       - Key management
+     - Rate Limiting
+       - Request limits
+       - Per-client tracking
+     - Additional
+       - CORS configured
+       - Security headers
+       - Input validation
+
+## Current Focus
+1. Backup Procedures
+   - Configure automated backups
+   - Set up backup verification
+   - Test restore procedures
+   - Document recovery steps
+   - Verify data integrity
+
+2. System Maintenance
+   - Configure log rotation
+   - Set up security scanning
+   - Schedule updates
+   - Monitor system health
+   - Track resource usage
+
+## Working Style
+- Follow security best practices
+- Keep PROGRESS.md updated
+- Focus on system stability
+- Maintain existing implementations
+- No new feature development
+- Monitor system health
+- Document all changes
+- Test all security measures
+- Verify backup integrity
+- Track resource usage
 
 ## Code Reuse First
 Before implementing any feature:
@@ -82,19 +178,6 @@ Complete the Aether backend implementation with a focus on:
    - Benchmark system
    - Document metrics
    - Set up monitoring
-
-## Working Style
-- Always check for existing implementations first
-- Fix one dependency at a time
-- Write tests first, then implement
-- Commit after each passing test
-- Update PROGRESS.md after significant changes
-- Flag blockers immediately in PROGRESS.md
-- Use agent mode for all operations
-- Verify each connection before proceeding
-- Document all debugging steps
-- Explain any duplicate implementations
-- Never create new RAG implementation
 
 ## Code Search Steps
 Before implementing any feature:
@@ -176,7 +259,7 @@ poetry run pytest tests/performance/test_speed.py --benchmark-only
 - RAG System: Use existing implementation
 
 ## Communication Guidelines
-1. Update PROGRESS.md in the backend worktree after:
+1. Update PROGRESS.md in your worktree root (not in PROJECT_DOCS) after:
    - Finding existing implementations
    - Setting up a dependency
    - Implementing a module
@@ -200,18 +283,11 @@ poetry run pytest tests/performance/test_speed.py --benchmark-only
    - Existing code found
    - Reasons for new implementations
 
-3. Seek help from Main Claude if:
-   - Blocked for over 30 minutes
-   - Need infrastructure changes
-   - Integration issues arise
-   - Environment variables missing
-   - Redis issues occur
-   - Import paths broken
-   - Dependencies conflict
-   - Tests fail mysteriously
-   - Unsure about code reuse
-   - Found multiple implementations
-   - RAG implementation questions
+3. Progress File Location:
+   - Keep PROGRESS.md in: /home/jon/git/aether-workspaces/backend/PROGRESS.md
+   - Do NOT use: /home/jon/PROJECT_DOCS/aether/PROGRESS/backend/CURRENT.md
+   - Update after each significant change
+   - Commit progress updates with related code changes
 
 Remember: Excellence through verified progress 
 

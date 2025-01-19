@@ -8,7 +8,7 @@ import numpy as np
 from openai import AsyncOpenAI
 from redis import asyncio as aioredis
 from rag_aether.ai.vector_store import VectorStore
-from rag_aether.ai.query_expansion import QueryExpander
+from rag_aether.ai.query_expansion import QueryExpander, QueryExpansionError
 from rag_aether.core.monitoring import monitor
 from rag_aether.core.performance import with_performance_monitoring, performance_section
 from rag_aether.config import MODEL_CONFIG
@@ -47,8 +47,14 @@ class RAGSystem:
             
         Returns:
             bool: True if ingestion was successful
+            
+        Raises:
+            ValueError: If text is empty or invalid
         """
         try:
+            if not text or not text.strip():
+                raise ValueError("Text cannot be empty")
+                
             if batch_size is None:
                 batch_size = MODEL_CONFIG["embedding"]["batch_size"]
                 
@@ -74,7 +80,7 @@ class RAGSystem:
             
         except Exception as e:
             self.logger.error(f"Ingestion failed: {e}")
-            return False
+            raise
             
     @with_performance_monitoring
     async def query(
@@ -104,8 +110,11 @@ class RAGSystem:
             
             # Expand query
             with performance_section("expand_query"):
-                expanded = await self.query_expander.expand_query(query)
-                expanded_queries = expanded["expanded_queries"]
+                try:
+                    expanded = await self.query_expander.expand_query(query)
+                    expanded_queries = expanded["expanded_queries"]
+                except QueryExpansionError as e:
+                    raise e
             
             # Get embeddings for all expanded queries
             with performance_section("get_embeddings"):
