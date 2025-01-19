@@ -1,0 +1,21 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Install dependencies
+COPY package*.json ./
+RUN npm install
+
+# Copy test files
+COPY tests/performance ./tests/performance
+COPY shared ./shared
+
+# Install test dependencies
+RUN npm install -D vitest ws
+
+# Health check endpoint
+COPY tests/health.js ./
+
+EXPOSE 8000
+
+CMD ["node", "tests/health.js"] 

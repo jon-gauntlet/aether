@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import WebSocket from 'ws'
+import { config } from '../../shared/utils/supabase/config'
 
-const WS_URL = 'ws://localhost:8000/ws/test-channel'
+const WS_URL = `${config.api.wsUrl}/test-channel`
 const NUM_MESSAGES = 1000
 const MESSAGE_INTERVAL = 100 // Send a message every 100ms
 const CONNECTION_TIMEOUT = 5000 // 5 seconds timeout

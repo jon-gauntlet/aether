@@ -1,34 +1,32 @@
 import React from 'react'
-import { Link, Routes, Route } from 'react-router-dom'
-import ChatContainer from './components/ChatContainer'
+import { ChakraProvider, Box } from '@chakra-ui/react'
+import { AuthProvider } from './contexts/AuthContext'
+import { Auth } from './components/Auth'
+import { useAuth } from './contexts/AuthContext'
+import ChatContainer from './components/chat/ChatContainer'
+import { SpaceContainer } from './components/spaces'
+import ThemeToggle from './components/shared/ThemeToggle'
 
-const Home = () => (
-  <div>
-    <h1>Welcome to Aether</h1>
-    <ChatContainer />
-  </div>
-)
+function ProtectedChat() {
+  const { user, loading } = useAuth()
 
-const About = () => (
-  <div>
-    <h1>About Aether</h1>
-    <p>A modern chat application built with React and Supabase</p>
-  </div>
-)
+  if (loading) {
+    return <Box p={4}>Loading...</Box>
+  }
 
-const App = () => {
-  return (
-    <div>
-      <nav>
-        <Link to="/">Home</Link>
-        <Link to="/about">About</Link>
-      </nav>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/about" element={<About />} />
-      </Routes>
-    </div>
-  )
+  if (!user) {
+    return <Auth />
+  }
+
+  return <ChatContainer />
 }
 
-export default App 
+export default function App() {
+  return (
+    <ChakraProvider>
+      <AuthProvider>
+        <ProtectedChat />
+      </AuthProvider>
+    </ChakraProvider>
+  )
+} 
