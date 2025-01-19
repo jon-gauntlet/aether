@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-<<<<<<< HEAD
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
@@ -15,27 +14,28 @@
     "test:perf:analyze": "npm run test:perf && node scripts/analyze-performance.js",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "test:e2e:debug": "playwright test --debug"
+    "test:e2e:debug": "playwright test --debug",
+    "test:ws": "vitest run tests/performance/websocket.load.test.js --config vitest.config.js",
+    "test:memory": "vitest run tests/performance/memory.leak.test.js --config vitest.config.js",
+    "test:latency": "vitest run tests/performance/latency.test.js --config vitest.config.js"
   },
   "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.3",
+    "@vitest/ui": "^1.2.1",
     "concurrently": "^8.2.2",
     "eslint": "^8.56.0",
     "eslint-plugin-jest": "^27.6.3",
     "eslint-plugin-jsx-a11y": "^6.8.0",
     "eslint-plugin-react": "^7.33.2",
     "eslint-plugin-react-hooks": "^4.6.0",
-    "prettier": "^3.2.4"
+    "jsdom": "^24.0.0",
+    "prettier": "^3.2.4",
+    "vite": "^5.0.12",
+    "vitest": "^1.2.1",
+    "ws": "^8.16.0"
   },
   "dependencies": {
-    "@playwright/test": "^1.49.1"
-=======
-    "dev": "concurrently \"cd frontend && npx vite\" \"cd backend && poetry run uvicorn src.main:app --reload --port 8000\"",
-    "build": "cd frontend && npm run build",
-    "start": "concurrently \"cd frontend && npm run preview\" \"cd backend && poetry run uvicorn src.main:app --port 8000\"",
-    "install": "cd frontend && npm install --prefer-offline --no-audit --no-fund --no-package-lock --production && npm install --prefer-offline --no-audit --no-fund --no-package-lock --only=dev && cd ../backend && poetry install"
-  },
-  "devDependencies": {
-    "concurrently": "^8.2.2"
->>>>>>> feature/infra
+    "@playwright/test": "^1.49.1",
+    "vue": "^3.4.15"
   }
 }
