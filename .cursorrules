@@ -102,6 +102,12 @@
       "contextPreservation": true,
       "stateAwareness": true,
       "autoProtection": true,
+      "agentMode": {
+        "enabled": true,
+        "defaultMode": "agent",
+        "autoEnable": true,
+        "preserveAcrossSessions": true
+      },
       "codeReuse": {
         "enabled": true,
         "searchPaths": ["src/", "tests/"],
