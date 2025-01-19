@@ -1,6 +1,7 @@
 """Tests for query expansion module."""
 import pytest
 from unittest.mock import Mock, patch
+import torch
 from rag_aether.ai.query_expansion import (
     QueryProcessor,
     QueryExpander,
@@ -14,8 +15,23 @@ def mock_t5_tokenizer():
     """Mock T5 tokenizer."""
     with patch('rag_aether.ai.query_expansion.T5Tokenizer') as mock:
         tokenizer = Mock()
-        tokenizer.encode.return_value = Mock(to=lambda x: [1, 2, 3])
-        tokenizer.decode.return_value = "expanded test query about flow"
+        # Create mock tensor
+        mock_tensor = torch.tensor([[1, 2, 3]])
+        mock_tensor.to = Mock(return_value=mock_tensor)
+        
+        # Mock tokenizer call
+        tokenizer.return_value = {
+            "input_ids": mock_tensor,
+            "attention_mask": mock_tensor
+        }
+        
+        # Mock batch decode
+        tokenizer.batch_decode.return_value = [
+            "expanded test query about flow",
+            "another expanded query",
+            "third expansion"
+        ]
+        
         mock.from_pretrained.return_value = tokenizer
         yield mock
 
@@ -24,10 +40,9 @@ def mock_t5_model():
     """Mock T5 model."""
     with patch('rag_aether.ai.query_expansion.T5ForConditionalGeneration') as mock:
         model = Mock()
-        # Create a mock tensor that can be decoded
-        mock_tensor = Mock()
-        mock_tensor.__iter__ = lambda self: iter([1, 2, 3])
-        model.generate.return_value = [mock_tensor, mock_tensor, mock_tensor]
+        # Create mock tensor for generation output
+        mock_outputs = [torch.tensor([1, 2, 3]) for _ in range(3)]
+        model.generate.return_value = mock_outputs
         model.to.return_value = model
         mock.from_pretrained.return_value = model
         yield mock

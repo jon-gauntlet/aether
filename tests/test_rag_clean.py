@@ -1,12 +1,91 @@
-from rag_aether.ai.rag import RAGSystem
+from rag_aether.ai.rag_system import RAGSystem
 import os
 from dotenv import load_dotenv
 import time
 import warnings
 from langsmith.client import Client
+import pytest
+import pytest_asyncio
+from unittest.mock import AsyncMock, Mock
 
 # Disable LangSmith telemetry warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="langsmith.client")
+
+@pytest_asyncio.fixture
+async def mock_rag():
+    """Create mock RAG system."""
+    # Create mock OpenAI client
+    mock_openai = AsyncMock()
+    mock_openai.embeddings.create.return_value.data = [Mock(embedding=[0.1] * 1536)]
+    mock_openai.chat.completions.create.return_value.choices = [
+        Mock(message=Mock(content="Test response"))
+    ]
+    
+    # Create mock vector store
+    mock_vector_store = AsyncMock()
+    mock_vector_store.search.return_value = [
+        {
+            "text": "Test document",
+            "metadata": {"source": "test"},
+            "score": 0.95
+        }
+    ]
+    
+    # Create mock Redis client
+    mock_redis = AsyncMock()
+    mock_redis.get.return_value = None
+    
+    # Create RAG system with mocks
+    rag = RAGSystem()
+    rag.client = mock_openai
+    rag.vector_store = mock_vector_store
+    rag.redis = mock_redis
+    return rag
+
+@pytest.mark.asyncio
+async def test_ingest_text(mock_rag):
+    """Test text ingestion."""
+    result = await mock_rag.ingest_text(
+        "Test document",
+        metadata={"source": "test"}
+    )
+    assert result is True
+    mock_rag.vector_store.add_texts.assert_called_once()
+
+@pytest.mark.asyncio
+async def test_query(mock_rag):
+    """Test query functionality."""
+    results = await mock_rag.query("test query")
+    assert len(results) > 0
+    assert results[0]["score"] > 0
+    assert "text" in results[0]
+    assert "metadata" in results[0]
+
+@pytest.mark.asyncio
+async def test_query_with_cache(mock_rag):
+    """Test query with cache hit."""
+    # First query (cache miss)
+    await mock_rag.query("test query")
+    
+    # Second query (cache hit)
+    mock_rag.redis.get.return_value = [{"text": "Cached result"}]
+    results = await mock_rag.query("test query")
+    
+    assert len(results) > 0
+    assert results[0]["text"] == "Cached result"
+    mock_rag.vector_store.search.assert_called_once()  # Only called on first query
+
+@pytest.mark.asyncio
+async def test_empty_query(mock_rag):
+    """Test empty query handling."""
+    with pytest.raises(ValueError):
+        await mock_rag.query("")
+
+@pytest.mark.asyncio
+async def test_empty_text_ingestion(mock_rag):
+    """Test empty text ingestion handling."""
+    with pytest.raises(ValueError):
+        await mock_rag.ingest_text("")
 
 def test_rag_pipeline():
     """Test the complete RAG pipeline."""

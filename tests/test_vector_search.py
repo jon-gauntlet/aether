@@ -5,8 +5,7 @@ from rag_aether.ai.vector_search import OptimizedVectorSearch
 @pytest.fixture
 def vector_search():
     search = OptimizedVectorSearch()
-    search.cache = search.cache.__class__(use_redis=False)  # Use in-memory cache
-    return search
+    return search  # LRUCache is already in-memory only
 
 @pytest.fixture
 def sample_vector():
@@ -33,7 +32,10 @@ def test_invalid_input(vector_search):
     with pytest.raises(TypeError):
         vector_search.search([1, 2, 3])  # Not a numpy array
 
-def test_search_with_cache(vector_search, sample_vector):
+def test_search_with_cache(vector_search, sample_vector, sample_documents):
+    # Add documents first
+    vector_search.add_documents(sample_documents)
+    
     # First search should cache
     first_results = vector_search.search(sample_vector)
     assert isinstance(first_results, list)
