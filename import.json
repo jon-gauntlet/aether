@@ -1,0 +1,28 @@
+{
+  "Resources": {
+    "ECSCluster": {
+      "Type": "AWS::ECS::Cluster",
+      "PhysicalResourceId": "arn:aws:ecs:us-west-2:061051250133:cluster/aether-cluster"
+    },
+    "ECSService": {
+      "Type": "AWS::ECS::Service",
+      "PhysicalResourceId": "arn:aws:ecs:us-west-2:061051250133:service/aether-cluster/aether-service"
+    },
+    "AetherRepository": {
+      "Type": "AWS::ECR::Repository",
+      "PhysicalResourceId": "arn:aws:ecr:us-west-2:061051250133:repository/aether-backend"
+    },
+    "TaskRole": {
+      "Type": "AWS::IAM::Role",
+      "PhysicalResourceId": "arn:aws:iam::061051250133:role/ecsTaskRole"
+    },
+    "TaskExecutionRole": {
+      "Type": "AWS::IAM::Role",
+      "PhysicalResourceId": "arn:aws:iam::061051250133:role/ecsTaskExecutionRole"
+    },
+    "ContainerSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "PhysicalResourceId": "sg-00a94e35e3de05c47"
+    }
+  }
+}
