@@ -1,0 +1,14 @@
+[tool.poetry]
+name = "aether-infrastructure-config"
+version = "0.1.0"
+description = "AWS infrastructure configuration for Aether"
+authors = ["Jon"]
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.10"
+boto3 = "^1.36.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api" 
