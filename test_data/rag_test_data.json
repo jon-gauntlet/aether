@@ -1,0 +1,198 @@
+{
+  "documents": [
+    {
+      "id": "doc1",
+      "content": "The quick brown fox jumps over the lazy dog. \n                    This classic pangram contains every letter of the English alphabet at least once.\n                    Pangrams are often used to display font samples and test keyboards.\n                    This document tests basic text retrieval capabilities.",
+      "metadata": {
+        "type": "test",
+        "category": "basic",
+        "complexity": "simple",
+        "tags": [
+          "pangram",
+          "english",
+          "test"
+        ],
+        "priority": 1,
+        "embedding_model": "text-embedding-3-small"
+      }
+    },
+    {
+      "id": "doc2",
+      "content": "RAG systems combine retrieval and generation for better AI responses.\n                    They work by first retrieving relevant documents from a knowledge base,\n                    then using those documents to generate accurate and contextual responses.\n                    This document tests technical content retrieval.\n                    \n                    Key RAG Components:\n                    1. Document Indexing\n                    2. Vector Search\n                    3. Query Expansion\n                    4. Response Generation\n                    5. Context Integration",
+      "metadata": {
+        "type": "test",
+        "category": "technical",
+        "complexity": "high",
+        "tags": [
+          "rag",
+          "ai",
+          "technical"
+        ],
+        "priority": 1,
+        "embedding_model": "text-embedding-3-small"
+      }
+    },
+    {
+      "id": "doc3",
+      "content": "Performance testing guidelines for RAG systems:\n                    1. Measure retrieval latency\n                    2. Evaluate response quality\n                    3. Monitor resource usage\n                    4. Test with varying load\n                    5. Benchmark against baselines\n                    \n                    Performance Metrics:\n                    - Query Response Time\n                    - Throughput (QPS)\n                    - Memory Usage\n                    - GPU Utilization\n                    - Relevance Scores\n                    - Context Window Usage",
+      "metadata": {
+        "type": "test",
+        "category": "performance",
+        "complexity": "medium",
+        "tags": [
+          "performance",
+          "testing",
+          "metrics"
+        ],
+        "priority": 2,
+        "embedding_model": "text-embedding-3-small"
+      }
+    },
+    {
+      "id": "doc4",
+      "content": "Error handling in RAG systems:\n                    1. Invalid queries\n                    2. Missing documents\n                    3. Embedding failures\n                    4. Context window overflow\n                    5. Rate limiting\n                    \n                    Error Response Templates:\n                    - \"Unable to process query: {error}\"\n                    - \"Document not found: {doc_id}\"\n                    - \"Embedding generation failed\"\n                    - \"Context window exceeded\"\n                    - \"Rate limit reached\" ",
+      "metadata": {
+        "type": "test",
+        "category": "error_handling",
+        "complexity": "high",
+        "tags": [
+          "errors",
+          "handling",
+          "edge_cases"
+        ],
+        "priority": 1,
+        "embedding_model": "text-embedding-3-small"
+      }
+    }
+  ],
+  "queries": [
+    {
+      "query": "What does the fox do?",
+      "expected_doc_ids": [
+        "doc1"
+      ],
+      "expected_snippets": [
+        "quick brown fox jumps"
+      ],
+      "difficulty": "easy",
+      "expected_metrics": {
+        "retrieval_time_ms": 100,
+        "relevance_score": 0.9,
+        "context_length": 100
+      }
+    },
+    {
+      "query": "How do RAG systems work and what are their components?",
+      "expected_doc_ids": [
+        "doc2"
+      ],
+      "expected_snippets": [
+        "combine retrieval and generation",
+        "Key RAG Components"
+      ],
+      "difficulty": "medium",
+      "expected_metrics": {
+        "retrieval_time_ms": 150,
+        "relevance_score": 0.85,
+        "context_length": 250
+      }
+    },
+    {
+      "query": "What metrics should we track for RAG performance testing?",
+      "expected_doc_ids": [
+        "doc3"
+      ],
+      "expected_snippets": [
+        "Performance Metrics",
+        "Query Response Time",
+        "Throughput (QPS)"
+      ],
+      "difficulty": "hard",
+      "expected_metrics": {
+        "retrieval_time_ms": 200,
+        "relevance_score": 0.8,
+        "context_length": 300
+      }
+    },
+    {
+      "query": "How should the system handle errors and edge cases?",
+      "expected_doc_ids": [
+        "doc4"
+      ],
+      "expected_snippets": [
+        "Error handling in RAG systems",
+        "Error Response Templates"
+      ],
+      "difficulty": "hard",
+      "expected_metrics": {
+        "retrieval_time_ms": 180,
+        "relevance_score": 0.85,
+        "context_length": 250
+      }
+    }
+  ],
+  "performance_metrics": {
+    "expected_retrieval_time_ms": 100,
+    "expected_generation_time_ms": 500,
+    "minimum_relevance_score": 0.7,
+    "target_throughput_qps": 10,
+    "max_memory_usage_mb": 1024,
+    "max_gpu_memory_mb": 2048,
+    "max_context_length": 4096,
+    "chunk_size": 512,
+    "chunk_overlap": 50
+  },
+  "test_scenarios": [
+    {
+      "name": "Basic Retrieval",
+      "description": "Test basic document retrieval capabilities",
+      "queries": [
+        "What does the fox do?"
+      ],
+      "expected_latency_ms": 100,
+      "test_type": "functional"
+    },
+    {
+      "name": "Technical Content",
+      "description": "Test retrieval of technical documentation",
+      "queries": [
+        "How do RAG systems work?",
+        "Explain RAG components"
+      ],
+      "expected_latency_ms": 150,
+      "test_type": "functional"
+    },
+    {
+      "name": "Performance Testing",
+      "description": "Test system under load",
+      "queries": [
+        "What metrics to track?",
+        "How to measure performance?"
+      ],
+      "expected_latency_ms": 200,
+      "test_type": "performance",
+      "load_test_config": {
+        "concurrent_users": 10,
+        "ramp_up_time_sec": 30,
+        "steady_state_time_sec": 300,
+        "cool_down_time_sec": 30
+      }
+    },
+    {
+      "name": "Error Handling",
+      "description": "Test system error handling",
+      "queries": [
+        "",
+        "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "\ud83d\ude80\ud83c\udf1f\u2728"
+      ],
+      "expected_latency_ms": 50,
+      "test_type": "error_handling",
+      "expected_errors": [
+        "Empty query not allowed",
+        "Query too long",
+        "Invalid characters in query"
+      ]
+    }
+  ]
+}

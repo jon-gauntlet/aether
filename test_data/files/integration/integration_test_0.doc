@@ -1,0 +1,23 @@
+MIME-Version: 1.0
+Content-Type: application/msword
+Content-Transfer-Encoding: binary
+
+INTEGRATION TEST DOCUMENT 0
+
+1. Test Overview
+   - Category: integration
+   - ID: 0
+   - Priority: 3
+
+2. Test Objectives
+   - Verify system functionality
+   - Validate data processing
+   - Measure performance
+
+3. Expected Results
+   - All tests should pass
+   - Performance within thresholds
+   - No errors reported
+
+4. Notes
+   This is a simulated Word document for testing purposes.

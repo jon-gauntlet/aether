@@ -1,0 +1,31 @@
+[Unit]
+Description=Aether System Maintenance Service
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=jon
+Group=jon
+WorkingDirectory=/home/jon/git/aether-workspaces/backend
+Environment=PYTHONPATH=/home/jon/git/aether-workspaces/backend
+ExecStart=/usr/bin/python3 scripts/maintenance_scheduler.py
+Restart=always
+RestartSec=1
+StandardOutput=append:/home/jon/git/aether-workspaces/backend/logs/system/maintenance.log
+StandardError=append:/home/jon/git/aether-workspaces/backend/logs/error/maintenance.log
+
+# Security settings
+NoNewPrivileges=yes
+ProtectSystem=full
+ProtectHome=read-only
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+
+[Install]
+WantedBy=multi-user.target 

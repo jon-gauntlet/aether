@@ -1,0 +1,15 @@
+Unit test case for file operations.
+
+Test ID: UNIT_6
+
+Expected behavior: File should be properly processed
+
+Test steps:
+
+1. Create file
+
+2. Write content
+
+3. Verify content
+
+4. Delete file

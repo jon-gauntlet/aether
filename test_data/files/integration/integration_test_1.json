@@ -1,0 +1,52 @@
+{
+  "id": "integration_test_1",
+  "type": "test_document",
+  "category": "integration",
+  "properties": {
+    "name": "Integration Test 1",
+    "priority": 3,
+    "tags": [
+      "test",
+      "integration",
+      "priority_3"
+    ],
+    "complexity": 3
+  },
+  "test_cases": [
+    {
+      "id": "tc_1",
+      "name": "Test Case 1",
+      "steps": [
+        "Step 1",
+        "Step 2",
+        "Step 3"
+      ],
+      "expected": "success"
+    },
+    {
+      "id": "tc_2",
+      "name": "Test Case 2",
+      "steps": [
+        "Step 1",
+        "Step 2",
+        "Step 3"
+      ],
+      "expected": "success"
+    },
+    {
+      "id": "tc_3",
+      "name": "Test Case 3",
+      "steps": [
+        "Step 1",
+        "Step 2",
+        "Step 3"
+      ],
+      "expected": "success"
+    }
+  ],
+  "metadata": {
+    "created_at": "2025-01-19T13:07:58.834401",
+    "version": "1.0",
+    "is_test": true
+  }
+}
