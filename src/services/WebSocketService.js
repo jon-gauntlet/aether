@@ -11,6 +11,7 @@ export default class WebSocketService {
     this.messageId = 1
     this.messageCallbacks = new Set()
     this.statusCallbacks = new Set()
+    this.disconnectCallbacks = new Set()
     this.presenceCallbacks = new Set()
     this.typingCallbacks = new Set()
     this.readReceiptCallbacks = new Set()
@@ -26,300 +27,82 @@ export default class WebSocketService {
       latencySum: 0,
       latencyCount: 0
     }
+    this.connectionStartTime = null
+    this.lastPingTime = null
+    this.lastPongTime = null
+    this.missedHeartbeats = 0
+    this.heartbeatInterval = null
+    this.batchTimeout = null
+  }
+
+  /**
+   * Check if WebSocket is connected
+   * @returns {boolean} Connection status
+   */
+  isConnected() {
+    return this.connected && this.socket?.readyState === WebSocket.OPEN
   }
 
   /**
    * Connect to the WebSocket server
    * @param {string} url WebSocket URL
    * @param {Object} options Connection options
+   * @returns {Promise} Connection promise
    */
   connect(url, options = {}) {
-    if (this.socket) {
-      this.disconnect()
-    }
-
-    try {
-      this.socket = new WebSocket(url)
-      this.setupSocketHandlers()
-      this.startHeartbeat()
-
-      if (options.auth) {
-        this.authenticate(options.auth)
+    return new Promise((resolve, reject) => {
+      if (this.socket) {
+        this.disconnect()
       }
-    } catch (error) {
-      this.handleError(error)
-    }
+
+      try {
+        this.socket = new WebSocket(url)
+        
+        const onOpen = () => {
+          this.connected = true
+          this.connectionStartTime = Date.now()
+          this.notifyStatusChange()
+          this.sendBufferedMessages()
+          resolve()
+        }
+
+        const onError = (error) => {
+          this.handleError(error)
+          reject(error)
+        }
+
+        this.socket.addEventListener('open', onOpen)
+        this.socket.addEventListener('error', onError)
+        this.setupSocketHandlers()
+        this.startHeartbeat()
+
+        if (options.auth) {
+          this.authenticate(options.auth)
+        }
+      } catch (error) {
+        this.handleError(error)
+        reject(error)
+      }
+    })
   }
 
   /**
    * Disconnect from the WebSocket server
+   * @returns {Promise} Disconnection promise
    */
   disconnect() {
-    if (this.socket) {
-      this.connected = false
-      this.socket.close()
-      this.socket = null
-      this.stopHeartbeat()
-      this.clearState()
-      this.notifyStatusChange()
-    }
-  }
-
-  /**
-   * Set up WebSocket event handlers
-   */
-  setupSocketHandlers() {
-    this.socket.onopen = () => {
-      this.connected = true
-      this.notifyStatusChange()
-      this.sendBufferedMessages()
-    }
-
-    this.socket.onclose = () => {
-      this.connected = false
-      this.notifyStatusChange()
-      this.clearState()
-    }
-
-    this.socket.onerror = (error) => {
-      this.handleError(error)
-    }
-
-    this.socket.onmessage = (event) => {
-      try {
-        const message = JSON.parse(event.data)
-        this.handleMessage(message)
-      } catch (error) {
-        this.handleError(error)
+    return new Promise((resolve) => {
+      if (this.socket) {
+        this.connected = false
+        this.socket.close()
+        this.socket = null
+        this.stopHeartbeat()
+        this.clearState()
+        this.notifyStatusChange()
+        this.notifyDisconnect()
       }
-    }
-  }
-
-  /**
-   * Handle incoming WebSocket messages
-   * @param {Object} message Incoming message
-   */
-  handleMessage(message) {
-    switch (message.type) {
-      case 'batch':
-        message.messages.forEach(msg => this.handleMessage(msg))
-        break
-      case 'delivery':
-        this.handleDeliveryConfirmation(message)
-        break
-      case 'presence':
-        this.handlePresenceUpdate(message)
-        break
-      case 'typing':
-        this.handleTypingUpdate(message)
-        break
-      case 'read':
-        this.handleReadReceipt(message)
-        break
-      default:
-        this.notifyMessageCallbacks(message)
-    }
-
-    this.metrics.messagesReceived++
-    if (message.timestamp) {
-      const latency = Date.now() - message.timestamp
-      this.metrics.latencySum += latency
-      this.metrics.latencyCount++
-    }
-  }
-
-  /**
-   * Send a message through the WebSocket
-   * @param {Object} message Message to send
-   */
-  send(message) {
-    const enhancedMessage = {
-      ...message,
-      id: this.messageId++,
-      timestamp: Date.now()
-    }
-
-    if (!this.connected) {
-      this.messageBuffer.push(enhancedMessage)
-      return
-    }
-
-    if (this.shouldBatchMessage(message)) {
-      this.queueForBatch(enhancedMessage)
-    } else {
-      this.sendImmediate(enhancedMessage)
-    }
-  }
-
-  /**
-   * Send a message immediately
-   * @param {Object} message Message to send
-   */
-  sendImmediate(message) {
-    try {
-      this.socket.send(JSON.stringify(message))
-      this.pendingMessages.set(message.id, message)
-      this.metrics.messagesSent++
-    } catch (error) {
-      this.handleError(error)
-      this.messageBuffer.push(message)
-    }
-  }
-
-  /**
-   * Check if a message should be batched
-   * @param {Object} message Message to check
-   * @returns {boolean} True if the message should be batched
-   */
-  shouldBatchMessage(message) {
-    return message.type !== 'presence' && 
-           message.type !== 'typing' && 
-           message.type !== 'read'
-  }
-
-  /**
-   * Queue a message for batching
-   * @param {Object} message Message to queue
-   */
-  queueForBatch(message) {
-    this.batchQueue.push(message)
-    if (this.batchQueue.length >= 10) {
-      this.sendBatch()
-    } else if (this.batchQueue.length === 1) {
-      setTimeout(() => this.sendBatch(), 100)
-    }
-  }
-
-  /**
-   * Send a batch of messages
-   */
-  sendBatch() {
-    if (this.batchQueue.length === 0) return
-
-    const batch = {
-      type: 'batch',
-      messages: [...this.batchQueue],
-      timestamp: Date.now()
-    }
-
-    this.sendImmediate(batch)
-    this.metrics.batchesSent++
-    this.metrics.totalBatchSize += this.batchQueue.length
-    this.batchQueue = []
-  }
-
-  /**
-   * Send buffered messages
-   */
-  sendBufferedMessages() {
-    const messages = [...this.messageBuffer, ...this.batchQueue]
-    this.messageBuffer = []
-    this.batchQueue = []
-    messages.forEach(message => this.send(message))
-  }
-
-  /**
-   * Handle delivery confirmation message
-   * @param {Object} message Delivery confirmation message
-   */
-  handleDeliveryConfirmation(message) {
-    const { messageId } = message
-    if (this.pendingMessages.has(messageId)) {
-      this.pendingMessages.delete(messageId)
-      this.notifyMessageCallbacks({
-        type: 'delivery',
-        messageId,
-        status: 'delivered'
-      })
-    }
-  }
-
-  /**
-   * Handle presence update message
-   * @param {Object} message Presence update message
-   */
-  handlePresenceUpdate(message) {
-    this.presenceCallbacks.forEach(callback => callback(message))
-  }
-
-  /**
-   * Handle typing update message
-   * @param {Object} message Typing update message
-   */
-  handleTypingUpdate(message) {
-    const { userId, isTyping } = message
-    if (isTyping) {
-      this.typingUsers.set(userId, Date.now())
-    } else {
-      this.typingUsers.delete(userId)
-    }
-    this.notifyTypingCallbacks()
-  }
-
-  /**
-   * Handle read receipt message
-   * @param {Object} message Read receipt message
-   */
-  handleReadReceipt(message) {
-    const { userId, messageIds } = message
-    messageIds.forEach(messageId => {
-      if (!this.readReceipts.has(messageId)) {
-        this.readReceipts.set(messageId, new Set())
-      }
-      this.readReceipts.get(messageId).add(userId)
+      resolve()
     })
-    this.notifyReadReceiptCallbacks(message)
-  }
-
-  /**
-   * Start heartbeat
-   */
-  startHeartbeat() {
-    this.heartbeatInterval = setInterval(() => {
-      if (this.connected) {
-        this.send({ type: 'ping', timestamp: Date.now() })
-      }
-    }, 30000)
-  }
-
-  /**
-   * Stop heartbeat
-   */
-  stopHeartbeat() {
-    if (this.heartbeatInterval) {
-      clearInterval(this.heartbeatInterval)
-      this.heartbeatInterval = null
-    }
-  }
-
-  /**
-   * Authenticate with the WebSocket server
-   * @param {string} token Authentication token
-   */
-  authenticate(token) {
-    this.send({
-      type: 'auth',
-      token,
-      timestamp: Date.now()
-    })
-  }
-
-  /**
-   * Clear WebSocket state
-   */
-  clearState() {
-    this.batchQueue = []
-    this.typingUsers.clear()
-    this.readReceipts.clear()
-  }
-
-  /**
-   * Handle WebSocket error
-   * @param {Error} error Error to handle
-   */
-  handleError(error) {
-    this.metrics.errors++
-    console.error('WebSocket error:', error)
   }
 
   /**
@@ -343,21 +126,31 @@ export default class WebSocketService {
   }
 
   /**
-   * Register presence change handler
-   * @param {Function} callback Presence change handler callback
+   * Register disconnect handler
+   * @param {Function} callback Disconnect handler callback
    * @returns {Function} Unregister function
    */
-  onPresenceChange(callback) {
+  onDisconnect(callback) {
+    this.disconnectCallbacks.add(callback)
+    return () => this.disconnectCallbacks.delete(callback)
+  }
+
+  /**
+   * Register presence handler
+   * @param {Function} callback Presence handler callback
+   * @returns {Function} Unregister function
+   */
+  onPresence(callback) {
     this.presenceCallbacks.add(callback)
     return () => this.presenceCallbacks.delete(callback)
   }
 
   /**
-   * Register typing change handler
-   * @param {Function} callback Typing change handler callback
+   * Register typing handler
+   * @param {Function} callback Typing handler callback
    * @returns {Function} Unregister function
    */
-  onTypingChange(callback) {
+  onTyping(callback) {
     this.typingCallbacks.add(callback)
     return () => this.typingCallbacks.delete(callback)
   }
@@ -373,18 +166,378 @@ export default class WebSocketService {
   }
 
   /**
-   * Notify all message handlers
-   * @param {Object} message Message to notify handlers with
+   * Notify status change
+   */
+  notifyStatusChange() {
+    this.statusCallbacks.forEach(callback => callback(this.isConnected()))
+  }
+
+  /**
+   * Notify disconnect
+   */
+  notifyDisconnect() {
+    this.disconnectCallbacks.forEach(callback => callback())
+  }
+
+  /**
+   * Notify message callbacks
+   * @param {Object} message Message to notify
    */
   notifyMessageCallbacks(message) {
     this.messageCallbacks.forEach(callback => callback(message))
   }
 
   /**
-   * Notify status change
+   * Set up WebSocket event handlers
    */
-  notifyStatusChange() {
-    this.statusCallbacks.forEach(callback => callback(this.connected))
+  setupSocketHandlers() {
+    if (!this.socket) return
+
+    this.socket.addEventListener('open', () => {
+      this.connected = true
+      this.connectionStartTime = Date.now()
+      this.notifyStatusChange()
+      this.sendBufferedMessages()
+    })
+
+    this.socket.addEventListener('close', () => {
+      this.connected = false
+      this.notifyStatusChange()
+      this.clearState()
+      this.notifyDisconnect()
+    })
+
+    this.socket.addEventListener('error', (error) => {
+      this.handleError(error)
+    })
+
+    this.socket.addEventListener('message', (event) => {
+      try {
+        const message = JSON.parse(event.data)
+        this.handleMessage(message)
+      } catch (error) {
+        this.handleError(error)
+      }
+    })
+  }
+
+  /**
+   * Handle incoming WebSocket messages
+   * @param {Object} message Incoming message
+   */
+  handleMessage(message) {
+    try {
+      switch (message.type) {
+        case 'batch':
+          if (Array.isArray(message.messages)) {
+            message.messages.forEach(msg => this.handleMessage(msg))
+          }
+          break
+        case 'delivery':
+          if (message.data?.messageId) {
+            this.handleDeliveryConfirmation(message.data)
+          }
+          break
+        case 'presence':
+          this.handlePresenceUpdate(message.data || message)
+          break
+        case 'typing':
+          if (message.data?.userId !== undefined) {
+            this.handleTypingUpdate(message.data)
+          }
+          break
+        case 'read':
+          if (message.data?.messageIds) {
+            this.handleReadReceipt(message.data)
+          }
+          break
+        default:
+          this.notifyMessageCallbacks(message)
+      }
+
+      this.metrics.messagesReceived++
+      if (message.timestamp) {
+        const latency = Date.now() - message.timestamp
+        this.metrics.latencySum += latency
+        this.metrics.latencyCount++
+      }
+    } catch (error) {
+      this.handleError(error)
+    }
+  }
+
+  /**
+   * Send a message through the WebSocket
+   * @param {Object} message Message to send
+   * @returns {Promise} Message sending promise
+   */
+  send(message) {
+    return new Promise((resolve, reject) => {
+      try {
+        const enhancedMessage = {
+          ...message,
+          id: this.messageId++,
+          timestamp: Date.now()
+        }
+
+        if (!this.isConnected()) {
+          this.messageBuffer.push(enhancedMessage)
+          resolve(enhancedMessage)
+          return
+        }
+
+        if (this.shouldBatchMessage(message)) {
+          this.queueForBatch(enhancedMessage)
+          resolve(enhancedMessage)
+        } else {
+          this.sendImmediate(enhancedMessage)
+            .then(() => resolve(enhancedMessage))
+            .catch(reject)
+        }
+      } catch (error) {
+        reject(error)
+      }
+    })
+  }
+
+  /**
+   * Send a message immediately
+   * @param {Object} message Message to send
+   * @returns {Promise} Message sending promise
+   */
+  sendImmediate(message) {
+    return new Promise((resolve, reject) => {
+      try {
+        if (!this.isConnected()) {
+          this.messageBuffer.push(message)
+          resolve(message)
+          return
+        }
+
+        const messageStr = JSON.stringify(message)
+        this.socket.send(messageStr)
+        this.pendingMessages.set(message.id, message)
+        this.metrics.messagesSent++
+        resolve(message)
+      } catch (error) {
+        this.handleError(error)
+        reject(error)
+      }
+    })
+  }
+
+  /**
+   * Queue a message for batch sending
+   * @param {Object} message Message to queue
+   */
+  queueForBatch(message) {
+    this.batchQueue.push(message)
+    if (!this.batchTimeout) {
+      this.batchTimeout = setTimeout(() => this.sendBatch(), 100)
+    }
+  }
+
+  /**
+   * Send queued messages as a batch
+   */
+  sendBatch() {
+    if (this.batchQueue.length === 0) return
+
+    const batch = {
+      type: 'batch',
+      messages: this.batchQueue.splice(0, 10),
+      timestamp: Date.now()
+    }
+
+    this.sendImmediate(batch)
+      .then(() => {
+        this.metrics.batchesSent++
+        this.metrics.totalBatchSize += batch.messages.length
+      })
+      .catch(this.handleError.bind(this))
+
+    if (this.batchQueue.length > 0) {
+      this.batchTimeout = setTimeout(() => this.sendBatch(), 100)
+    } else {
+      this.batchTimeout = null
+    }
+  }
+
+  /**
+   * Send buffered messages
+   */
+  sendBufferedMessages() {
+    while (this.messageBuffer.length > 0) {
+      const message = this.messageBuffer.shift()
+      this.send(message).catch(this.handleError.bind(this))
+    }
+  }
+
+  /**
+   * Handle error
+   * @param {Error} error Error to handle
+   */
+  handleError(error) {
+    this.metrics.errors++
+    console.error('WebSocket error:', error)
+  }
+
+  /**
+   * Clear state
+   */
+  clearState() {
+    this.typingUsers.clear()
+    this.readReceipts.clear()
+    if (this.batchTimeout) {
+      clearTimeout(this.batchTimeout)
+      this.batchTimeout = null
+    }
+  }
+
+  /**
+   * Start heartbeat
+   */
+  startHeartbeat() {
+    this.stopHeartbeat()
+    this.heartbeatInterval = setInterval(() => {
+      if (this.isConnected()) {
+        this.send({ type: 'ping', timestamp: Date.now() })
+          .catch(this.handleError.bind(this))
+      }
+    }, 30000)
+  }
+
+  /**
+   * Stop heartbeat
+   */
+  stopHeartbeat() {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval)
+      this.heartbeatInterval = null
+    }
+  }
+
+  /**
+   * Check if message should be batched
+   * @param {Object} message Message to check
+   * @returns {boolean} Whether message should be batched
+   */
+  shouldBatchMessage(message) {
+    return !['ping', 'pong', 'batch'].includes(message.type)
+  }
+
+  /**
+   * Get metrics
+   * @returns {Object} Current metrics
+   */
+  getMetrics() {
+    return {
+      ...this.metrics,
+      averageLatency: this.metrics.latencyCount > 0
+        ? this.metrics.latencySum / this.metrics.latencyCount
+        : 0,
+      averageBatchSize: this.metrics.batchesSent > 0
+        ? this.metrics.totalBatchSize / this.metrics.batchesSent
+        : 0,
+      uptime: this.connectionStartTime
+        ? Date.now() - this.connectionStartTime
+        : 0
+    }
+  }
+
+  /**
+   * Reset metrics
+   */
+  resetMetrics() {
+    this.metrics = {
+      messagesSent: 0,
+      messagesReceived: 0,
+      errors: 0,
+      reconnections: 0,
+      batchesSent: 0,
+      totalBatchSize: 0,
+      latencySum: 0,
+      latencyCount: 0
+    }
+  }
+
+  /**
+   * Handle delivery confirmation message
+   * @param {Object} message Delivery confirmation message
+   */
+  handleDeliveryConfirmation(message) {
+    const { messageId, status = 'delivered', timestamp = Date.now() } = message
+    if (this.pendingMessages.has(messageId)) {
+      const originalMessage = this.pendingMessages.get(messageId)
+      this.pendingMessages.delete(messageId)
+      
+      const deliveryInfo = {
+        messageId,
+        status,
+        message: originalMessage,
+        deliveryTime: timestamp
+      }
+
+      this.notifyMessageCallbacks({
+        type: 'delivery',
+        ...deliveryInfo
+      })
+    }
+  }
+
+  /**
+   * Handle presence update message
+   * @param {Object} message Presence update message
+   */
+  handlePresenceUpdate(message) {
+    const { userId, status, timestamp = Date.now() } = message
+    if (userId) {
+      const presenceInfo = {
+        userId,
+        status,
+        timestamp,
+        lastSeen: timestamp
+      }
+      this.presenceCallbacks.forEach(callback => callback(presenceInfo))
+    }
+  }
+
+  /**
+   * Handle typing update message
+   * @param {Object} message Typing update message
+   */
+  handleTypingUpdate(message) {
+    const { userId, isTyping, timestamp = Date.now() } = message
+    if (userId !== undefined) {
+      if (isTyping) {
+        this.typingUsers.set(userId, timestamp)
+      } else {
+        this.typingUsers.delete(userId)
+      }
+      this.notifyTypingCallbacks()
+    }
+  }
+
+  /**
+   * Handle read receipt message
+   * @param {Object} message Read receipt message
+   */
+  handleReadReceipt(message) {
+    const { userId, messageIds, timestamp = Date.now() } = message
+    if (userId && Array.isArray(messageIds)) {
+      messageIds.forEach(messageId => {
+        if (!this.readReceipts.has(messageId)) {
+          this.readReceipts.set(messageId, new Map())
+        }
+        this.readReceipts.get(messageId).set(userId, timestamp)
+      })
+      this.notifyReadReceiptCallbacks({
+        type: 'read',
+        userId,
+        messageIds,
+        timestamp
+      })
+    }
   }
 
   /**
@@ -404,63 +557,5 @@ export default class WebSocketService {
    */
   notifyReadReceiptCallbacks(message) {
     this.readReceiptCallbacks.forEach(callback => callback(message))
-  }
-
-  /**
-   * Send typing update message
-   * @param {boolean} isTyping Typing status
-   */
-  sendTypingUpdate(isTyping) {
-    this.send({
-      type: 'typing',
-      isTyping,
-      timestamp: Date.now()
-    })
-  }
-
-  /**
-   * Mark messages as read
-   * @param {Array} messageIds Message IDs to mark as read
-   */
-  markMessagesAsRead(messageIds) {
-    this.send({
-      type: 'read',
-      messageIds,
-      timestamp: Date.now()
-    })
-  }
-
-  /**
-   * Get message read status
-   * @param {string} messageId Message ID
-   * @returns {Set} Read receipt set for the message
-   */
-  getMessageReadStatus(messageId) {
-    return this.readReceipts.get(messageId) || new Set()
-  }
-
-  /**
-   * Get WebSocket metrics
-   * @returns {Object} WebSocket metrics
-   */
-  getMetrics() {
-    return {
-      ...this.metrics,
-      averageBatchSize: this.metrics.batchesSent > 0 
-        ? this.metrics.totalBatchSize / this.metrics.batchesSent 
-        : 0,
-      averageLatency: this.metrics.latencyCount > 0
-        ? this.metrics.latencySum / this.metrics.latencyCount
-        : 0
-    }
-  }
-
-  /**
-   * Reset WebSocket metrics
-   */
-  resetMetrics() {
-    Object.keys(this.metrics).forEach(key => {
-      this.metrics[key] = 0
-    })
   }
 } 

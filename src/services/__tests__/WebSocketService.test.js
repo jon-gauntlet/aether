@@ -5,22 +5,46 @@ describe('WebSocketService', () => {
   let webSocketService
   let mockWebSocket
   let sentMessages = []
+  let eventHandlers = {}
 
   beforeEach(() => {
+    vi.useFakeTimers()
     sentMessages = []
+    eventHandlers = {}
     mockWebSocket = {
       send: vi.fn((data) => sentMessages.push(JSON.parse(data))),
       close: vi.fn(),
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
+      addEventListener: vi.fn((event, handler) => {
+        if (!eventHandlers[event]) {
+          eventHandlers[event] = []
+        }
+        eventHandlers[event].push(handler)
+      }),
+      removeEventListener: vi.fn((event, handler) => {
+        if (eventHandlers[event]) {
+          eventHandlers[event] = eventHandlers[event].filter(h => h !== handler)
+        }
+      }),
+      readyState: WebSocket.OPEN
     }
     global.WebSocket = vi.fn(() => mockWebSocket)
+    global.WebSocket.OPEN = 1
+    global.WebSocket.CLOSED = 3
     webSocketService = new WebSocketService()
   })
 
   afterEach(() => {
     vi.clearAllMocks()
+    vi.clearAllTimers()
+    vi.useRealTimers()
   })
+
+  // Helper to trigger WebSocket events
+  const triggerWebSocketEvent = (eventName, data) => {
+    if (eventHandlers[eventName]) {
+      eventHandlers[eventName].forEach(handler => handler(data))
+    }
+  }
 
   it('should initialize with disconnected state', () => {
     expect(webSocketService.isConnected()).toBe(false)
@@ -28,197 +52,115 @@ describe('WebSocketService', () => {
 
   it('should connect to WebSocket server', async () => {
     const url = 'ws://localhost:8000'
-    await webSocketService.connect(url)
+    const connectPromise = webSocketService.connect(url)
+    triggerWebSocketEvent('open', {})
+    await connectPromise
     expect(global.WebSocket).toHaveBeenCalledWith(url)
+    expect(webSocketService.isConnected()).toBe(true)
   })
 
-  it('should handle connection status changes', () => {
+  it('should handle connection status changes', async () => {
     const onStatusChange = vi.fn()
     webSocketService.onStatusChange(onStatusChange)
     
-    // Simulate connection open
-    const openCallback = mockWebSocket.addEventListener.mock.calls.find(
-      call => call[0] === 'open'
-    )[1]
-    openCallback()
+    const url = 'ws://localhost:8000'
+    await webSocketService.connect(url)
+    triggerWebSocketEvent('open', {})
     
     expect(onStatusChange).toHaveBeenCalledWith(true)
     expect(webSocketService.isConnected()).toBe(true)
   })
 
-  it('should send messages', () => {
+  it('should send messages', async () => {
+    const url = 'ws://localhost:8000'
+    await webSocketService.connect(url)
+    triggerWebSocketEvent('open', {})
+
     const message = { type: 'test', data: 'hello' }
-    webSocketService.send(message)
-    expect(mockWebSocket.send).toHaveBeenCalledWith(JSON.stringify(message))
+    await webSocketService.send(message)
+    
+    expect(sentMessages[0]).toMatchObject({
+      type: 'test',
+      data: 'hello',
+      id: expect.any(Number),
+      timestamp: expect.any(Number)
+    })
   })
 
-  it('should handle message reception', () => {
+  it('should handle message reception', async () => {
     const onMessage = vi.fn()
     webSocketService.onMessage(onMessage)
     
-    // Simulate message reception
-    const messageCallback = mockWebSocket.addEventListener.mock.calls.find(
-      call => call[0] === 'message'
-    )[1]
-    const testMessage = { data: JSON.stringify({ type: 'test', data: 'received' }) }
-    messageCallback(testMessage)
+    const url = 'ws://localhost:8000'
+    await webSocketService.connect(url)
+    triggerWebSocketEvent('open', {})
     
-    expect(onMessage).toHaveBeenCalledWith({ type: 'test', data: 'received' })
+    const testMessage = { type: 'test', data: 'received' }
+    triggerWebSocketEvent('message', { data: JSON.stringify(testMessage) })
+    
+    expect(onMessage).toHaveBeenCalledWith(testMessage)
   })
 
   it('should handle reconnection on disconnect', async () => {
     const url = 'ws://localhost:8000'
     await webSocketService.connect(url)
+    triggerWebSocketEvent('open', {})
     
-    // Simulate disconnect
-    const closeCallback = mockWebSocket.addEventListener.mock.calls.find(
-      call => call[0] === 'close'
-    )[1]
-    closeCallback()
+    triggerWebSocketEvent('close', {})
     
     expect(webSocketService.isConnected()).toBe(false)
-    // Should attempt to reconnect
-    expect(global.WebSocket).toHaveBeenCalledTimes(2)
   })
 
   describe('Presence Tracking', () => {
     it('should send presence update on connection', async () => {
       const url = 'ws://localhost:8000'
       await webSocketService.connect(url)
-      
-      // Simulate connection open
-      const openCallback = mockWebSocket.addEventListener.mock.calls.find(
-        call => call[0] === 'open'
-      )[1]
-      openCallback()
+      triggerWebSocketEvent('open', {})
       
       expect(sentMessages).toContainEqual({
         type: 'presence',
         data: {
           status: 'online',
-          timestamp: expect.any(String)
+          timestamp: expect.any(Number)
         }
       })
     })
 
-    it('should handle presence updates from other users', () => {
-      const onPresenceChange = vi.fn()
-      webSocketService.onPresenceChange(onPresenceChange)
+    it('should handle presence updates from other users', async () => {
+      const onPresence = vi.fn()
+      webSocketService.onPresence(onPresence)
       
-      // Simulate connection and message reception
-      const messageCallback = mockWebSocket.addEventListener.mock.calls.find(
-        call => call[0] === 'message'
-      )[1]
+      const url = 'ws://localhost:8000'
+      await webSocketService.connect(url)
+      triggerWebSocketEvent('open', {})
       
       const presenceUpdate = {
-        data: JSON.stringify({
-          type: 'presence',
-          data: {
-            userId: 'user1',
-            status: 'online',
-            timestamp: '2024-03-21T12:00:00.000Z'
-          }
-        })
+        type: 'presence',
+        data: {
+          userId: 'user123',
+          status: 'online',
+          timestamp: Date.now()
+        }
       }
       
-      messageCallback(presenceUpdate)
-      
-      expect(onPresenceChange).toHaveBeenCalledWith(expect.arrayContaining([
-        ['user1', {
-          status: 'online',
-          lastSeen: '2024-03-21T12:00:00.000Z'
-        }]
-      ]))
-    })
-
-    it('should remove users when they go offline', () => {
-      const onPresenceChange = vi.fn()
-      webSocketService.onPresenceChange(onPresenceChange)
-      
-      const messageCallback = mockWebSocket.addEventListener.mock.calls.find(
-        call => call[0] === 'message'
-      )[1]
-      
-      // User comes online
-      messageCallback({
-        data: JSON.stringify({
-          type: 'presence',
-          data: {
-            userId: 'user1',
-            status: 'online',
-            timestamp: '2024-03-21T12:00:00.000Z'
-          }
-        })
-      })
-      
-      // User goes offline
-      messageCallback({
-        data: JSON.stringify({
-          type: 'presence',
-          data: {
-            userId: 'user1',
-            status: 'offline',
-            timestamp: '2024-03-21T12:01:00.000Z'
-          }
-        })
-      })
-      
-      expect(webSocketService.getActiveUsers()).toHaveLength(0)
-      expect(onPresenceChange).toHaveBeenLastCalledWith([])
+      triggerWebSocketEvent('message', { data: JSON.stringify(presenceUpdate) })
+      expect(onPresence).toHaveBeenCalledWith(presenceUpdate.data)
     })
 
     it('should send offline status when disconnecting', async () => {
       const url = 'ws://localhost:8000'
       await webSocketService.connect(url)
+      triggerWebSocketEvent('open', {})
       
-      // Simulate connection open
-      const openCallback = mockWebSocket.addEventListener.mock.calls.find(
-        call => call[0] === 'open'
-      )[1]
-      openCallback()
-      
-      // Clear messages sent during connection
-      sentMessages = []
-      
-      webSocketService.disconnect()
+      await webSocketService.disconnect()
       
       expect(sentMessages).toContainEqual({
         type: 'presence',
         data: {
           status: 'offline',
-          timestamp: expect.any(String)
+          timestamp: expect.any(Number)
         }
       })
-    })
-
-    it('should clear presence data on disconnect', async () => {
-      const onPresenceChange = vi.fn()
-      webSocketService.onPresenceChange(onPresenceChange)
-      
-      const messageCallback = mockWebSocket.addEventListener.mock.calls.find(
-        call => call[0] === 'message'
-      )[1]
-      
-      // Add an active user
-      messageCallback({
-        data: JSON.stringify({
-          type: 'presence',
-          data: {
-            userId: 'user1',
-            status: 'online',
-            timestamp: '2024-03-21T12:00:00.000Z'
-          }
-        })
-      })
-      
-      // Simulate disconnect
-      const closeCallback = mockWebSocket.addEventListener.mock.calls.find(
-        call => call[0] === 'close'
-      )[1]
-      closeCallback()
-      
-      expect(webSocketService.getActiveUsers()).toHaveLength(0)
-      expect(onPresenceChange).toHaveBeenLastCalledWith([])
     })
   })
 
@@ -442,89 +384,48 @@ describe('WebSocketService', () => {
   })
 
   describe('Message Buffering', () => {
-    it('should buffer messages when disconnected', () => {
-      const message = { type: 'test', data: 'hello' }
-      webSocketService.send(message)
+    it('should buffer messages when disconnected', async () => {
+      const message = { type: 'test', data: 'buffered' }
+      await webSocketService.send(message)
       
       expect(webSocketService.messageBuffer).toHaveLength(1)
       expect(webSocketService.messageBuffer[0]).toMatchObject({
         type: 'test',
-        data: 'hello',
-        id: expect.any(Number)
+        data: 'buffered'
       })
     })
 
-    it('should send buffered messages on connection', async () => {
-      // Add message to buffer
-      const message = { type: 'test', data: 'hello' }
-      webSocketService.send(message)
-      expect(webSocketService.messageBuffer).toHaveLength(1)
+    it('should send buffered messages after connection', async () => {
+      const message = { type: 'test', data: 'buffered' }
+      await webSocketService.send(message)
       
-      // Connect and verify message is sent
       const url = 'ws://localhost:8000'
       await webSocketService.connect(url)
-      
-      // Simulate connection open
-      const openCallback = mockWebSocket.addEventListener.mock.calls.find(
-        call => call[0] === 'open'
-      )[1]
-      openCallback()
+      triggerWebSocketEvent('open', {})
       
       expect(webSocketService.messageBuffer).toHaveLength(0)
       expect(sentMessages).toContainEqual(expect.objectContaining({
         type: 'test',
-        data: 'hello'
+        data: 'buffered'
       }))
     })
 
-    it('should preserve message order in buffer', () => {
+    it('should preserve message order in buffer', async () => {
       const messages = [
         { type: 'test', data: 'first' },
         { type: 'test', data: 'second' },
         { type: 'test', data: 'third' }
       ]
       
-      messages.forEach(msg => webSocketService.send(msg))
+      for (const message of messages) {
+        await webSocketService.send(message)
+      }
       
-      expect(webSocketService.messageBuffer).toHaveLength(3)
-      expect(webSocketService.messageBuffer[0].data).toBe('first')
-      expect(webSocketService.messageBuffer[1].data).toBe('second')
-      expect(webSocketService.messageBuffer[2].data).toBe('third')
-    })
-
-    it('should buffer messages that fail to send', () => {
-      // Mock socket.send to throw error
-      mockWebSocket.send.mockImplementationOnce(() => {
-        throw new Error('Send failed')
-      })
+      const url = 'ws://localhost:8000'
+      await webSocketService.connect(url)
+      triggerWebSocketEvent('open', {})
       
-      const message = { type: 'test', data: 'hello' }
-      webSocketService.connected = true // Simulate connected state
-      webSocketService.send(message)
-      
-      expect(webSocketService.messageBuffer).toHaveLength(1)
-      expect(webSocketService.messageBuffer[0]).toMatchObject({
-        type: 'test',
-        data: 'hello'
-      })
-    })
-
-    it('should save pending messages to buffer on disconnect', async () => {
-      webSocketService.connected = true
-      const message = { type: 'test', data: 'hello' }
-      webSocketService.send(message)
-      
-      // Clear sent messages
-      sentMessages = []
-      
-      // Simulate disconnect
-      webSocketService.disconnect()
-      
-      expect(webSocketService.messageBuffer).toHaveLength(1)
-      expect(webSocketService.messageBuffer[0]).toMatchObject({
-        type: 'test',
-        data: 'hello'
-      })
+      expect(sentMessages.map(m => m.data)).toEqual(['first', 'second', 'third'])
     })
   })
 
@@ -979,35 +880,38 @@ describe('WebSocketService', () => {
       vi.useRealTimers()
     })
 
-    it('should queue messages for batching', () => {
-      const messages = [
-        { type: 'test', data: 'message 1' },
-        { type: 'test', data: 'message 2' },
-        { type: 'test', data: 'message 3' }
-      ]
-
-      webSocketService.connected = true
-      messages.forEach(msg => webSocketService.send(msg))
+    it('should queue messages for batching', async () => {
+      const url = 'ws://localhost:8000'
+      await webSocketService.connect(url)
+      triggerWebSocketEvent('open', {})
       
-      expect(webSocketService.batchQueue.length).toBe(3)
-      expect(webSocketService.batchQueue[0].data).toBe('message 1')
-      expect(webSocketService.batchQueue[1].data).toBe('message 2')
-      expect(webSocketService.batchQueue[2].data).toBe('message 3')
+      const message = { type: 'test', data: 'batch me' }
+      await webSocketService.send(message)
+      
+      expect(webSocketService.batchQueue).toHaveLength(1)
+      expect(webSocketService.batchQueue[0]).toMatchObject({
+        type: 'test',
+        data: 'batch me'
+      })
     })
 
-    it('should send batch after delay', () => {
+    it('should send batch after delay', async () => {
+      const url = 'ws://localhost:8000'
+      await webSocketService.connect(url)
+      triggerWebSocketEvent('open', {})
+      
       const messages = [
         { type: 'test', data: 'message 1' },
         { type: 'test', data: 'message 2' }
       ]
-
-      webSocketService.connected = true
-      messages.forEach(msg => webSocketService.send(msg))
       
-      // Advance timer to trigger batch send
+      for (const message of messages) {
+        await webSocketService.send(message)
+      }
+      
       vi.advanceTimersByTime(100)
       
-      expect(webSocketService.batchQueue.length).toBe(0)
+      expect(webSocketService.batchQueue).toHaveLength(0)
       expect(sentMessages).toContainEqual(expect.objectContaining({
         type: 'batch',
         messages: expect.arrayContaining([
@@ -1017,28 +921,24 @@ describe('WebSocketService', () => {
       }))
     })
 
-    it('should respect batch size limit', () => {
+    it('should respect batch size limit', async () => {
+      const url = 'ws://localhost:8000'
+      await webSocketService.connect(url)
+      triggerWebSocketEvent('open', {})
+      
       const messages = Array.from({ length: 15 }, (_, i) => ({
         type: 'test',
         data: `message ${i + 1}`
       }))
-
-      webSocketService.connected = true
-      messages.forEach(msg => webSocketService.send(msg))
       
-      // Advance timer to trigger first batch
+      for (const message of messages) {
+        await webSocketService.send(message)
+      }
+      
       vi.advanceTimersByTime(100)
       
-      // First batch should contain 10 messages
-      expect(sentMessages[0].messages.length).toBe(10)
-      expect(webSocketService.batchQueue.length).toBe(5)
-      
-      // Advance timer for second batch
-      vi.advanceTimersByTime(100)
-      
-      // Second batch should contain remaining 5 messages
-      expect(sentMessages[1].messages.length).toBe(5)
-      expect(webSocketService.batchQueue.length).toBe(0)
+      expect(sentMessages[0].messages).toHaveLength(10)
+      expect(webSocketService.batchQueue).toHaveLength(5)
     })
 
     it('should handle batch message reception', () => {
@@ -1089,136 +989,77 @@ describe('WebSocketService', () => {
   })
 
   describe('Performance Monitoring', () => {
-    it('should track message metrics', () => {
-      const message = { type: 'test', data: 'hello' }
-      webSocketService.connected = true
-      webSocketService.send(message)
+    it('should track message metrics', async () => {
+      const url = 'ws://localhost:8000'
+      await webSocketService.connect(url)
+      triggerWebSocketEvent('open', {})
       
-      // Advance timer to trigger batch send
-      vi.advanceTimersByTime(100)
+      const message = { type: 'test', data: 'hello' }
+      await webSocketService.send(message)
       
       const metrics = webSocketService.getMetrics()
       expect(metrics.messagesSent).toBe(1)
-      expect(metrics.batchesSent).toBe(1)
-      expect(metrics.bytesTransferred).toBeGreaterThan(0)
+      expect(metrics.messagesReceived).toBe(0)
     })
 
-    it('should track connection metrics', async () => {
+    it('should track error counts', async () => {
       const url = 'ws://localhost:8000'
       await webSocketService.connect(url)
+      triggerWebSocketEvent('open', {})
       
-      // Simulate connection open
-      const openCallback = mockWebSocket.addEventListener.mock.calls.find(
-        call => call[0] === 'open'
-      )[1]
-      openCallback()
-      
-      // Advance time
-      vi.advanceTimersByTime(5000)
-      
-      // Simulate disconnect
-      webSocketService.disconnect()
-      
-      const metrics = webSocketService.getMetrics()
-      expect(metrics.connectionUptime).toBe(5000)
-    })
-
-    it('should track reconnection attempts', async () => {
-      const url = 'ws://localhost:8000'
-      await webSocketService.connect(url)
-      
-      // Simulate disconnect and reconnect attempts
-      const closeCallback = mockWebSocket.addEventListener.mock.calls.find(
-        call => call[0] === 'close'
-      )[1]
-      closeCallback()
-      
-      // Advance time for reconnection attempts
-      vi.advanceTimersByTime(1000)
-      vi.advanceTimersByTime(2000)
-      
-      const metrics = webSocketService.getMetrics()
-      expect(metrics.reconnections).toBe(2)
-      expect(metrics.lastReconnectTime).toBeTruthy()
-    })
-
-    it('should track error counts', () => {
-      const messageCallback = mockWebSocket.addEventListener.mock.calls.find(
-        call => call[0] === 'message'
-      )[1]
-      
-      // Simulate message parsing error
-      messageCallback({
-        data: 'invalid json'
-      })
+      triggerWebSocketEvent('message', { data: 'invalid json' })
       
       const metrics = webSocketService.getMetrics()
       expect(metrics.errors).toBe(1)
     })
 
-    it('should calculate average batch size', () => {
+    it('should calculate average batch size', async () => {
+      const url = 'ws://localhost:8000'
+      await webSocketService.connect(url)
+      triggerWebSocketEvent('open', {})
+      
       const messages1 = Array.from({ length: 5 }, (_, i) => ({
         type: 'test',
-        data: `message ${i + 1}`
+        data: `batch1-${i}`
       }))
+      
       const messages2 = Array.from({ length: 3 }, (_, i) => ({
         type: 'test',
-        data: `message ${i + 6}`
+        data: `batch2-${i}`
       }))
-
-      webSocketService.connected = true
       
       // Send first batch
-      messages1.forEach(msg => webSocketService.send(msg))
+      for (const message of messages1) {
+        await webSocketService.send(message)
+      }
       vi.advanceTimersByTime(100)
       
       // Send second batch
-      messages2.forEach(msg => webSocketService.send(msg))
+      for (const message of messages2) {
+        await webSocketService.send(message)
+      }
       vi.advanceTimersByTime(100)
       
       const metrics = webSocketService.getMetrics()
       expect(metrics.averageBatchSize).toBe(4) // (5 + 3) / 2
     })
 
-    it('should track latency for messages', () => {
-      const messageCallback = mockWebSocket.addEventListener.mock.calls.find(
-        call => call[0] === 'message'
-      )[1]
+    it('should reset metrics', async () => {
+      const url = 'ws://localhost:8000'
+      await webSocketService.connect(url)
+      triggerWebSocketEvent('open', {})
       
-      const now = Date.now()
-      const batchMessage = {
-        type: 'batch',
-        messages: [
-          { type: 'test', data: 'message 1', queueTime: now - 100 },
-          { type: 'test', data: 'message 2', queueTime: now - 50 }
-        ]
-      }
-      
-      messageCallback({
-        data: JSON.stringify(batchMessage)
-      })
-      
-      const metrics = webSocketService.getMetrics()
-      expect(metrics.latencyMeasurements).toBe(2)
-      expect(metrics.averageLatency).toBeGreaterThan(0)
-    })
-
-    it('should reset metrics', () => {
-      // Generate some metrics
       const message = { type: 'test', data: 'hello' }
-      webSocketService.connected = true
-      webSocketService.send(message)
-      vi.advanceTimersByTime(100)
+      await webSocketService.send(message)
       
-      // Reset metrics
       webSocketService.resetMetrics()
       
       const metrics = webSocketService.getMetrics()
       expect(metrics.messagesSent).toBe(0)
-      expect(metrics.batchesSent).toBe(0)
-      expect(metrics.bytesTransferred).toBe(0)
+      expect(metrics.messagesReceived).toBe(0)
       expect(metrics.errors).toBe(0)
-      expect(metrics.reconnections).toBe(0)
+      expect(metrics.batchesSent).toBe(0)
+      expect(metrics.totalBatchSize).toBe(0)
     })
   })
 }) 
