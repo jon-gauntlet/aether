@@ -51,39 +51,53 @@ export default class WebSocketService {
    */
   connect(url, options = {}) {
     return new Promise((resolve, reject) => {
-      if (this.socket) {
-        this.disconnect()
-      }
-
       try {
-        this.socket = new WebSocket(url)
-        
+        const timeout = options.timeout || 5000;
+        const timeoutId = setTimeout(() => {
+          if (!this.connected) {
+            this.handleError(new Error('Connection timeout'));
+            reject(new Error('Connection timeout'));
+          }
+        }, timeout);
+
+        this.socket = new WebSocket(url);
+        this.setupSocketHandlers();
+
         const onOpen = () => {
-          this.connected = true
-          this.connectionStartTime = Date.now()
-          this.notifyStatusChange()
-          this.sendBufferedMessages()
-          resolve()
-        }
+          clearTimeout(timeoutId);
+          this.connected = true;
+          this.connectionStartTime = Date.now();
+          this.startHeartbeat();
+          this.notifyStatusChange();
+          resolve();
+        };
 
         const onError = (error) => {
-          this.handleError(error)
-          reject(error)
-        }
+          clearTimeout(timeoutId);
+          this.handleError(error);
+          reject(error);
+        };
 
-        this.socket.addEventListener('open', onOpen)
-        this.socket.addEventListener('error', onError)
-        this.setupSocketHandlers()
-        this.startHeartbeat()
+        this.socket.addEventListener('open', onOpen);
+        this.socket.addEventListener('error', onError);
+
+        // Cleanup listeners after connection attempt
+        const cleanup = () => {
+          this.socket.removeEventListener('open', onOpen);
+          this.socket.removeEventListener('error', onError);
+        };
+
+        this.socket.addEventListener('open', cleanup, { once: true });
+        this.socket.addEventListener('error', cleanup, { once: true });
 
         if (options.auth) {
           this.authenticate(options.auth)
         }
       } catch (error) {
-        this.handleError(error)
-        reject(error)
+        this.handleError(error);
+        reject(error);
       }
-    })
+    });
   }
 
   /**
