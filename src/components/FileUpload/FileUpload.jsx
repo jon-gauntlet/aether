@@ -14,7 +14,9 @@ import {
   ALLOWED_FILE_TYPES,
   UPLOAD_BUCKET,
   PERFORMANCE,
-  VALIDATION
+  VALIDATION,
+  UPLOAD_CONFIG,
+  UI
 } from '../../config/constants'
 import {
   Container,
@@ -33,6 +35,9 @@ import {
   SearchBar,
   ProgressIndicator
 } from './FileUpload.styles'
+import { motion } from 'framer-motion'
+import { useDropzone } from 'react-dropzone'
+import { uploadFile } from '../../lib/supabase'
 
 export const FileUpload = ({ 
   onUpload,
@@ -46,211 +51,164 @@ export const FileUpload = ({
   const { session } = useAuth()
   const { theme } = useTheme()
   const [files, setFiles] = useState([])
-  const [uploadStatus, setUploadStatus] = useState({})
-  const [uploadProgress, setUploadProgress] = useState({})
+  const [uploadState, setUploadState] = useState(UPLOAD_STATES.IDLE)
   const [error, setError] = useState(null)
   const [dragActive, setDragActive] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const fileInputRef = useRef(null)
-  const uploadCancelTokens = useRef({})
+  const uploadTimeoutRef = useRef(null)
   const { currentFolder, folders, createFolder, navigateToFolder, refreshFolders } = useFolder(bucket)
   const { startProgress, updateProgress, completeProgress } = useProgress()
 
-  // Validate file
   const validateFile = useCallback((file) => {
-    // Check file size
-    if (file.size > maxSize) {
-      throw new Error(VALIDATION.file.maxSize.message)
+    if (file.size > UPLOAD_CONFIG.MAX_FILE_SIZE) {
+      throw new Error(`File size must not exceed ${UPLOAD_CONFIG.MAX_FILE_SIZE / (1024 * 1024)}MB`)
     }
-
-    // Check file type
-    const isValidType = acceptedTypes.some(type => {
-      if (type.includes('*')) {
-        return file.type.startsWith(type.split('/')[0])
-      }
-      return file.type === type || `.${file.name.split('.').pop()}` === type
-    })
-
-    if (!isValidType) {
-      throw new Error(VALIDATION.file.allowedTypes.message)
+    if (!UPLOAD_CONFIG.ALLOWED_FILE_TYPES.includes(file.type)) {
+      throw new Error(`File type ${file.type} is not supported`)
     }
-
-    // Check for duplicates
     if (files.some(f => f.name === file.name)) {
-      throw new Error('File already selected')
+      throw new Error(`File ${file.name} already exists`)
     }
-  }, [files, maxSize, acceptedTypes])
+  }, [files])
 
-  // Handle file selection
-  const handleFiles = useCallback((newFiles) => {
-    const validFiles = []
-    const errors = []
-
-    Array.from(newFiles).forEach(file => {
-      try {
-        validateFile(file)
-        validFiles.push(file)
-      } catch (err) {
-        errors.push(`${file.name}: ${err.message}`)
-      }
-    })
-
-    if (validFiles.length > 0) {
-      setFiles(prev => multiple ? [...prev, ...validFiles] : [validFiles[0]])
-      setError(null)
-    }
-
-    if (errors.length > 0) {
-      setError(errors.join('\n'))
-    }
-  }, [validateFile, multiple])
-
-  // Handle drag events
-  const handleDrag = useCallback((e) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setDragActive(e.type === 'dragenter' || e.type === 'dragover')
-  }, [])
-
-  // Handle drop
-  const handleDrop = useCallback((e) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setDragActive(false)
-    handleFiles(e.dataTransfer.files)
-  }, [handleFiles])
-
-  // Upload single file
-  const uploadFile = useCallback(async (file) => {
-    if (!session) throw new Error('Please sign in to upload files')
-
-    const filePath = currentFolder 
-      ? `${currentFolder}/${file.name}`
-      : file.name
-
-    const cancelToken = new AbortController()
-    uploadCancelTokens.current[filePath] = cancelToken
-
+  const handleDrop = useCallback(async (acceptedFiles) => {
+    setUploadState(UPLOAD_STATES.VALIDATING)
+    setError(null)
+    
     try {
-      startProgress(file.name)
-      setUploadStatus(prev => ({ ...prev, [file.name]: UPLOAD_STATES.UPLOADING }))
-
-      const { data, error } = await supabase.storage
-        .from(bucket)
-        .upload(filePath, file, {
-          signal: cancelToken.signal,
-          onUploadProgress: (progress) => {
-            const percent = (progress.loaded / progress.total) * 100
-            updateProgress(file.name, percent)
-            setUploadProgress(prev => ({ ...prev, [file.name]: percent }))
-          }
-        })
-
-      if (error) throw error
-
-      const { data: { publicUrl } } = supabase.storage
-        .from(bucket)
-        .getPublicUrl(data.path)
-
-      completeProgress(file.name)
-      setUploadStatus(prev => ({ ...prev, [file.name]: UPLOAD_STATES.SUCCESS }))
-      onSuccess?.({ file, path: data.path, url: publicUrl })
-
-      return { path: data.path, url: publicUrl }
-    } catch (err) {
-      setUploadStatus(prev => ({ ...prev, [file.name]: UPLOAD_STATES.ERROR }))
-      throw err
-    } finally {
-      delete uploadCancelTokens.current[filePath]
-    }
-  }, [session, bucket, currentFolder, startProgress, updateProgress, completeProgress, onSuccess])
-
-  // Upload all files
-  const uploadAll = useCallback(async () => {
-    if (files.length === 0) return
-
-    const uploadPromises = files.map(async (file) => {
-      try {
-        const result = await uploadFile(file)
-        return { file, result, error: null }
-      } catch (err) {
-        return { file, result: null, error: err }
-      }
-    })
-
-    try {
-      const results = await Promise.all(uploadPromises)
-      const errors = results.filter(r => r.error)
-      const successes = results.filter(r => !r.error)
-
-      if (errors.length > 0) {
-        setError(`Failed to upload ${errors.length} files:\n${
-          errors.map(({ file, error }) => `${file.name}: ${error.message}`).join('\n')
-        }`)
-      }
-
-      if (successes.length > 0) {
-        setFiles(prev => prev.filter(f => !successes.find(s => s.file.name === f.name)))
-        onUpload?.(successes.map(s => s.result))
-      }
+      // Validate each file
+      acceptedFiles.forEach(validateFile)
+      
+      // Add files to state with upload progress
+      const newFiles = acceptedFiles.map(file => ({
+        file,
+        progress: 0,
+        state: UPLOAD_STATES.IDLE
+      }))
+      
+      setFiles(prev => [...prev, ...newFiles])
+      setUploadState(UPLOAD_STATES.IDLE)
     } catch (err) {
       setError(err.message)
-      onError?.(err)
+      setUploadState(UPLOAD_STATES.ERROR)
+      
+      // Clear error after timeout
+      if (uploadTimeoutRef.current) {
+        clearTimeout(uploadTimeoutRef.current)
+      }
+      uploadTimeoutRef.current = setTimeout(() => {
+        setError(null)
+        setUploadState(UPLOAD_STATES.IDLE)
+      }, UI.ERROR_DISPLAY_DURATION)
     }
-  }, [files, uploadFile, onUpload, onError])
+  }, [validateFile])
 
-  // Cancel upload
-  const cancelUpload = useCallback((fileName) => {
-    const filePath = currentFolder 
-      ? `${currentFolder}/${fileName}`
-      : fileName
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop: handleDrop,
+    accept: UPLOAD_CONFIG.ALLOWED_FILE_TYPES.join(','),
+    maxSize: UPLOAD_CONFIG.MAX_FILE_SIZE,
+    multiple: true
+  })
 
-    const cancelToken = uploadCancelTokens.current[filePath]
-    if (cancelToken) {
-      cancelToken.abort()
-      setUploadStatus(prev => ({ ...prev, [fileName]: UPLOAD_STATES.CANCELLED }))
-      setError(`Upload cancelled: ${fileName}`)
-    }
-  }, [currentFolder])
-
-  // Remove file
-  const removeFile = useCallback((fileName) => {
-    setFiles(prev => prev.filter(f => f.name !== fileName))
-    setUploadStatus(prev => {
-      const { [fileName]: removed, ...rest } = prev
-      return rest
-    })
-    setUploadProgress(prev => {
-      const { [fileName]: removed, ...rest } = prev
-      return rest
-    })
-    cancelUpload(fileName)
-  }, [cancelUpload])
-
-  // Clear all
-  const clearAll = useCallback(() => {
-    files.forEach(file => {
-      cancelUpload(file.name)
-    })
-    setFiles([])
-    setUploadStatus({})
-    setUploadProgress({})
+  const uploadFiles = useCallback(async () => {
+    setUploadState(UPLOAD_STATES.UPLOADING)
     setError(null)
-  }, [files, cancelUpload])
+
+    try {
+      await Promise.all(
+        files.map(async ({ file }, index) => {
+          // Skip already uploaded files
+          if (files[index].state === UPLOAD_STATES.SUCCESS) {
+            return
+          }
+
+          // Update file state to uploading
+          setFiles(prev => {
+            const newFiles = [...prev]
+            newFiles[index] = {
+              ...newFiles[index],
+              state: UPLOAD_STATES.UPLOADING,
+              progress: 0
+            }
+            return newFiles
+          })
+
+          try {
+            // Upload file
+            const path = `${Date.now()}-${file.name}`
+            await uploadFile(UPLOAD_CONFIG.UPLOAD_BUCKET, path, file)
+
+            // Update file state to success
+            setFiles(prev => {
+              const newFiles = [...prev]
+              newFiles[index] = {
+                ...newFiles[index],
+                state: UPLOAD_STATES.SUCCESS,
+                progress: 100
+              }
+              return newFiles
+            })
+          } catch (err) {
+            // Update file state to error
+            setFiles(prev => {
+              const newFiles = [...prev]
+              newFiles[index] = {
+                ...newFiles[index],
+                state: UPLOAD_STATES.ERROR,
+                error: err.message
+              }
+              return newFiles
+            })
+            throw err
+          }
+        })
+      )
+
+      setUploadState(UPLOAD_STATES.SUCCESS)
+    } catch (err) {
+      setError('One or more files failed to upload')
+      setUploadState(UPLOAD_STATES.ERROR)
+      
+      // Clear error after timeout
+      if (uploadTimeoutRef.current) {
+        clearTimeout(uploadTimeoutRef.current)
+      }
+      uploadTimeoutRef.current = setTimeout(() => {
+        setError(null)
+        setUploadState(UPLOAD_STATES.IDLE)
+      }, UI.ERROR_DISPLAY_DURATION)
+    }
+  }, [files])
+
+  const clearAll = useCallback(() => {
+    setFiles([])
+    setUploadState(UPLOAD_STATES.IDLE)
+    setError(null)
+    if (uploadTimeoutRef.current) {
+      clearTimeout(uploadTimeoutRef.current)
+    }
+  }, [])
+
+  const removeFile = useCallback((index) => {
+    setFiles(prev => prev.filter((_, i) => i !== index))
+  }, [])
 
   // Filter files by search
   const filteredFiles = useMemo(() => {
     if (!searchQuery) return files
     const query = searchQuery.toLowerCase()
     return files.filter(file => 
-      file.name.toLowerCase().includes(query)
+      file.file.name.toLowerCase().includes(query)
     )
   }, [files, searchQuery])
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      Object.values(uploadCancelTokens.current).forEach(token => token.abort())
+      if (uploadTimeoutRef.current) {
+        clearTimeout(uploadTimeoutRef.current)
+      }
     }
   }, [])
 
@@ -318,55 +276,79 @@ export const FileUpload = ({
       />
 
       <DropZone
-        onDragEnter={handleDrag}
-        onDragOver={handleDrag}
-        onDragLeave={handleDrag}
-        onDrop={handleDrop}
-        onClick={() => fileInputRef.current?.click()}
-        isDragActive={dragActive}
-        error={error}
+        {...getRootProps()}
+        isDragActive={isDragActive}
+        state={uploadState}
+        data-testid="dropzone"
       >
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple={multiple}
-          accept={acceptedTypes.join(',')}
-          onChange={(e) => handleFiles(e.target.files)}
-          style={{ display: 'none' }}
-        />
-        <p>
-          {dragActive 
-            ? 'Drop files here...'
-            : `Click or drag files to upload (Max size: ${formatFileSize(maxSize)})`
-          }
-        </p>
+        <input {...getInputProps()} data-testid="file-input" />
+        
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: UI.ANIMATION_DURATION / 1000 }}
+        >
+          {isDragActive ? (
+            <p>Drop files here...</p>
+          ) : (
+            <p>
+              Drag & drop files here, or click to select files<br />
+              <small>
+                Supported files: {UPLOAD_CONFIG.ALLOWED_FILE_TYPES.join(', ')}<br />
+                Max size: {UPLOAD_CONFIG.MAX_FILE_SIZE / (1024 * 1024)}MB
+              </small>
+            </p>
+          )}
+        </motion.div>
       </DropZone>
 
       {filteredFiles.length > 0 && (
         <>
           <BatchActions>
-            <Button onClick={uploadAll}>Upload All</Button>
-            <Button onClick={clearAll} variant="secondary">Clear All</Button>
+            <Button
+              onClick={uploadFiles}
+              disabled={
+                uploadState === UPLOAD_STATES.UPLOADING ||
+                files.every(f => f.state === UPLOAD_STATES.SUCCESS)
+              }
+              data-testid="upload-button"
+            >
+              {uploadState === UPLOAD_STATES.UPLOADING ? 'Uploading...' : 'Upload All'}
+            </Button>
+            <Button
+              onClick={clearAll}
+              disabled={uploadState === UPLOAD_STATES.UPLOADING}
+              data-testid="clear-button"
+            >
+              Clear All
+            </Button>
           </BatchActions>
 
           <FileList>
-            {filteredFiles.map(file => (
-              <FileItem key={file.name}>
-                <FileIcon type={getFileType(file)} />
-                <FileDetails>
-                  <span>{file.name}</span>
-                  <small>{formatFileSize(file.size)}</small>
-                </FileDetails>
-                {uploadStatus[file.name] === UPLOAD_STATES.UPLOADING && (
+            {filteredFiles.map((file, index) => (
+              <FileItem
+                key={index}
+                variant={file.state}
+                data-testid={`file-item-${index}`}
+              >
+                <FilePreview type={file.file.type} />
+                <div>
+                  <p>{file.file.name}</p>
+                  <small>
+                    {(file.file.size / 1024).toFixed(1)}KB
+                  </small>
+                </div>
+                {file.state === UPLOAD_STATES.UPLOADING && (
                   <ProgressIndicator
-                    progress={uploadProgress[file.name] || 0}
-                    size="small"
+                    value={file.progress}
+                    max="100"
+                    data-testid={`progress-${index}`}
                   />
                 )}
                 <ButtonGroup>
-                  {uploadStatus[file.name] === UPLOAD_STATES.UPLOADING ? (
+                  {file.state === UPLOAD_STATES.UPLOADING ? (
                     <Button
-                      onClick={() => cancelUpload(file.name)}
+                      onClick={() => removeFile(index)}
                       variant="danger"
                       size="small"
                     >
@@ -374,7 +356,7 @@ export const FileUpload = ({
                     </Button>
                   ) : (
                     <Button
-                      onClick={() => removeFile(file.name)}
+                      onClick={() => removeFile(index)}
                       variant="secondary"
                       size="small"
                     >

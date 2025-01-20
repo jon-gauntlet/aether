@@ -7,6 +7,10 @@ import { ThemeProvider } from '../../contexts/ThemeContext'
 import { AuthProvider } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabaseClient'
 import { useFolder } from '../../hooks/useFolder'
+import { UPLOAD_CONFIG, UPLOAD_STATES } from '../../config/constants'
+import * as supabaseMock from '../../lib/supabase'
+import { ThemeProvider as StyledThemeProvider } from 'styled-components'
+import { theme } from '../../theme'
 
 // Configure longer timeout for all tests
 vi.setConfig({ testTimeout: 10000 })
@@ -574,6 +578,159 @@ describe('FileUpload', () => {
       await waitFor(() => {
         expect(screen.getByText(/test-folder/i)).toBeInTheDocument()
         expect(screen.getByText('/')).toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('Upload Process', () => {
+    it('renders dropzone with correct text', () => {
+      render(<FileUpload />)
+      
+      expect(screen.getByText(/Drag & drop files here/i)).toBeInTheDocument()
+      expect(screen.getByText(new RegExp(`Max size: ${UPLOAD_CONFIG.MAX_FILE_SIZE / (1024 * 1024)}MB`))).toBeInTheDocument()
+    })
+
+    it('validates file size', async () => {
+      render(<FileUpload />)
+      
+      const file = new File(['test'], 'test.txt', { type: 'text/plain' })
+      Object.defineProperty(file, 'size', { value: UPLOAD_CONFIG.MAX_FILE_SIZE + 1 })
+      
+      const input = screen.getByTestId('file-input')
+      fireEvent.change(input, { target: { files: [file] } })
+      
+      await waitFor(() => {
+        expect(screen.getByTestId('error-message')).toHaveTextContent(/file size must not exceed/i)
+      })
+    })
+
+    it('validates file type', async () => {
+      render(<FileUpload />)
+      
+      const file = new File(['test'], 'test.invalid', { type: 'invalid/type' })
+      
+      const input = screen.getByTestId('file-input')
+      fireEvent.change(input, { target: { files: [file] } })
+      
+      await waitFor(() => {
+        expect(screen.getByTestId('error-message')).toHaveTextContent(/file type.*is not supported/i)
+      })
+    })
+
+    it('prevents duplicate files', async () => {
+      render(<FileUpload />)
+      
+      const file = new File(['test'], 'test.txt', { type: 'text/plain' })
+      
+      const input = screen.getByTestId('file-input')
+      fireEvent.change(input, { target: { files: [file] } })
+      fireEvent.change(input, { target: { files: [file] } })
+      
+      await waitFor(() => {
+        expect(screen.getByTestId('error-message')).toHaveTextContent(/file.*already exists/i)
+      })
+    })
+
+    it('uploads files successfully', async () => {
+      supabaseMock.uploadFile.mockResolvedValue({ path: 'test.txt' })
+      
+      render(<FileUpload />)
+      
+      const file = new File(['test'], 'test.txt', { type: 'text/plain' })
+      
+      const input = screen.getByTestId('file-input')
+      fireEvent.change(input, { target: { files: [file] } })
+      
+      const uploadButton = screen.getByTestId('upload-button')
+      fireEvent.click(uploadButton)
+      
+      await waitFor(() => {
+        expect(supabaseMock.uploadFile).toHaveBeenCalledWith(
+          UPLOAD_CONFIG.UPLOAD_BUCKET,
+          expect.stringContaining('test.txt'),
+          file
+        )
+        expect(screen.getByTestId('file-item-0')).toHaveAttribute('variant', UPLOAD_STATES.SUCCESS)
+      })
+    })
+
+    it('handles upload errors', async () => {
+      const errorMessage = 'Upload failed'
+      supabaseMock.uploadFile.mockRejectedValue(new Error(errorMessage))
+      
+      render(<FileUpload />)
+      
+      const file = new File(['test'], 'test.txt', { type: 'text/plain' })
+      
+      const input = screen.getByTestId('file-input')
+      fireEvent.change(input, { target: { files: [file] } })
+      
+      const uploadButton = screen.getByTestId('upload-button')
+      fireEvent.click(uploadButton)
+      
+      await waitFor(() => {
+        expect(screen.getByTestId('error-message')).toHaveTextContent(/one or more files failed to upload/i)
+        expect(screen.getByTestId('file-item-0')).toHaveAttribute('variant', UPLOAD_STATES.ERROR)
+      })
+    })
+
+    it('removes files', async () => {
+      render(<FileUpload />)
+      
+      const file = new File(['test'], 'test.txt', { type: 'text/plain' })
+      
+      const input = screen.getByTestId('file-input')
+      fireEvent.change(input, { target: { files: [file] } })
+      
+      const removeButton = screen.getByTestId('remove-file-0')
+      fireEvent.click(removeButton)
+      
+      await waitFor(() => {
+        expect(screen.queryByTestId('file-item-0')).not.toBeInTheDocument()
+      })
+    })
+
+    it('clears all files', async () => {
+      render(<FileUpload />)
+      
+      const files = [
+        new File(['test1'], 'test1.txt', { type: 'text/plain' }),
+        new File(['test2'], 'test2.txt', { type: 'text/plain' })
+      ]
+      
+      const input = screen.getByTestId('file-input')
+      fireEvent.change(input, { target: { files: files } })
+      
+      const clearButton = screen.getByTestId('clear-button')
+      fireEvent.click(clearButton)
+      
+      await waitFor(() => {
+        expect(screen.queryByTestId('file-item-0')).not.toBeInTheDocument()
+        expect(screen.queryByTestId('file-item-1')).not.toBeInTheDocument()
+      })
+    })
+
+    it('shows upload progress', async () => {
+      supabaseMock.uploadFile.mockImplementation(() => new Promise(resolve => {
+        setTimeout(() => resolve({ path: 'test.txt' }), 100)
+      }))
+      
+      render(<FileUpload />)
+      
+      const file = new File(['test'], 'test.txt', { type: 'text/plain' })
+      
+      const input = screen.getByTestId('file-input')
+      fireEvent.change(input, { target: { files: [file] } })
+      
+      const uploadButton = screen.getByTestId('upload-button')
+      fireEvent.click(uploadButton)
+      
+      await waitFor(() => {
+        expect(screen.getByTestId('progress-0')).toBeInTheDocument()
+      })
+      
+      await waitFor(() => {
+        expect(screen.getByTestId('file-item-0')).toHaveAttribute('variant', UPLOAD_STATES.SUCCESS)
       })
     })
   })

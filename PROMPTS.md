@@ -2,68 +2,69 @@
 
 ## CRITICAL FEATURES (25-30% Done)
 1. Auth (25% Done)
-   - ✅ UI Components
+   - ✅ UI Components (SignIn, SignUp)
    - ✅ Basic validation
-   - ❌ 15 failing tests
-     * Button states
-     * Error validation
-     * Session cleanup
+   - ❌ Tests Failing
+     * Button states (5 tests)
+     * Error validation (4 tests)
+     * Session cleanup (3 tests)
+     * Memory leaks (3 tests)
    - ❌ No Supabase integration
    - Must demo by 7 PM
 
 2. Files (20% Done)
-   - ✅ UI Components
-   - ✅ Progress UI
+   - ✅ UI Components (FileUpload)
+   - ✅ Progress indicators
    - ❌ No upload system
    - ❌ No backend integration
-   - ❌ No tests
+   - ❌ Tests not written
    - Must demo by 7 PM
 
 ## IMMEDIATE FOCUS (4:22-5:15 PM)
 1. Fix Auth Tests (30min)
    ```bash
-   # Run only auth tests
-   npm test -- "auth" --run
-   
-   # Target specific failures
-   npm test -- "button.*auth" --run  # Button states
-   npm test -- "error.*auth" --run   # Error validation
-   npm test -- "session.*auth" --run # Session cleanup
-   
-   # Single file focus
-   npm test -- "Auth.test" --run
+   # Clear cache first
+   rm -rf node_modules/.vite node_modules/.vitest
+
+   # Fix button tests first
+   npx vitest run "button.*auth" --no-isolate --no-file-parallelism
+
+   # Then error validation
+   npx vitest run "error.*auth" --no-isolate --no-file-parallelism
+
+   # Then session & cleanup
+   npx vitest run "session.*auth" --no-isolate --no-file-parallelism
    ```
-   - Fix button states first
-   - Then error validation
-   - Then session cleanup
-   - Run coverage after fixes
+   - Fix in order listed above
+   - Run with performance flags
+   - Verify each fix
 
 2. Core Auth (25min)
-   - Supabase client
-   - Session handling
-   - Error states
-   - Basic flow
+   - Supabase client setup
+   - Session management
+   - Error handling
+   - Basic auth flow
 
 ## Phase 2 (5:15-6:00 PM)
 1. File System
    ```bash
-   # Run file tests as you build
-   npm test -- "file" --run
-   npm test -- "upload" --run
+   # Run as you build
+   npx vitest run "file" --no-isolate
+   npx vitest run "upload" --no-isolate
    ```
    - Upload to Supabase
    - Progress tracking
    - Error handling
-   - Basic tests
+   - Write tests first
 
 2. Integration
    ```bash
-   # Verify full coverage
-   npm test -- --coverage
+   # Verify coverage
+   npx vitest run --coverage --no-isolate
    ```
    - Auth flow complete
    - File system working
-   - Tests passing
+   - All tests passing
    - Coverage report
 
 ## Phase 3 (6:00-7:00 PM)
@@ -81,8 +82,8 @@
 
 3. Production (6:45-7:00)
    ```bash
-   # Final verification
-   npm test -- --run --coverage
+   # Final checks
+   npx vitest run --coverage --no-isolate
    ```
    - Final deploy
    - Smoke test
@@ -91,7 +92,7 @@
 ## Emergency Rules
 1. Tests First
    - Fix failing tests
-   - Then add features
+   - Write tests before features
    - Keep them passing
 
 2. Demo Ready
@@ -104,32 +105,61 @@
    - Deploy often
    - Fix forward
 
-## Verification
-Each feature needs:
-1. Passing tests
-2. Error handling
-3. Documentation
-4. Coverage report
-
 ## Test Commands
 ```bash
-# Fastest Commands (Use These!)
-npx vitest run Auth.test.jsx        # Single file
-npx vitest run "auth"               # Pattern match
-npx vitest run --coverage           # Coverage report
+# 🧹 First Step
+rm -rf node_modules/.vite node_modules/.vitest   # Clear cache
 
-# Specific Tests
-npx vitest run "button"             # Button tests
-npx vitest run "error"              # Error tests
-npx vitest run "session"            # Session tests
+# 🚀 Fastest Commands
+npx vitest run Auth.test.jsx --no-isolate --no-file-parallelism      # Single file
+npx vitest run "auth" --no-isolate --no-file-parallelism            # Pattern match
+npx vitest run --coverage --no-isolate                              # Coverage
 
-# Watch Mode (Only if Needed)
-npx vitest watch Auth.test.jsx      # Watch single file
-npx vitest watch "auth"             # Watch pattern
+# 🎯 Specific Tests
+npx vitest run "button" --no-isolate      # Button tests
+npx vitest run "error" --no-isolate       # Error tests
+npx vitest run "session" --no-isolate     # Session tests
+```
+
+## Speed Configuration
+```javascript
+// vitest.config.js
+export default {
+  test: {
+    isolate: false,
+    threads: true,
+    pool: 'threads',
+    minThreads: 8,
+    maxThreads: 16,
+    fileParallelism: false,
+    css: false,
+    concurrent: 10
+  }
+}
 ```
 
 ## Speed Tips
-1. Use `vitest run` instead of `npm test`
-2. Target specific files/patterns
-3. Only use watch mode when needed
-4. Add `.only` to focus on specific tests
+1. Use direct `vitest run` commands
+2. Add performance flags for faster runs
+3. Target specific files/patterns
+4. Use `.only` for focused tests
+5. Clear cache if tests get slow:
+   ```bash
+   rm -rf node_modules/.vite
+   rm -rf node_modules/.vitest
+   ```
+
+## Common Commands
+```bash
+# 🧹 Clear Test Cache
+rm -rf node_modules/.vite node_modules/.vitest
+
+# 🚀 Run All Auth Tests Fast
+npx vitest run "auth" --no-isolate --no-file-parallelism
+
+# 🎯 Debug Single Test File
+npx vitest run Auth.test.jsx --no-isolate --no-file-parallelism
+
+# 📊 Fast Coverage Report
+npx vitest run --coverage --no-isolate
+```

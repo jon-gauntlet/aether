@@ -4,6 +4,24 @@ import PropTypes from 'prop-types'
 
 const AuthContext = createContext(null)
 
+const ERROR_MESSAGES = {
+  NETWORK: 'Network error. Please check your connection.',
+  INVALID_CREDENTIALS: 'Invalid email or password.',
+  RATE_LIMIT: 'Too many attempts. Please try again later.',
+  SESSION_EXPIRED: 'Your session has expired. Please sign in again.',
+  DEFAULT: 'An error occurred. Please try again.'
+}
+
+const mapErrorMessage = (error) => {
+  if (!error) return null
+  if (!navigator.onLine) return ERROR_MESSAGES.NETWORK
+  if (error.message?.includes('network')) return ERROR_MESSAGES.NETWORK
+  if (error.message?.includes('credentials')) return ERROR_MESSAGES.INVALID_CREDENTIALS
+  if (error.message?.includes('rate limit')) return ERROR_MESSAGES.RATE_LIMIT
+  if (error.message?.includes('expired')) return ERROR_MESSAGES.SESSION_EXPIRED
+  return ERROR_MESSAGES.DEFAULT
+}
+
 export const useAuth = () => {
   const context = useContext(AuthContext)
   if (!context) {
@@ -18,7 +36,8 @@ export const AuthProvider = ({
   supabaseUrl = process.env.VITE_SUPABASE_URL || 'http://localhost:54321',
   supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0',
   sessionPersistence = true,
-  refreshInterval = 4 * 60 * 1000 // 4 minutes
+  refreshInterval = 4 * 60 * 1000, // 4 minutes
+  onAuthStateChange
 }) => {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -30,52 +49,8 @@ export const AuthProvider = ({
   const supabaseRef = useRef(null)
   const sessionCheckRef = useRef(null)
 
-  // Map error messages to user-friendly messages
-  const mapErrorMessage = useCallback((error) => {
-    if (!error) return null
-    
-    const message = error.message || error
-    
-    // Network errors
-    if (message.includes('fetch') || message.includes('network')) {
-      return 'Unable to connect. Please check your internet connection.'
-    }
-    
-    // Rate limiting
-    if (message.includes('too many requests') || message.includes('rate limit')) {
-      return 'Too many attempts. Please try again later.'
-    }
-    
-    // Auth errors
-    if (message.includes('invalid login') || message.includes('Invalid login')) {
-      return 'Invalid email or password.'
-    }
-    
-    if (message.includes('User already registered')) {
-      return 'An account with this email already exists.'
-    }
-    
-    if (message.includes('Password should be')) {
-      return 'Password must be at least 6 characters long.'
-    }
-    
-    if (message.includes('Email not confirmed')) {
-      return 'Please verify your email address.'
-    }
-    
-    // Session errors
-    if (message.includes('expired')) {
-      return 'Your session has expired. Please sign in again.'
-    }
-    
-    // Default error
-    return message
-  }, [])
-
-  // Safe error setter with auto-clear
   const setSafeError = useCallback((error) => {
     if (!mountedRef.current) return
-    
     const mappedError = mapErrorMessage(error)
     setError(mappedError)
     
@@ -83,7 +58,6 @@ export const AuthProvider = ({
     if (errorTimeoutRef.current) {
       clearTimeout(errorTimeoutRef.current)
     }
-    
     if (mappedError) {
       errorTimeoutRef.current = setTimeout(() => {
         if (mountedRef.current) {
@@ -91,16 +65,13 @@ export const AuthProvider = ({
         }
       }, 5000)
     }
-  }, [mapErrorMessage])
+  }, [])
 
-  // Clear error manually
   const clearError = useCallback(() => {
     if (errorTimeoutRef.current) {
       clearTimeout(errorTimeoutRef.current)
     }
-    if (mountedRef.current) {
-      setError(null)
-    }
+    setError(null)
   }, [])
 
   // Initialize Supabase client only once with proper config
@@ -291,6 +262,10 @@ export const AuthProvider = ({
             setupTokenRefresh(session)
             startSessionCheck()
           }
+
+          if (onAuthStateChange) {
+            onAuthStateChange(event, session)
+          }
         })
 
         if (authSubscriptionRef.current) {
@@ -327,7 +302,7 @@ export const AuthProvider = ({
         }
       }
     }
-  }, [safeSetState, setupTokenRefresh, setSafeError, startSessionCheck])
+  }, [safeSetState, setupTokenRefresh, setSafeError, startSessionCheck, onAuthStateChange])
 
   // Comprehensive cleanup on unmount
   useEffect(() => {
@@ -369,7 +344,7 @@ export const AuthProvider = ({
   const signIn = useCallback(async ({ email, password }) => {
     try {
       setLoading(true)
-      setSafeError(null)
+      clearError()
       const { data, error } = await supabaseRef.current.auth.signInWithPassword({
         email,
         password
@@ -387,10 +362,12 @@ export const AuthProvider = ({
 
       return data
     } catch (e) {
-      safeSetState(() => setSafeError(e))
+      setSafeError(e)
       throw e
     } finally {
-      safeSetState(() => setLoading(false))
+      if (mountedRef.current) {
+        setLoading(false)
+      }
     }
   }, [safeSetState, setupTokenRefresh, setSafeError])
 
@@ -398,7 +375,7 @@ export const AuthProvider = ({
   const signUp = useCallback(async ({ email, password }) => {
     try {
       setLoading(true)
-      setSafeError(null)
+      clearError()
       const { data, error } = await supabaseRef.current.auth.signUp({
         email,
         password
@@ -415,10 +392,12 @@ export const AuthProvider = ({
 
       return data
     } catch (e) {
-      safeSetState(() => setSafeError(e))
+      setSafeError(e)
       throw e
     } finally {
-      safeSetState(() => setLoading(false))
+      if (mountedRef.current) {
+        setLoading(false)
+      }
     }
   }, [safeSetState, setupTokenRefresh, setSafeError])
 
@@ -426,7 +405,7 @@ export const AuthProvider = ({
   const signOut = useCallback(async () => {
     try {
       setLoading(true)
-      setSafeError(null)
+      clearError()
       const { error } = await supabaseRef.current.auth.signOut()
       if (error) throw error
 
@@ -440,10 +419,12 @@ export const AuthProvider = ({
         setSafeError(null)
       })
     } catch (e) {
-      safeSetState(() => setSafeError(e))
+      setSafeError(e)
       throw e
     } finally {
-      safeSetState(() => setLoading(false))
+      if (mountedRef.current) {
+        setLoading(false)
+      }
     }
   }, [safeSetState, setSafeError])
 
@@ -479,20 +460,20 @@ export const AuthProvider = ({
     }
   }, [safeSetState, setSafeError])
 
+  const value = {
+    session,
+    loading,
+    error,
+    signIn,
+    signUp,
+    signOut,
+    clearError,
+    isAuthenticated: !!session?.user,
+    user: session?.user || null
+  }
+
   return (
-    <AuthContext.Provider
-      value={{
-        session,
-        loading,
-        error,
-        signIn,
-        signUp,
-        signOut,
-        clearError,
-        isAuthenticated: !!session?.user,
-        user: session?.user || null
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   )
@@ -504,7 +485,8 @@ AuthProvider.propTypes = {
   supabaseUrl: PropTypes.string,
   supabaseKey: PropTypes.string,
   sessionPersistence: PropTypes.bool,
-  refreshInterval: PropTypes.number
+  refreshInterval: PropTypes.number,
+  onAuthStateChange: PropTypes.func
 }
 
 export default AuthProvider 

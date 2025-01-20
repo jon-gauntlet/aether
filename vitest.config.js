@@ -4,34 +4,25 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   test: {
-    environment: 'jsdom',
     globals: true,
-    setupFiles: ['./src/test/setup.js'],
-    coverage: {
-      provider: 'v8',
-      reporter: ['text', 'json', 'html'],
-      exclude: ['node_modules/', 'src/test/']
-    },
-    pool: 'threads',
-    poolOptions: {
-      threads: {
-        singleThread: false,
-        isolate: false
-      }
-    },
-    testTimeout: 10000,
-    hookTimeout: 10000,
-    maxConcurrency: 5,
-    minThreads: 1,
-    maxThreads: 4,
-    fileParallelism: true,
-    sequence: {
-      shuffle: false
-    },
-    typecheck: {
-      enabled: false
-    },
+    environment: 'jsdom',
+    setupFiles: ['./src/tests/setup.js'],
     include: ['src/**/*.{test,spec}.{js,jsx}'],
+    coverage: {
+      reporter: ['text', 'json', 'html'],
+      exclude: [
+        'node_modules/',
+        'src/tests/',
+      ],
+    },
+    isolate: false,
+    threads: true,
+    pool: 'threads',
+    minThreads: 8,
+    maxThreads: 16,
+    fileParallelism: false,
+    css: false,
+    concurrent: 10,
     exclude: [
       'node_modules',
       'dist',

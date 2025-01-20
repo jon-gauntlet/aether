@@ -98,6 +98,19 @@ const Label = styled.label`
   margin-bottom: 0.25rem;
 `
 
+const getButtonText = (state) => {
+  switch (state) {
+    case 'loading':
+      return 'Signing in...'
+    case 'error':
+      return 'Try Again'
+    case 'success':
+      return 'Success!'
+    default:
+      return 'Sign In'
+  }
+}
+
 export const SignIn = ({ onSuccess, onError }) => {
   const { signIn, loading: authLoading, error: authError, clearError } = useAuth()
   const [email, setEmail] = useState('')
@@ -252,7 +265,6 @@ export const SignIn = ({ onSuccess, onError }) => {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              data-testid="email-error"
             >
               {validationErrors.email}
             </ErrorMessage>
@@ -281,29 +293,12 @@ export const SignIn = ({ onSuccess, onError }) => {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              data-testid="password-error"
             >
               {validationErrors.password}
             </ErrorMessage>
           )}
         </AnimatePresence>
       </div>
-
-      <Button
-        type="submit"
-        disabled={isDisabled}
-        $loading={buttonState === 'loading'}
-        $success={buttonState === 'success'}
-        $error={buttonState === 'error'}
-        whileTap={!isDisabled ? { scale: 0.98 } : {}}
-        data-testid="submit-button"
-        aria-busy={buttonState === 'loading'}
-      >
-        {buttonState === 'loading' ? 'Signing in...' :
-         buttonState === 'success' ? 'Success!' :
-         buttonState === 'error' ? 'Try Again' :
-         'Sign In'}
-      </Button>
 
       <AnimatePresence mode="wait">
         {authError && (
@@ -312,12 +307,26 @@ export const SignIn = ({ onSuccess, onError }) => {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            data-testid="auth-error"
           >
             {authError}
           </ErrorMessage>
         )}
       </AnimatePresence>
+
+      <Button
+        type="submit"
+        disabled={isDisabled}
+        $loading={buttonState === 'loading'}
+        data-testid="sign-in-button"
+        whileTap={{ scale: 0.98 }}
+        style={{
+          backgroundColor: buttonState === 'error' ? 'var(--error-500)' : 
+                          buttonState === 'success' ? 'var(--success-500)' : 
+                          'var(--primary-500)'
+        }}
+      >
+        {getButtonText(buttonState)}
+      </Button>
     </Form>
   )
 }
