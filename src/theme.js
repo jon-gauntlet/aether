@@ -120,4 +120,6 @@ export const theme = {
     xl: '1280px',
     '2xl': '1536px'
   }
-} 
+}
+
+export default theme; 
