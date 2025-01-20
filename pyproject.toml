@@ -1,30 +1,36 @@
 [tool.poetry]
-name = "rag-aether"
+name = "aether-backend"
 version = "0.1.0"
-description = "RAG system with efficient batch processing"
-authors = ["Your Name <your.email@example.com>"]
-packages = [{include = "rag_aether", from = "src"}]
+description = "Aether Backend Service"
+authors = ["Your Name <you@example.com>"]
+packages = [
+    {include = "src"},
+    {include = "src/websocket"},
+    {include = "src/core"}
+]
 
 [tool.poetry.dependencies]
-python = "^3.12"
-pytest = "^8.3.4"
-pytest-asyncio = "^0.25.2"
-psutil = "^6.1.1"
-uvicorn = "^0.34.0"
-fastapi = "^0.115.6"
-websockets = "<14.0"
-python-dotenv = "^1.0.1"
-openai = "^1.59.8"
-faiss-cpu = "^1.9.0.post1"
-pgvector = "^0.3.6"
-supabase = "^2.11.0"
-boto3 = "^1.36.2"
-redis = "^5.2.1"
+python = "^3.10"
+fastapi = "^0.109.0"
+uvicorn = "^0.27.0"
+websockets = "^12.0"
+pydantic = "^2.5.3"
+pyjwt = "^2.10.1"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.4"
+pytest-asyncio = "^0.23.3"
+httpx = "^0.26.0"
 
 [build-system]
-requires = ["poetry-core"]
+requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
-asyncio_mode = "strict"
+pythonpath = [
+    ".",
+    "src"
+]
+asyncio_mode = "auto"
 testpaths = ["tests"]
+python_files = ["test_*.py"]

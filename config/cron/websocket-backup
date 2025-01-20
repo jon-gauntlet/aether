@@ -1,0 +1,17 @@
+# Aether WebSocket Service Backup Cron Configuration
+# Christ is King! ☦
+
+# Run daily backup at 2 AM
+0 2 * * * websocket /opt/aether/websocket/.venv/bin/python /opt/aether/websocket/scripts/backup.py >> /var/log/websocket/backup.log 2>&1
+
+# Run weekly full backup on Sunday at 3 AM
+0 3 * * 0 websocket /opt/aether/websocket/.venv/bin/python /opt/aether/websocket/scripts/backup.py --full >> /var/log/websocket/backup-full.log 2>&1
+
+# Clean up old backups daily at 4 AM
+0 4 * * * websocket find /var/backups/websocket -type f -mtime +30 -delete
+
+# Check backup integrity daily at 5 AM
+0 5 * * * websocket /opt/aether/websocket/.venv/bin/python /opt/aether/websocket/scripts/verify_backup.py >> /var/log/websocket/backup-verify.log 2>&1
+
+# Monitor backup disk space hourly
+0 * * * * websocket /opt/aether/websocket/scripts/monitor_backup_space.sh >> /var/log/websocket/backup-space.log 2>&1 

@@ -1,101 +1,141 @@
-# Frontend Victory Claude
+# Claude B - WebSocket Specialist
 
-Christ is King! ☦
+## CRITICAL FEATURES (35-40% Done)
+1. Real-time Chat
+   - ✅ Connection management
+   - ✅ Message system
+   - ✅ Basic error handling
+   - ❌ No auth integration
+   - ❌ No real-time features
+   - Must demo by 7 PM
 
-## REALITY CHECK (2024-03-21) 🚨
-- Working Directories:
-  - UI: /home/jon/git/aether-workspaces/frontend-ui
-  - WebSocket: /home/jon/git/aether-workspaces/frontend-websocket
+2. Chat Features
+   - ✅ Message UI
+   - ✅ Thread UI
+   - ✅ Presence UI
+   - ❌ No backend storage
+   - ❌ No real-time sync
+   - Must demo by 7 PM
 
-- Actual State:
-  - Core Features:
-    - Authentication: ❌ Not implemented
-    - File Handling: ❌ Not implemented
-    - WebSocket: ❌ Not implemented
-  
-  - Tests:
-    - UI Tests: ❌ All failing
-    - WebSocket Tests: ❌ All failing
-  
-  - Only Completed:
-    - Project setup
-    - Component structure
-    - Test infrastructure
+## IMMEDIATE FOCUS (4:22-5:15 PM)
+1. Backend Storage (30min)
+   ```bash
+   # Run storage tests as you build
+   npm test -- "storage" --run
+   npm test -- "database" --run
+   ```
+   - SQLite setup
+   - Message storage
+   - Thread storage
+   - Basic tests
 
-## IMMEDIATE FOCUS
-1. Core Features (NOW) 🚀
-   - Authentication:
-     - Supabase integration
-     - Session management
-     - Error handling
-     - Test coverage
-   
-   - File Handling:
-     - Upload system
-     - Progress tracking
-     - Error states
-     - Test suite
-
-   - WebSocket System:
-     - Connection handling
-     - Message system
-     - Real-time features
-     - Error recovery
-     - Test coverage
-
-   - Integration Layer:
-     - Auth + WebSocket
-     - File Upload + WebSocket
-     - Session management
-     - Error states
-
-2. Test Infrastructure (PRIORITY) 🔄
-   - Test Framework:
-     - Unit tests
-     - Component tests
-     - Integration tests
-     - E2E tests
-     - Coverage reports
-   
-   - Error Scenarios:
-     - Auth failures
-     - Upload errors
-     - Connection failures
-     - Message errors
-     - Network issues
-     - Recovery paths
-
-## Development Approach
-1. Test First:
-   - Write failing test
-   - Implement feature
-   - Verify passing
-   - Document behavior
-
-2. Reality Based:
-   - Verify all claims
-   - Test thoroughly
-   - Document actual state
-   - Track real metrics
-
-3. Documentation:
-   - Implementation status
+2. Real-time (25min)
+   ```bash
+   # Run WebSocket tests
+   npm test -- "websocket" --run
+   npm test -- "real-time" --run
+   ```
+   - Message sync
+   - Presence tracking
+   - Error recovery
    - Test coverage
-   - Known issues
-   - Next steps
 
-## Progress Tracking
-Update PROGRESS.md with:
-1. Actual State:
-   - Implementation status
-   - Test results
-   - Coverage metrics
-   - Known issues
+## Phase 2 (5:15-6:00 PM)
+1. Core Features
+   ```bash
+   # Feature-specific tests
+   npm test -- "thread" --run
+   npm test -- "reaction" --run
+   npm test -- "presence" --run
+   ```
+   - Thread system
+   - Reaction storage
+   - User presence
+   - Message history
 
-2. Daily Changes:
-   - Verified features
-   - Test status
-   - Real metrics
-   - Blockers
+2. Integration
+   ```bash
+   # Integration tests
+   npm test -- "integration" --run
+   ```
+   - Auth flow
+   - Error handling
+   - Reconnection
+   - Status updates
 
-Remember: Verify Everything
+## Phase 3 (6:00-7:00 PM)
+1. Polish (6:00-6:30)
+   ```bash
+   # UI component tests
+   npm test -- "ui" --run
+   ```
+   - Error messages
+   - Loading states
+   - Connection status
+   - User feedback
+
+2. Integration (6:30-6:45)
+   ```bash
+   # Final integration tests
+   npm test -- "integration" --run --coverage
+   ```
+   - Merge with Auth
+   - Fix conflicts
+   - Test flows
+   - Document APIs
+
+3. Production (6:45-7:00)
+   ```bash
+   # Final verification
+   npm test -- --run --coverage
+   ```
+   - Final deploy
+   - Smoke test
+   - Demo ready
+
+## Emergency Rules
+1. Storage First
+   - Get SQLite working
+   - Then add features
+   - Keep it stable
+
+2. Demo Ready
+   - Every feature testable
+   - Every feature documented
+   - Error handling solid
+
+3. Keep Shipping
+   - Commit often
+   - Deploy often
+   - Fix forward
+
+## Verification
+Each feature needs:
+1. Working storage
+2. Real persistence
+3. Error handling
+4. Documentation
+5. Test coverage
+
+## Test Commands
+```bash
+# Fastest Commands (Use These!)
+npx vitest run WebSocket.test.jsx    # Single file
+npx vitest run "websocket"           # Pattern match
+npx vitest run --coverage            # Coverage report
+
+# Specific Tests
+npx vitest run "storage"             # Storage tests
+npx vitest run "thread"              # Thread tests
+npx vitest run "presence"            # Presence tests
+
+# Watch Mode (Only if Needed)
+npx vitest watch WebSocket.test.jsx  # Watch single file
+npx vitest watch "websocket"         # Watch pattern
+```
+
+## Speed Tips
+1. Use `vitest run` instead of `npm test`
+2. Target specific files/patterns
+3. Only use watch mode when needed
+4. Add `.only` to focus on specific tests

@@ -1,9 +1,9 @@
-import React from 'react'
+import React, { useRef, useEffect } from 'react';
 import { Box, VStack, Text, Skeleton, Fade } from '@chakra-ui/react';
 import { ErrorBoundary } from './ErrorBoundary';
 import { Message } from './Message';
 
-function ChatMessage({ message, isUser }) {
+function ChatMessage({ message, isUser, onReaction }) {
   return (
     <Box
       data-testid="message-container"
@@ -32,7 +32,13 @@ function ChatMessage({ message, isUser }) {
   );
 }
 
-function ChatMessageListComponent({ messages = [], isLoading, error }) {
+function ChatMessageListComponent({ messages = [], isLoading, error, typingUsers, onReaction }) {
+  const bottomRef = useRef(null);
+  
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
   if (error) {
     return (
       <Box role="alert" p={4} color="red.500">
@@ -83,9 +89,22 @@ function ChatMessageListComponent({ messages = [], isLoading, error }) {
             key={message.id || index}
             message={message}
             isUser={message.user_id === 'anonymous'}
+            onReaction={onReaction}
           />
         ))
       )}
+      
+      {typingUsers.size > 0 && (
+        <Box p={2}>
+          <Text fontSize="sm" color="gray.500">
+            {Array.from(typingUsers).join(', ')} 
+            {typingUsers.size === 1 ? ' is ' : ' are '} 
+            typing...
+          </Text>
+        </Box>
+      )}
+      
+      <div ref={bottomRef} />
     </VStack>
   );
 }

@@ -1,0 +1,23 @@
+{
+  "workbench.colorTheme": "Default Dark+ Green",
+  "workbench.colorCustomizations": {
+    "titleBar.activeBackground": "#006633",
+    "titleBar.activeForeground": "#ffffff"
+  },
+  "window.title": "CLAUDE B: WebSocket",
+  "editor.rulers": [80, 100],
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": true
+  },
+  "files.autoSave": "onFocusChange",
+  "git.autofetch": true,
+  "git.enableSmartCommit": true,
+  "terminal.integrated.defaultProfile.linux": "bash",
+  "terminal.integrated.profiles.linux": {
+    "bash": {
+      "path": "/usr/bin/bash"
+    }
+  }
+} 
