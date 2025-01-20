@@ -59,6 +59,7 @@ const Button = styled(motion.button)`
   &:disabled {
     opacity: 0.7;
     cursor: not-allowed;
+    background-color: ${({ theme }) => theme.colors.neutral[400]};
   }
 
   &::after {
@@ -89,6 +90,9 @@ const ErrorMessage = styled(motion.div)`
   color: ${({ theme }) => theme.colors.error[500]};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
   margin-top: 0.25rem;
+  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  role: alert;
+  aria-live: polite;
 `
 
 const Label = styled.label`
@@ -251,20 +255,19 @@ export const SignIn = ({ onSuccess, onError }) => {
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          error={validationErrors.email || authError}
           disabled={isDisabled}
+          error={validationErrors.email}
           aria-invalid={!!validationErrors.email}
-          aria-describedby={validationErrors.email ? 'email-error' : undefined}
-          data-testid="email-input"
+          aria-describedby={validationErrors.email ? "email-error" : undefined}
         />
-        <AnimatePresence mode="wait">
+        <AnimatePresence>
           {validationErrors.email && (
             <ErrorMessage
-              role="alert"
-              id="email-error"
               initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
+              animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
+              id="email-error"
+              role="alert"
             >
               {validationErrors.email}
             </ErrorMessage>
@@ -279,20 +282,19 @@ export const SignIn = ({ onSuccess, onError }) => {
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          error={validationErrors.password || authError}
           disabled={isDisabled}
+          error={validationErrors.password}
           aria-invalid={!!validationErrors.password}
-          aria-describedby={validationErrors.password ? 'password-error' : undefined}
-          data-testid="password-input"
+          aria-describedby={validationErrors.password ? "password-error" : undefined}
         />
-        <AnimatePresence mode="wait">
+        <AnimatePresence>
           {validationErrors.password && (
             <ErrorMessage
-              role="alert"
-              id="password-error"
               initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
+              animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
+              id="password-error"
+              role="alert"
             >
               {validationErrors.password}
             </ErrorMessage>
@@ -300,33 +302,31 @@ export const SignIn = ({ onSuccess, onError }) => {
         </AnimatePresence>
       </div>
 
-      <AnimatePresence mode="wait">
-        {authError && (
-          <ErrorMessage
-            role="alert"
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-          >
-            {authError}
-          </ErrorMessage>
-        )}
-      </AnimatePresence>
-
       <Button
         type="submit"
         disabled={isDisabled}
         $loading={buttonState === 'loading'}
+        whileHover={{ scale: isDisabled ? 1 : 1.02 }}
+        whileTap={{ scale: isDisabled ? 1 : 0.98 }}
+        aria-disabled={isDisabled}
+        aria-busy={buttonState === 'loading'}
         data-testid="sign-in-button"
-        whileTap={{ scale: 0.98 }}
-        style={{
-          backgroundColor: buttonState === 'error' ? 'var(--error-500)' : 
-                          buttonState === 'success' ? 'var(--success-500)' : 
-                          'var(--primary-500)'
-        }}
       >
         {getButtonText(buttonState)}
       </Button>
+
+      <AnimatePresence>
+        {authError && (
+          <ErrorMessage
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            role="alert"
+          >
+            {authError.message || 'An error occurred during sign in'}
+          </ErrorMessage>
+        )}
+      </AnimatePresence>
     </Form>
   )
 }

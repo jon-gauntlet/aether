@@ -15,22 +15,19 @@ export default defineConfig({
         'src/tests/',
       ],
     },
-    isolate: false,
-    threads: true,
-    pool: 'threads',
-    minThreads: 8,
-    maxThreads: 16,
+    minThreads: 1,
+    maxThreads: 4,
+    slowTestThreshold: 5000,
     fileParallelism: false,
+    isolate: false,
+    reporters: ['tap'],
     css: false,
-    concurrent: 10,
     exclude: [
       'node_modules',
       'dist',
       '.storybook',
       'storybook-static'
     ],
-    reporters: ['verbose'],
-    watch: false,
     watchExclude: ['**/node_modules/**', '**/dist/**'],
     passWithNoTests: false
   }
