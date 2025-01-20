@@ -1,0 +1,23 @@
+{
+  "workbench.colorTheme": "Default Dark+ Blue",
+  "workbench.colorCustomizations": {
+    "titleBar.activeBackground": "#0066cc",
+    "titleBar.activeForeground": "#ffffff"
+  },
+  "window.title": "CLAUDE A: Auth & Files",
+  "editor.rulers": [80, 100],
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": true
+  },
+  "files.autoSave": "onFocusChange",
+  "git.autofetch": true,
+  "git.enableSmartCommit": true,
+  "terminal.integrated.defaultProfile.linux": "bash",
+  "terminal.integrated.profiles.linux": {
+    "bash": {
+      "path": "/usr/bin/bash"
+    }
+  }
+} 

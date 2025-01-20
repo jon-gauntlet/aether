@@ -3,12 +3,10 @@
  */
 export default class WebSocketService {
   constructor() {
-    this.socket = null
+    this.ws = null
     this.connected = false
     this.messageBuffer = []
-    this.batchQueue = []
-    this.pendingMessages = new Map()
-    this.messageId = 1
+    this.batchTimeout = null
     this.messageCallbacks = new Set()
     this.statusCallbacks = new Set()
     this.presenceCallbacks = new Set()
@@ -16,38 +14,83 @@ export default class WebSocketService {
     this.readReceiptCallbacks = new Set()
     this.typingUsers = new Map()
     this.readReceipts = new Map()
+    this.missedHeartbeats = 0
     this.metrics = {
       messagesSent: 0,
       messagesReceived: 0,
       errors: 0,
       reconnections: 0,
+      lastReconnectTime: null,
+      connectionUptime: 0,
       batchesSent: 0,
-      totalBatchSize: 0,
-      latencySum: 0,
-      latencyCount: 0
+      bytesTransferred: 0,
+      latencyMeasurements: 0,
+      averageLatency: 0
     }
   }
 
   /**
    * Connect to the WebSocket server
    * @param {string} url WebSocket URL
-   * @param {Object} options Connection options
+   * @returns {Promise} Promise that resolves when connection is established
    */
-  connect(url, options = {}) {
-    if (this.socket) {
+  async connect(url) {
+    if (this.ws) {
       this.disconnect()
     }
 
     try {
-      this.socket = new WebSocket(url)
-      this.setupSocketHandlers()
-      this.startHeartbeat()
-
-      if (options.auth) {
-        this.authenticate(options.auth)
+      this.ws = new WebSocket(url)
+      
+      this.ws.onopen = () => {
+        this.connected = true
+        this.statusCallbacks.forEach(cb => cb(true))
+        this.sendBufferedMessages()
+        this.startHeartbeat()
       }
+
+      this.ws.onclose = () => {
+        this.connected = false
+        this.statusCallbacks.forEach(cb => cb(false))
+        this.stopHeartbeat()
+        this.reconnect()
+      }
+
+      this.ws.onerror = (error) => {
+        console.error('WebSocket error:', error)
+        this.metrics.errors++
+      }
+
+      this.ws.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data)
+          this.metrics.messagesReceived++
+          this.messageCallbacks.forEach(cb => cb(message))
+        } catch (error) {
+          console.error('Failed to parse message:', error)
+          this.metrics.errors++
+        }
+      }
+
+      return new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new Error('Connection timeout'))
+        }, 5000)
+
+        this.ws.onopen = () => {
+          clearTimeout(timeout)
+          resolve()
+        }
+
+        this.ws.onerror = (error) => {
+          clearTimeout(timeout)
+          reject(error)
+        }
+      })
     } catch (error) {
-      this.handleError(error)
+      console.error('Failed to connect:', error)
+      this.metrics.errors++
+      throw error
     }
   }
 
@@ -55,43 +98,75 @@ export default class WebSocketService {
    * Disconnect from the WebSocket server
    */
   disconnect() {
-    if (this.socket) {
+    if (this.ws) {
+      this.ws.close()
+      this.ws = null
       this.connected = false
-      this.socket.close()
-      this.socket = null
       this.stopHeartbeat()
-      this.clearState()
-      this.notifyStatusChange()
     }
   }
 
   /**
-   * Set up WebSocket event handlers
+   * Reconnect to the WebSocket server
    */
-  setupSocketHandlers() {
-    this.socket.onopen = () => {
-      this.connected = true
-      this.notifyStatusChange()
-      this.sendBufferedMessages()
-    }
-
-    this.socket.onclose = () => {
-      this.connected = false
-      this.notifyStatusChange()
-      this.clearState()
-    }
-
-    this.socket.onerror = (error) => {
-      this.handleError(error)
-    }
-
-    this.socket.onmessage = (event) => {
-      try {
-        const message = JSON.parse(event.data)
-        this.handleMessage(message)
-      } catch (error) {
-        this.handleError(error)
+  reconnect() {
+    this.metrics.reconnections++
+    this.metrics.lastReconnectTime = Date.now()
+    setTimeout(() => {
+      if (!this.connected) {
+        this.connect()
       }
+    }, Math.min(1000 * Math.pow(2, this.metrics.reconnections), 30000))
+  }
+
+  /**
+   * Send a message through the WebSocket
+   * @param {Object} message Message to send
+   */
+  send(message) {
+    if (!message) return
+
+    const enhancedMessage = {
+      ...message,
+      id: Date.now(),
+      timestamp: new Date().toISOString()
+    }
+
+    if (this.connected && this.ws) {
+      this.sendImmediate(enhancedMessage)
+    } else {
+      this.messageBuffer.push(enhancedMessage)
+    }
+  }
+
+  /**
+   * Send a message immediately
+   * @param {Object} message Message to send
+   */
+  sendImmediate(message) {
+    try {
+      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+        throw new Error('WebSocket not connected')
+      }
+
+      const data = JSON.stringify(message)
+      this.ws.send(data)
+      this.metrics.messagesSent++
+      this.metrics.bytesTransferred += data.length
+    } catch (error) {
+      console.error('Failed to send message:', error)
+      this.metrics.errors++
+      this.messageBuffer.push(message)
+    }
+  }
+
+  /**
+   * Send buffered messages
+   */
+  sendBufferedMessages() {
+    while (this.messageBuffer.length > 0 && this.connected) {
+      const message = this.messageBuffer.shift()
+      this.sendImmediate(message)
     }
   }
 
@@ -123,99 +198,9 @@ export default class WebSocketService {
     this.metrics.messagesReceived++
     if (message.timestamp) {
       const latency = Date.now() - message.timestamp
-      this.metrics.latencySum += latency
-      this.metrics.latencyCount++
+      this.metrics.latencyMeasurements++
+      this.metrics.averageLatency = ((this.metrics.averageLatency * (this.metrics.latencyMeasurements - 1)) + latency) / this.metrics.latencyMeasurements
     }
-  }
-
-  /**
-   * Send a message through the WebSocket
-   * @param {Object} message Message to send
-   */
-  send(message) {
-    const enhancedMessage = {
-      ...message,
-      id: this.messageId++,
-      timestamp: Date.now()
-    }
-
-    if (!this.connected) {
-      this.messageBuffer.push(enhancedMessage)
-      return
-    }
-
-    if (this.shouldBatchMessage(message)) {
-      this.queueForBatch(enhancedMessage)
-    } else {
-      this.sendImmediate(enhancedMessage)
-    }
-  }
-
-  /**
-   * Send a message immediately
-   * @param {Object} message Message to send
-   */
-  sendImmediate(message) {
-    try {
-      this.socket.send(JSON.stringify(message))
-      this.pendingMessages.set(message.id, message)
-      this.metrics.messagesSent++
-    } catch (error) {
-      this.handleError(error)
-      this.messageBuffer.push(message)
-    }
-  }
-
-  /**
-   * Check if a message should be batched
-   * @param {Object} message Message to check
-   * @returns {boolean} True if the message should be batched
-   */
-  shouldBatchMessage(message) {
-    return message.type !== 'presence' && 
-           message.type !== 'typing' && 
-           message.type !== 'read'
-  }
-
-  /**
-   * Queue a message for batching
-   * @param {Object} message Message to queue
-   */
-  queueForBatch(message) {
-    this.batchQueue.push(message)
-    if (this.batchQueue.length >= 10) {
-      this.sendBatch()
-    } else if (this.batchQueue.length === 1) {
-      setTimeout(() => this.sendBatch(), 100)
-    }
-  }
-
-  /**
-   * Send a batch of messages
-   */
-  sendBatch() {
-    if (this.batchQueue.length === 0) return
-
-    const batch = {
-      type: 'batch',
-      messages: [...this.batchQueue],
-      timestamp: Date.now()
-    }
-
-    this.sendImmediate(batch)
-    this.metrics.batchesSent++
-    this.metrics.totalBatchSize += this.batchQueue.length
-    this.batchQueue = []
-  }
-
-  /**
-   * Send buffered messages
-   */
-  sendBufferedMessages() {
-    const messages = [...this.messageBuffer, ...this.batchQueue]
-    this.messageBuffer = []
-    this.batchQueue = []
-    messages.forEach(message => this.send(message))
   }
 
   /**
@@ -278,6 +263,12 @@ export default class WebSocketService {
     this.heartbeatInterval = setInterval(() => {
       if (this.connected) {
         this.send({ type: 'ping', timestamp: Date.now() })
+        this.missedHeartbeats++
+        
+        if (this.missedHeartbeats >= 2) {
+          this.disconnect()
+          this.reconnect()
+        }
       }
     }, 30000)
   }
@@ -290,36 +281,7 @@ export default class WebSocketService {
       clearInterval(this.heartbeatInterval)
       this.heartbeatInterval = null
     }
-  }
-
-  /**
-   * Authenticate with the WebSocket server
-   * @param {string} token Authentication token
-   */
-  authenticate(token) {
-    this.send({
-      type: 'auth',
-      token,
-      timestamp: Date.now()
-    })
-  }
-
-  /**
-   * Clear WebSocket state
-   */
-  clearState() {
-    this.batchQueue = []
-    this.typingUsers.clear()
-    this.readReceipts.clear()
-  }
-
-  /**
-   * Handle WebSocket error
-   * @param {Error} error Error to handle
-   */
-  handleError(error) {
-    this.metrics.errors++
-    console.error('WebSocket error:', error)
+    this.missedHeartbeats = 0
   }
 
   /**
@@ -444,23 +406,24 @@ export default class WebSocketService {
    * @returns {Object} WebSocket metrics
    */
   getMetrics() {
-    return {
-      ...this.metrics,
-      averageBatchSize: this.metrics.batchesSent > 0 
-        ? this.metrics.totalBatchSize / this.metrics.batchesSent 
-        : 0,
-      averageLatency: this.metrics.latencyCount > 0
-        ? this.metrics.latencySum / this.metrics.latencyCount
-        : 0
-    }
+    return { ...this.metrics }
   }
 
   /**
    * Reset WebSocket metrics
    */
   resetMetrics() {
-    Object.keys(this.metrics).forEach(key => {
-      this.metrics[key] = 0
-    })
+    this.metrics = {
+      messagesSent: 0,
+      messagesReceived: 0,
+      errors: 0,
+      reconnections: 0,
+      lastReconnectTime: null,
+      connectionUptime: 0,
+      batchesSent: 0,
+      bytesTransferred: 0,
+      latencyMeasurements: 0,
+      averageLatency: 0
+    }
   }
 } 

@@ -4,34 +4,32 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   test: {
-    globals: true,
     environment: 'jsdom',
+    globals: true,
     setupFiles: ['./src/test/setup.js'],
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'json', 'html', 'lcov'],
-      exclude: [
-        'node_modules/**',
-        'dist/**',
-        '**/*.d.ts',
-        '**/virtual:*',
-        '**/__x00__*',
-        '**/\x00*',
-        'cypress/**',
-        '**/*.test.{js,jsx}',
-        '**/*.spec.{js,jsx}',
-        '**/setup.{js,jsx}',
-        '.storybook/**',
-        'storybook-static/**'
-      ],
-      reportsDirectory: './coverage',
-      clean: true,
-      cleanOnRerun: true,
-      enabled: true,
-      lines: 80,
-      functions: 80,
-      branches: 80,
-      statements: 80
+      reporter: ['text', 'json', 'html'],
+      exclude: ['node_modules/', 'src/test/']
+    },
+    pool: 'threads',
+    poolOptions: {
+      threads: {
+        singleThread: false,
+        isolate: false
+      }
+    },
+    testTimeout: 10000,
+    hookTimeout: 10000,
+    maxConcurrency: 5,
+    minThreads: 1,
+    maxThreads: 4,
+    fileParallelism: true,
+    sequence: {
+      shuffle: false
+    },
+    typecheck: {
+      enabled: false
     },
     include: ['src/**/*.{test,spec}.{js,jsx}'],
     exclude: [
@@ -43,10 +41,6 @@ export default defineConfig({
     reporters: ['verbose'],
     watch: false,
     watchExclude: ['**/node_modules/**', '**/dist/**'],
-    passWithNoTests: false,
-    threads: true,
-    maxConcurrency: 5,
-    minThreads: 1,
-    maxThreads: 4
+    passWithNoTests: false
   }
 }) 

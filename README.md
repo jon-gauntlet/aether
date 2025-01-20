@@ -1,139 +1,152 @@
-# Aether
+# Auth & Files System
 
-A next-generation development environment that integrates AI-first principles with natural system design.
+A modern authentication and file management system built with React, Supabase, and WebSocket for real-time updates.
 
-## Overview
+## Features
 
-Aether is built on three core principles:
-1. **AI-First Development**: Designed to work seamlessly with AI assistants
-2. **Natural System Design**: Systems that evolve and adapt naturally
-3. **Flow State Optimization**: Enhancing developer productivity through flow state
+### Authentication
+- Secure email/password authentication
+- Session management with auto-refresh
+- Real-time auth state synchronization
+- Comprehensive error handling
+- Rate limiting protection
 
-## Quick Start
+### File Management
+- Drag and drop file upload
+- Progress tracking
+- File type validation
+- Size limits
+- Folder organization
+- Search functionality
+- Real-time updates
 
+### Real-time Updates
+- WebSocket integration
+- Auto-reconnection
+- Event filtering
+- Concurrent operation handling
+- State synchronization
+
+## Tech Stack
+
+- **Frontend**: React, Framer Motion, Styled Components
+- **Backend**: Supabase (Auth, Storage, Real-time)
+- **State Management**: React Context + Hooks
+- **Testing**: Vitest, Testing Library, Playwright
+- **Build Tool**: Vite
+- **Type Safety**: PropTypes (with TypeScript-like validation)
+- **Code Quality**: ESLint, Prettier
+
+## Getting Started
+
+1. Clone the repository:
 ```bash
-# Clone the repository
-git clone https://github.com/jon-gauntlet/aether.git
-cd aether
-
-# Install dependencies
-npm install  # Frontend dependencies
-poetry install  # Python dependencies
-
-# Set up environment
-cp config/env/.env.example .env
-source scripts/setup_env.sh
-
-# Start development server
-npm run dev
+git clone https://github.com/yourusername/auth-files.git
+cd auth-files
 ```
 
-## Project Structure
+2. Install dependencies:
+```bash
+npm install
+```
 
-See [PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md) for a detailed breakdown of the codebase.
+3. Create environment file:
+```bash
+cp .env.example .env
+```
 
-Key components:
-- `/src` - Core application code
-- `/frontend` - Frontend application
-- `/config` - Configuration files
-- `/docs` - Documentation
-- `/tests` - Test suite
-- `/scripts` - Utility scripts
+4. Update environment variables in `.env`:
+```bash
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_MAX_FILE_SIZE=5242880
+VITE_ALLOWED_FILE_TYPES=image/*,application/pdf,.doc,.docx
+VITE_UPLOAD_BUCKET=files
+```
 
-## Core Features
-
-### 1. RAG System
-- Advanced document retrieval and generation
-- Semantic search capabilities
-- Context-aware responses
-- High-performance batch processing (112K+ docs/min)
-- Stable memory usage (3.1-3.9%)
-- 100% reliability across 226K+ documents
-- [Detailed RAG Documentation](docs/RAG_SYSTEM.md)
-
-### 2. Space Management
-- Dynamic workspace organization
-- Context-aware transitions
-- Pattern-based space optimization
-
-### 3. Reaction System
-- Real-time response handling
-- Energy-aware processing
-- Adaptive feedback loops
-
-### 4. Flow State Enhancement
-- Developer flow state tracking
-- Automatic context preservation
-- Minimal interruption design
-
-## Batch Processing Performance
-
-The system includes an optimized batch processor capable of handling 112K+ documents per minute with the following features:
-
-### Adaptive Performance Optimization
-- Dynamic batch sizing (50-500 documents) based on processing times
-- Memory-aware worker scaling (1-4 workers)
-- Processing speed auto-tuning based on system performance
-
-### Resource Management
-- Memory usage monitoring and automatic throttling
-- Adaptive concurrency control
-- Graceful degradation under high load
-
-### Error Handling
-- Intelligent retry mechanism with adaptive backoff
-- Memory-aware error recovery
-- Detailed performance statistics and monitoring
-
-### Recovery Procedures
-1. Automatic batch size reduction under memory pressure
-2. Worker count adjustment based on system load
-3. Exponential backoff with memory-aware retry delays
-4. Graceful shutdown and restart capabilities
-
-Current performance: 112K documents/minute verified with automatic optimization.
+5. Start development server:
+```bash
+npm run dev
+```
 
 ## Development
 
-### Prerequisites
-- Node.js 18+
-- Python 3.12+
-- Poetry
-- Cursor IDE (recommended)
+### Project Structure
+```
+src/
+├── components/          # React components
+│   ├── Auth/           # Authentication components
+│   └── FileUpload/     # File upload components
+├── config/             # Configuration and constants
+├── contexts/           # React contexts
+├── hooks/              # Custom hooks
+├── lib/               # Library integrations
+├── utils/             # Utility functions
+└── tests/             # Test files
+```
 
-### Development Commands
+### Available Scripts
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run preview` - Preview production build
+- `npm test` - Run tests
+- `npm run lint` - Lint code
+- `npm run format` - Format code
+
+## Testing
+
+### Unit Tests
 ```bash
-# Start development server
-npm run dev
+npm run test:unit
+```
 
-# Run tests
-npm test
+### Integration Tests
+```bash
+npm run test:integration
+```
 
-# Run specific test file
-npm test path/to/test
+### E2E Tests
+```bash
+npm run test:e2e
+```
 
-# Build for production
+### Coverage Report
+```bash
+npm run test:coverage
+```
+
+## Deployment
+
+1. Build the application:
+```bash
 npm run build
 ```
 
-### AI Integration
-Aether is designed to work seamlessly with AI assistants:
-1. Clear file structure for easy navigation
-2. Consistent naming conventions
-3. Comprehensive documentation
-4. AI-friendly code organization
+2. Deploy to your hosting platform:
+```bash
+npm run deploy
+```
+
+## API Documentation
+
+See [API.md](API.md) for detailed API documentation.
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed contribution guidelines.
-
-Key points:
 1. Fork the repository
-2. Create a feature branch
-3. Follow coding standards
-4. Write tests
-5. Submit a pull request
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## License
 
-MIT License - See [LICENSE](LICENSE) for details
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Acknowledgments
+
+- [Supabase](https://supabase.io/) for the amazing backend platform
+- [React](https://reactjs.org/) for the frontend framework
+- [Framer Motion](https://www.framer.com/motion/) for animations
+- [Styled Components](https://styled-components.com/) for styling
+- [Vite](https://vitejs.dev/) for the build tool
