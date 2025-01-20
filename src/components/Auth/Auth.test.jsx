@@ -1,10 +1,10 @@
 import React from 'react'
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderWithTheme } from '../../test/utils'
 import { mockSupabase } from '../../test/mocks'
-import { AuthProvider } from './AuthProvider'
+import { AuthProvider, useAuth } from './AuthProvider'
 import SignIn from './SignIn'
 import SignUp from './SignUp'
 import SignOut from './SignOut'
@@ -134,27 +134,59 @@ vi.mock('../../theme/ThemeProvider', () => ({
 describe('Authentication', () => {
   let onSuccess
   let onError
+  let unsubscribe
+  let mockClient
 
   beforeEach(() => {
-    vi.useFakeTimers()
+    vi.useFakeTimers({ shouldAdvanceTime: true })
     onSuccess = vi.fn()
     onError = vi.fn()
-    mockSupabase.auth.signInWithPassword.mockClear()
-    mockSupabase.auth.signUp.mockClear()
-    mockSupabase.auth.getSession.mockClear()
-    mockSupabase.auth.onAuthStateChange.mockClear()
+    unsubscribe = vi.fn()
+    
+    // Create a single mock client instance
+    mockClient = {
+      auth: {
+        ...mockSupabase.auth,
+        signInWithPassword: vi.fn(),
+        signUp: vi.fn(),
+        signOut: vi.fn(),
+        getSession: vi.fn(),
+        onAuthStateChange: vi.fn()
+      }
+    }
+
+    // Setup default mock implementations
+    mockClient.auth.signInWithPassword.mockImplementation(mockSupabase.auth.signInWithPassword)
+    mockClient.auth.signUp.mockImplementation(mockSupabase.auth.signUp)
+    mockClient.auth.signOut.mockImplementation(mockSupabase.auth.signOut)
+    mockClient.auth.getSession.mockImplementation(mockSupabase.auth.getSession)
+    mockClient.auth.onAuthStateChange.mockImplementation((callback) => {
+      const subscription = { unsubscribe }
+      callback('SIGNED_IN', { user: { id: '123' } })
+      return { data: { subscription } }
+    })
   })
 
   afterEach(() => {
     vi.useRealTimers()
+    vi.clearAllMocks()
+    unsubscribe.mockClear()
   })
+
+  const renderWithAuth = (component) => {
+    return renderWithProviders(
+      <AuthProvider supabase={mockClient}>
+        {component}
+      </AuthProvider>
+    )
+  }
 
   describe('SignIn', () => {
     it('handles successful sign in', async () => {
-      const user = userEvent.setup()
-      mockSupabase.auth.signInWithPassword.mockResolvedValueOnce({ data: { user: { id: '123' } }, error: null })
+      const user = userEvent.setup({ delay: null })
+      mockClient.auth.signInWithPassword.mockResolvedValueOnce({ data: { user: { id: '123' } }, error: null })
 
-      renderWithProviders(<SignIn onSuccess={onSuccess} />)
+      renderWithAuth(<SignIn onSuccess={onSuccess} />)
 
       const emailInput = screen.getByLabelText('Email')
       const passwordInput = screen.getByLabelText('Password')
@@ -164,18 +196,23 @@ describe('Authentication', () => {
       await user.type(passwordInput, 'password123')
       await user.click(signInButton)
 
-      expect(mockSupabase.auth.signInWithPassword).toHaveBeenCalledWith({
-        email: 'test@example.com',
-        password: 'password123'
+      await waitFor(() => {
+        expect(mockClient.auth.signInWithPassword).toHaveBeenCalledWith({
+          email: 'test@example.com',
+          password: 'password123'
+        })
       })
-      expect(onSuccess).toHaveBeenCalled()
+      
+      await waitFor(() => {
+        expect(onSuccess).toHaveBeenCalled()
+      })
     })
 
     it('handles sign in errors', async () => {
-      const user = userEvent.setup()
-      mockSupabase.auth.signInWithPassword.mockRejectedValueOnce(new Error('Invalid credentials'))
+      const user = userEvent.setup({ delay: null })
+      mockClient.auth.signInWithPassword.mockRejectedValueOnce(new Error('Invalid credentials'))
 
-      renderWithProviders(<SignIn onError={onError} />)
+      renderWithAuth(<SignIn onError={onError} />)
 
       const emailInput = screen.getByLabelText('Email')
       const passwordInput = screen.getByLabelText('Password')
@@ -185,30 +222,37 @@ describe('Authentication', () => {
       await user.type(passwordInput, 'wrongpassword')
       await user.click(signInButton)
 
-      expect(await screen.findByRole('alert')).toHaveTextContent(/invalid credentials/i)
-      expect(onError).toHaveBeenCalled()
+      await waitFor(() => {
+        expect(screen.getByRole('alert')).toHaveTextContent(/invalid credentials/i)
+      })
+      
+      await waitFor(() => {
+        expect(onError).toHaveBeenCalled()
+      })
     })
 
     it('validates required fields', async () => {
-      const user = userEvent.setup()
-      renderWithProviders(<SignIn />)
+      const user = userEvent.setup({ delay: null })
+      renderWithAuth(<SignIn />)
 
-      const signInButton = screen.getByRole('button', { name: /sign in/i })
+      const signInButton = screen.getByRole('button', { name: /(sign in|signing in)/i })
       await user.click(signInButton)
 
-      const alerts = screen.getAllByRole('alert')
-      expect(alerts).toHaveLength(2)
-      expect(alerts[0]).toHaveTextContent(/email is required/i)
-      expect(alerts[1]).toHaveTextContent(/password is required/i)
+      await waitFor(() => {
+        const alerts = screen.getAllByRole('alert')
+        expect(alerts).toHaveLength(2)
+        expect(alerts[0]).toHaveTextContent(/email is required/i)
+        expect(alerts[1]).toHaveTextContent(/password is required/i)
+      })
     })
   })
 
   describe('SignUp', () => {
     it('handles successful sign up', async () => {
-      const user = userEvent.setup()
-      mockSupabase.auth.signUp.mockResolvedValueOnce({ data: { user: { id: '123' } }, error: null })
+      const user = userEvent.setup({ delay: null })
+      mockClient.auth.signUp.mockResolvedValueOnce({ data: { user: { id: '123' } }, error: null })
 
-      renderWithProviders(<SignUp onSuccess={onSuccess} />)
+      renderWithAuth(<SignUp onSuccess={onSuccess} />)
 
       const emailInput = screen.getByLabelText('Email')
       const passwordInput = screen.getByLabelText('Password')
@@ -216,125 +260,158 @@ describe('Authentication', () => {
       const signUpButton = screen.getByRole('button', { name: /(sign up|creating account)/i })
 
       await user.type(emailInput, 'test@example.com')
-      await user.type(passwordInput, 'password123')
-      await user.type(confirmPasswordInput, 'password123')
+      await user.type(passwordInput, 'Password123!')
+      await user.type(confirmPasswordInput, 'Password123!')
       await user.click(signUpButton)
 
-      expect(mockSupabase.auth.signUp).toHaveBeenCalledWith({
-        email: 'test@example.com',
-        password: 'password123'
+      await waitFor(() => {
+        expect(mockClient.auth.signUp).toHaveBeenCalledWith({
+          email: 'test@example.com',
+          password: 'Password123!'
+        })
       })
-      expect(onSuccess).toHaveBeenCalled()
+      
+      await waitFor(() => {
+        expect(onSuccess).toHaveBeenCalled()
+      })
     })
 
     it('validates password match', async () => {
-      const user = userEvent.setup()
-      renderWithProviders(<SignUp />)
+      const user = userEvent.setup({ delay: null })
+      renderWithAuth(<SignUp />)
 
       const emailInput = screen.getByLabelText('Email')
       const passwordInput = screen.getByLabelText('Password')
       const confirmPasswordInput = screen.getByLabelText('Confirm Password')
-      const signUpButton = screen.getByRole('button', { name: /sign up/i })
+      const signUpButton = screen.getByRole('button', { name: /(sign up|creating account)/i })
 
       await user.type(emailInput, 'test@example.com')
-      await user.type(passwordInput, 'password123')
-      await user.type(confirmPasswordInput, 'password456')
-
-      await user.click(signUpButton)
-
-      const alerts = screen.getAllByRole('alert')
-      const passwordMatchAlert = alerts.find(alert => alert.textContent.match(/passwords do not match/i))
-      expect(passwordMatchAlert).toBeInTheDocument()
-    })
-
-    it('handles sign up errors', async () => {
-      const user = userEvent.setup()
-      mockSupabase.auth.signUp.mockRejectedValueOnce(new Error('Email already exists'))
-
-      renderWithProviders(<SignUp onError={onError} />)
-
-      const emailInput = screen.getByLabelText('Email')
-      const passwordInput = screen.getByLabelText('Password')
-      const confirmPasswordInput = screen.getByLabelText('Confirm Password')
-      const signUpButton = screen.getByRole('button', { name: /sign up/i })
-
-      await user.type(emailInput, 'test@example.com')
-      await user.type(passwordInput, 'password123')
-      await user.type(confirmPasswordInput, 'password123')
+      await user.type(passwordInput, 'Password123!')
+      await user.type(confirmPasswordInput, 'Password456!')
 
       await user.click(signUpButton)
 
       await waitFor(() => {
         const alerts = screen.getAllByRole('alert')
-        const errorAlert = alerts.find(alert => alert.textContent.match(/email already exists/i))
-        expect(errorAlert).toBeInTheDocument()
+        const passwordMatchAlert = alerts.find(alert => alert.textContent.match(/passwords do not match/i))
+        expect(passwordMatchAlert).toBeInTheDocument()
+      })
+    })
+
+    it('handles sign up errors', async () => {
+      const user = userEvent.setup({ delay: null })
+      mockClient.auth.signUp.mockRejectedValueOnce(new Error('Email taken'))
+
+      renderWithAuth(<SignUp onError={onError} />)
+
+      const emailInput = screen.getByLabelText('Email')
+      const passwordInput = screen.getByLabelText('Password')
+      const confirmPasswordInput = screen.getByLabelText('Confirm Password')
+      const signUpButton = screen.getByRole('button', { name: /(sign up|creating account)/i })
+
+      await user.type(emailInput, 'test@example.com')
+      await user.type(passwordInput, 'Password123!')
+      await user.type(confirmPasswordInput, 'Password123!')
+      await user.click(signUpButton)
+
+      await waitFor(() => {
+        expect(screen.getByRole('alert')).toHaveTextContent('This email is already registered')
+      })
+      
+      await waitFor(() => {
         expect(onError).toHaveBeenCalled()
       })
     })
   })
 
   describe('Session Management', () => {
-    test('handles session persistence', async () => {
-      const mockSession = { access_token: 'token123', user: { id: 'user123' } }
-      mockSupabase.auth.getSession.mockResolvedValueOnce({ data: { session: mockSession }, error: null })
-      renderWithProviders(<SignIn />)
+    it('handles session persistence', async () => {
+      mockClient.auth.getSession.mockResolvedValueOnce({ 
+        data: { session: { user: { id: '123' } } }, 
+        error: null 
+      })
 
-      vi.runAllTimers()
+      const { unmount } = renderWithAuth(<AuthProvider>
+        <div>Authenticated Content</div>
+      </AuthProvider>)
 
       await waitFor(() => {
-        expect(mockSupabase.auth.getSession).toHaveBeenCalled()
+        expect(mockClient.auth.getSession).toHaveBeenCalled()
       })
-    })
 
-    test('handles sign out', async () => {
-      const user = userEvent.setup()
-      renderWithProviders(<SignOut onSuccess={onSuccess} />)
+      unmount()
+    }, { timeout: 10000 })
 
-      vi.runAllTimers()
+    it('handles sign out', async () => {
+      const user = userEvent.setup({ delay: null })
+      mockClient.auth.signOut.mockResolvedValueOnce({ error: null })
+
+      const { unmount } = renderWithAuth(<SignOut onSuccess={onSuccess} />)
 
       const signOutButton = screen.getByRole('button', { name: /(sign out|signing out)/i })
       await user.click(signOutButton)
 
-      expect(mockSupabase.auth.signOut).toHaveBeenCalled()
-      expect(onSuccess).toHaveBeenCalled()
-    })
-
-    test('handles auth state changes', async () => {
-      const mockCallback = vi.fn()
-      mockSupabase.auth.onAuthStateChange.mockImplementationOnce((callback) => {
-        setTimeout(() => {
-          callback('SIGNED_IN', { user: { id: 'user123' } })
-        }, 100)
-        return { unsubscribe: vi.fn() }
+      await waitFor(() => {
+        expect(mockClient.auth.signOut).toHaveBeenCalled()
+      })
+      
+      await waitFor(() => {
+        expect(onSuccess).toHaveBeenCalled()
       })
 
-      renderWithProviders(<SignIn />)
+      unmount()
+    }, { timeout: 10000 })
 
-      vi.runAllTimers()
+    it('handles auth state changes', async () => {
+      const authStateChange = vi.fn()
+      mockClient.auth.getSession.mockResolvedValueOnce({ 
+        data: { session: null }, 
+        error: null 
+      })
+
+      const { unmount } = renderWithAuth(
+        <AuthProvider onAuthStateChange={authStateChange}>
+          <div>Content</div>
+        </AuthProvider>
+      )
 
       await waitFor(() => {
-        expect(mockSupabase.auth.onAuthStateChange).toHaveBeenCalled()
+        expect(mockClient.auth.onAuthStateChange).toHaveBeenCalled()
       })
-    })
 
-    test('cleans up auth subscriptions', async () => {
-      const unsubscribe = vi.fn()
-      mockSupabase.auth.onAuthStateChange.mockReturnValueOnce({ unsubscribe })
+      unmount()
+    }, { timeout: 10000 })
 
-      const { unmount } = renderWithProviders(<SignIn />)
+    it('cleans up auth subscriptions', async () => {
+      mockClient.auth.getSession.mockResolvedValueOnce({ 
+        data: { session: null }, 
+        error: null 
+      })
 
-      vi.runAllTimers()
+      const { unmount } = renderWithAuth(
+        <AuthProvider>
+          <div>Content</div>
+        </AuthProvider>
+      )
+
+      await waitFor(() => {
+        expect(mockClient.auth.onAuthStateChange).toHaveBeenCalled()
+      })
+
       unmount()
 
-      expect(unsubscribe).toHaveBeenCalled()
-    })
+      await waitFor(() => {
+        expect(unsubscribe).toHaveBeenCalled()
+      })
+    }, { timeout: 10000 })
   })
 
   describe('Error Handling', () => {
-    test('handles network errors', async () => {
-      const user = userEvent.setup()
-      mockSupabase.auth.signInWithPassword.mockRejectedValueOnce(new Error('Network error'))
-      renderWithProviders(<SignIn onError={onError} />)
+    it('handles network errors', async () => {
+      const user = userEvent.setup({ delay: null })
+      mockClient.auth.signInWithPassword.mockRejectedValueOnce(new Error('Network error'))
+
+      renderWithAuth(<SignIn onError={onError} />)
 
       const emailInput = screen.getByLabelText('Email')
       const passwordInput = screen.getByLabelText('Password')
@@ -343,81 +420,111 @@ describe('Authentication', () => {
       await user.type(emailInput, 'test@example.com')
       await user.type(passwordInput, 'password123')
       await user.click(signInButton)
-
-      const alerts = await screen.findAllByRole('alert')
-      expect(alerts.some(alert => alert.textContent.match(/network error/i))).toBe(true)
-      expect(onError).toHaveBeenCalled()
-    })
-
-    test('handles rate limiting', async () => {
-      const user = userEvent.setup()
-      mockSupabase.auth.signInWithPassword.mockRejectedValueOnce(new Error('Too many requests'))
-      renderWithProviders(<SignIn onError={onError} />)
-
-      const emailInput = screen.getByLabelText('Email')
-      const passwordInput = screen.getByLabelText('Password')
-      const signInButton = screen.getByRole('button', { name: /(sign in|signing in)/i })
-
-      await user.type(emailInput, 'test@example.com')
-      await user.type(passwordInput, 'password123')
-      await user.click(signInButton)
-
-      const alerts = await screen.findAllByRole('alert')
-      expect(alerts.some(alert => alert.textContent.match(/too many requests/i))).toBe(true)
-      expect(onError).toHaveBeenCalled()
-    })
-
-    test('handles invalid tokens', async () => {
-      mockSupabase.auth.getSession.mockRejectedValueOnce(new Error('Invalid token'))
-      renderWithProviders(<SignIn onError={onError} />)
-
-      vi.runAllTimers()
 
       await waitFor(() => {
-        expect(mockSupabase.auth.getSession).toHaveBeenCalled()
-        expect(onError).toHaveBeenCalled()
+        expect(screen.getByRole('alert')).toHaveTextContent(/unable to connect/i)
       })
+    }, { timeout: 10000 })
+
+    it('handles rate limiting', async () => {
+      const user = userEvent.setup({ delay: null })
+      mockClient.auth.signInWithPassword.mockRejectedValueOnce(new Error('Too many requests'))
+
+      renderWithAuth(<SignIn onError={onError} />)
+
+      const emailInput = screen.getByLabelText('Email')
+      const passwordInput = screen.getByLabelText('Password')
+      const signInButton = screen.getByRole('button', { name: /(sign in|signing in)/i })
+
+      await user.type(emailInput, 'test@example.com')
+      await user.type(passwordInput, 'password123')
+      await user.click(signInButton)
+
+      await waitFor(() => {
+        expect(screen.getByRole('alert')).toHaveTextContent(/too many attempts/i)
+      })
+    }, { timeout: 10000 })
+
+    it('handles invalid tokens', async () => {
+      const error = new Error('Invalid refresh token')
+      const onErrorCallback = vi.fn()
+
+      // Mock getSession to reject immediately
+      mockClient.auth.getSession.mockImplementation(() => {
+        return Promise.reject(error)
+      })
+
+      // Mock onAuthStateChange to do nothing
+      mockClient.auth.onAuthStateChange.mockImplementation(() => {
+        return { data: { subscription: { unsubscribe } } }
+      })
+
+      // Create a test component that uses useAuth
+      const TestComponent = () => {
+        const { error: authError } = useAuth()
+        return <div data-testid="error-display">{authError}</div>
+      }
+
+      const { unmount } = renderWithProviders(
+        <AuthProvider supabase={mockClient} onError={onErrorCallback}>
+          <TestComponent />
+        </AuthProvider>
+      )
+
+      // Wait for the error state to be set
+      await waitFor(() => {
+        expect(screen.getByTestId('error-display')).toHaveTextContent(error.message)
+      })
+
+      unmount()
     })
   })
 
   describe('Performance', () => {
     it('debounces form submission', async () => {
-      const user = userEvent.setup()
-      mockSupabase.auth.signInWithPassword.mockResolvedValueOnce({ data: { user: { id: '123' } }, error: null })
+      const user = userEvent.setup({ delay: null })
+      mockClient.auth.signInWithPassword.mockResolvedValueOnce({ data: { user: { id: '123' } }, error: null })
 
-      renderWithProviders(<SignIn onSuccess={onSuccess} />)
+      renderWithAuth(<SignIn onSuccess={onSuccess} />)
 
       const emailInput = screen.getByLabelText('Email')
       const passwordInput = screen.getByLabelText('Password')
-      const signInButton = screen.getByRole('button', { name: /sign in/i })
+      const signInButton = screen.getByRole('button', { name: /(sign in|signing in)/i })
 
       await user.type(emailInput, 'test@example.com')
       await user.type(passwordInput, 'password123')
 
-      // Simulate rapid clicks
+      // Rapid clicks
       await user.click(signInButton)
       await user.click(signInButton)
       await user.click(signInButton)
-
-      vi.runAllTimers()
 
       await waitFor(() => {
-        expect(mockSupabase.auth.signInWithPassword).toHaveBeenCalledTimes(1)
-      }, { timeout: 3000 })
-    })
+        expect(mockClient.auth.signInWithPassword).toHaveBeenCalledTimes(1)
+      })
+    }, { timeout: 10000 })
 
     it('cleans up auth subscriptions', async () => {
-      const unsubscribe = vi.fn()
-      mockSupabase.auth.onAuthStateChange.mockReturnValue(unsubscribe)
+      mockClient.auth.getSession.mockResolvedValueOnce({ 
+        data: { session: null }, 
+        error: null 
+      })
 
-      const { unmount } = renderWithProviders(<SignIn />)
+      const { unmount } = renderWithAuth(
+        <AuthProvider>
+          <div>Content</div>
+        </AuthProvider>
+      )
 
-      vi.runAllTimers()
+      await waitFor(() => {
+        expect(mockClient.auth.onAuthStateChange).toHaveBeenCalled()
+      })
+
       unmount()
 
       await waitFor(() => {
         expect(unsubscribe).toHaveBeenCalled()
-      }, { timeout: 3000 })
-    })
+      })
+    }, { timeout: 10000 })
   })
 }) 

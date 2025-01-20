@@ -1,8 +1,9 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect, useRef } from 'react'
 import PropTypes from 'prop-types'
 import { useAuth } from './AuthProvider'
 import styled from 'styled-components'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
+import { debounce } from 'lodash'
 
 const Form = styled(motion.form)`
   display: flex;
@@ -26,6 +27,11 @@ const Input = styled.input`
     border-color: ${({ theme }) => theme.colors.primary[500]};
     box-shadow: 0 0 0 2px ${({ theme }) => theme.colors.primary[100]};
   }
+
+  &:disabled {
+    background-color: ${({ theme }) => theme.colors.neutral[50]};
+    cursor: not-allowed;
+  }
 `
 
 const Button = styled(motion.button)`
@@ -37,9 +43,11 @@ const Button = styled(motion.button)`
   font-size: ${({ theme }) => theme.typography.fontSize.base};
   font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
 
-  &:hover {
+  &:hover:not(:disabled) {
     background-color: ${({ theme }) => theme.colors.primary[600]};
   }
 
@@ -51,6 +59,30 @@ const Button = styled(motion.button)`
   &:disabled {
     opacity: 0.7;
     cursor: not-allowed;
+    background-color: ${({ theme }) => theme.colors.neutral[400]};
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.2),
+      transparent
+    );
+    transform: translateX(-100%);
+    animation: ${({ $loading }) => $loading ? 'loading 1.5s infinite' : 'none'};
+  }
+
+  @keyframes loading {
+    100% {
+      transform: translateX(100%);
+    }
   }
 `
 
@@ -58,6 +90,9 @@ const ErrorMessage = styled(motion.div)`
   color: ${({ theme }) => theme.colors.error[500]};
   font-size: ${({ theme }) => theme.typography.fontSize.sm};
   margin-top: 0.25rem;
+  font-weight: ${({ theme }) => theme.typography.fontWeight.medium};
+  role: alert;
+  aria-live: polite;
 `
 
 const Label = styled.label`
@@ -67,11 +102,76 @@ const Label = styled.label`
   margin-bottom: 0.25rem;
 `
 
-export const SignIn = ({ onSuccess }) => {
-  const { signIn, loading, error, clearError } = useAuth()
+const getButtonText = (state) => {
+  switch (state) {
+    case 'loading':
+      return 'Signing in...'
+    case 'error':
+      return 'Try Again'
+    case 'success':
+      return 'Success!'
+    default:
+      return 'Sign In'
+  }
+}
+
+export const SignIn = ({ onSuccess, onError }) => {
+  const { signIn, loading: authLoading, error: authError, clearError } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [validationErrors, setValidationErrors] = useState({})
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [buttonState, setButtonState] = useState('idle')
+  const mountedRef = useRef(true)
+  const submitTimeoutRef = useRef(null)
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false
+      if (submitTimeoutRef.current) {
+        clearTimeout(submitTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  // Safe state updates
+  const safeSetState = useCallback((setter) => {
+    if (mountedRef.current) {
+      setter()
+    }
+  }, [])
+
+  // Update button state based on conditions
+  useEffect(() => {
+    if (authLoading || isSubmitting) {
+      safeSetState(() => setButtonState('loading'))
+    } else if (authError) {
+      safeSetState(() => setButtonState('error'))
+      // Auto-reset error state after 2 seconds
+      submitTimeoutRef.current = setTimeout(() => {
+        safeSetState(() => setButtonState('idle'))
+      }, 2000)
+    } else if (!authError && !authLoading && !isSubmitting) {
+      safeSetState(() => setButtonState('idle'))
+    }
+
+    return () => {
+      if (submitTimeoutRef.current) {
+        clearTimeout(submitTimeoutRef.current)
+      }
+    }
+  }, [authLoading, isSubmitting, authError, safeSetState])
+
+  // Clear validation errors when input changes
+  useEffect(() => {
+    if (validationErrors.email || validationErrors.password) {
+      safeSetState(() => setValidationErrors({}))
+    }
+    if (authError) {
+      clearError()
+    }
+  }, [email, password, clearError, validationErrors, authError])
 
   const validateForm = useCallback(() => {
     const errors = {}
@@ -80,23 +180,66 @@ export const SignIn = ({ onSuccess }) => {
     if (email && !/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(email)) {
       errors.email = 'Invalid email address'
     }
-    setValidationErrors(errors)
+    if (password && password.length < 6) {
+      errors.password = 'Password must be at least 6 characters'
+    }
+    safeSetState(() => setValidationErrors(errors))
     return Object.keys(errors).length === 0
-  }, [email, password])
+  }, [email, password, safeSetState])
+
+  // Debounced submit handler with cleanup
+  const debouncedSubmit = useCallback(
+    debounce(async (email, password) => {
+      try {
+        const data = await signIn({ email, password })
+        safeSetState(() => {
+          setIsSubmitting(false)
+          setButtonState('success')
+        })
+        if (onSuccess) onSuccess(data)
+        // Reset success state after 1 second
+        submitTimeoutRef.current = setTimeout(() => {
+          safeSetState(() => setButtonState('idle'))
+        }, 1000)
+      } catch (err) {
+        safeSetState(() => {
+          setIsSubmitting(false)
+          setButtonState('error')
+        })
+        if (onError) onError(err)
+        // Reset error state after 2 seconds
+        submitTimeoutRef.current = setTimeout(() => {
+          safeSetState(() => setButtonState('idle'))
+        }, 2000)
+      }
+    }, 300),
+    [signIn, onSuccess, onError, safeSetState]
+  )
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     clearError()
 
-    if (!validateForm()) return
+    if (!validateForm() || isSubmitting) return
 
-    try {
-      const data = await signIn({ email, password })
-      if (onSuccess) onSuccess(data)
-    } catch (err) {
-      // Error is handled by AuthProvider
-    }
+    safeSetState(() => {
+      setIsSubmitting(true)
+      setButtonState('loading')
+    })
+    debouncedSubmit(email, password)
   }
+
+  // Cleanup debounce on unmount
+  useEffect(() => {
+    return () => {
+      debouncedSubmit.cancel()
+      if (submitTimeoutRef.current) {
+        clearTimeout(submitTimeoutRef.current)
+      }
+    }
+  }, [debouncedSubmit])
+
+  const isDisabled = buttonState === 'loading' || buttonState === 'success'
 
   return (
     <Form
@@ -112,21 +255,24 @@ export const SignIn = ({ onSuccess }) => {
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          error={validationErrors.email || error}
-          disabled={loading}
+          disabled={isDisabled}
+          error={validationErrors.email}
           aria-invalid={!!validationErrors.email}
-          aria-describedby={validationErrors.email ? 'email-error' : undefined}
+          aria-describedby={validationErrors.email ? "email-error" : undefined}
         />
-        {validationErrors.email && (
-          <ErrorMessage
-            role="alert"
-            id="email-error"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-          >
-            {validationErrors.email}
-          </ErrorMessage>
-        )}
+        <AnimatePresence>
+          {validationErrors.email && (
+            <ErrorMessage
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              id="email-error"
+              role="alert"
+            >
+              {validationErrors.email}
+            </ErrorMessage>
+          )}
+        </AnimatePresence>
       </div>
 
       <div>
@@ -136,46 +282,58 @@ export const SignIn = ({ onSuccess }) => {
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          error={validationErrors.password || error}
-          disabled={loading}
+          disabled={isDisabled}
+          error={validationErrors.password}
           aria-invalid={!!validationErrors.password}
-          aria-describedby={validationErrors.password ? 'password-error' : undefined}
+          aria-describedby={validationErrors.password ? "password-error" : undefined}
         />
-        {validationErrors.password && (
-          <ErrorMessage
-            role="alert"
-            id="password-error"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-          >
-            {validationErrors.password}
-          </ErrorMessage>
-        )}
+        <AnimatePresence>
+          {validationErrors.password && (
+            <ErrorMessage
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              id="password-error"
+              role="alert"
+            >
+              {validationErrors.password}
+            </ErrorMessage>
+          )}
+        </AnimatePresence>
       </div>
-
-      {error && (
-        <ErrorMessage
-          role="alert"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-        >
-          {error}
-        </ErrorMessage>
-      )}
 
       <Button
         type="submit"
-        disabled={loading}
-        whileTap={{ scale: 0.98 }}
+        disabled={isDisabled}
+        $loading={buttonState === 'loading'}
+        whileHover={{ scale: isDisabled ? 1 : 1.02 }}
+        whileTap={{ scale: isDisabled ? 1 : 0.98 }}
+        aria-disabled={isDisabled}
+        aria-busy={buttonState === 'loading'}
+        data-testid="sign-in-button"
       >
-        {loading ? 'Signing in...' : 'Sign in'}
+        {getButtonText(buttonState)}
       </Button>
+
+      <AnimatePresence>
+        {authError && (
+          <ErrorMessage
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            role="alert"
+          >
+            {authError.message || 'An error occurred during sign in'}
+          </ErrorMessage>
+        )}
+      </AnimatePresence>
     </Form>
   )
 }
 
 SignIn.propTypes = {
-  onSuccess: PropTypes.func
+  onSuccess: PropTypes.func,
+  onError: PropTypes.func
 }
 
 export default SignIn 

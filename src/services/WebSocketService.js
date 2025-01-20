@@ -8,7 +8,7 @@ export default class WebSocketService {
     this.messageBuffer = []
     this.batchQueue = []
     this.pendingMessages = new Map()
-    this.messageId = 1
+    this.messageId = 0
     this.messageCallbacks = new Set()
     this.statusCallbacks = new Set()
     this.disconnectCallbacks = new Set()
@@ -28,9 +28,6 @@ export default class WebSocketService {
       latencyCount: 0
     }
     this.connectionStartTime = null
-    this.lastPingTime = null
-    this.lastPongTime = null
-    this.missedHeartbeats = 0
     this.heartbeatInterval = null
     this.batchTimeout = null
   }
@@ -117,6 +114,198 @@ export default class WebSocketService {
       }
       resolve()
     })
+  }
+
+  /**
+   * Reconnect to the WebSocket server
+   */
+  reconnect() {
+    this.metrics.reconnections++
+    this.metrics.lastReconnectTime = Date.now()
+    setTimeout(() => {
+      if (!this.connected) {
+        this.connect()
+      }
+    }, Math.min(1000 * Math.pow(2, this.metrics.reconnections), 30000))
+  }
+
+  /**
+   * Send a message through the WebSocket
+   * @param {Object} message Message to send
+   * @returns {Promise} Message sending promise
+   */
+  send(message) {
+    return new Promise((resolve, reject) => {
+      try {
+        const enhancedMessage = {
+          ...message,
+          id: this.messageId++,
+          timestamp: Date.now()
+        }
+
+        if (!this.isConnected()) {
+          this.messageBuffer.push(enhancedMessage)
+          resolve(enhancedMessage)
+          return
+        }
+
+        if (this.shouldBatchMessage(message)) {
+          this.queueForBatch(enhancedMessage)
+          resolve(enhancedMessage)
+        } else {
+          this.sendImmediate(enhancedMessage)
+            .then(() => resolve(enhancedMessage))
+            .catch(reject)
+        }
+      } catch (error) {
+        reject(error)
+      }
+    })
+  }
+
+  /**
+   * Send a message immediately
+   * @param {Object} message Message to send
+   */
+  sendImmediate(message) {
+    try {
+      if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
+        throw new Error('WebSocket not connected')
+      }
+
+      const data = JSON.stringify(message)
+      this.socket.send(data)
+      this.metrics.messagesSent++
+      this.metrics.bytesTransferred += data.length
+    } catch (error) {
+      console.error('Failed to send message:', error)
+      this.metrics.errors++
+      this.messageBuffer.push(message)
+    }
+  }
+
+  /**
+   * Send buffered messages
+   */
+  sendBufferedMessages() {
+    while (this.messageBuffer.length > 0 && this.connected) {
+      const message = this.messageBuffer.shift()
+      this.sendImmediate(message)
+    }
+  }
+
+  /**
+   * Handle incoming WebSocket messages
+   * @param {Object} message Incoming message
+   */
+  handleMessage(message) {
+    switch (message.type) {
+      case 'batch':
+        message.messages.forEach(msg => this.handleMessage(msg))
+        break
+      case 'delivery':
+        this.handleDeliveryConfirmation(message)
+        break
+      case 'presence':
+        this.handlePresenceUpdate(message)
+        break
+      case 'typing':
+        this.handleTypingUpdate(message)
+        break
+      case 'read':
+        this.handleReadReceipt(message)
+        break
+      default:
+        this.notifyMessageCallbacks(message)
+    }
+
+    this.metrics.messagesReceived++
+    if (message.timestamp) {
+      const latency = Date.now() - message.timestamp
+      this.metrics.latencyMeasurements++
+      this.metrics.averageLatency = ((this.metrics.averageLatency * (this.metrics.latencyMeasurements - 1)) + latency) / this.metrics.latencyMeasurements
+    }
+  }
+
+  /**
+   * Handle delivery confirmation message
+   * @param {Object} message Delivery confirmation message
+   */
+  handleDeliveryConfirmation(message) {
+    const { messageId } = message
+    if (this.pendingMessages.has(messageId)) {
+      this.pendingMessages.delete(messageId)
+      this.notifyMessageCallbacks({
+        type: 'delivery',
+        messageId,
+        status: 'delivered'
+      })
+    }
+  }
+
+  /**
+   * Handle presence update message
+   * @param {Object} message Presence update message
+   */
+  handlePresenceUpdate(message) {
+    this.presenceCallbacks.forEach(callback => callback(message))
+  }
+
+  /**
+   * Handle typing update message
+   * @param {Object} message Typing update message
+   */
+  handleTypingUpdate(message) {
+    const { userId, isTyping } = message
+    if (isTyping) {
+      this.typingUsers.set(userId, Date.now())
+    } else {
+      this.typingUsers.delete(userId)
+    }
+    this.notifyTypingCallbacks()
+  }
+
+  /**
+   * Handle read receipt message
+   * @param {Object} message Read receipt message
+   */
+  handleReadReceipt(message) {
+    const { userId, messageIds } = message
+    messageIds.forEach(messageId => {
+      if (!this.readReceipts.has(messageId)) {
+        this.readReceipts.set(messageId, new Set())
+      }
+      this.readReceipts.get(messageId).add(userId)
+    })
+    this.notifyReadReceiptCallbacks(message)
+  }
+
+  /**
+   * Start heartbeat
+   */
+  startHeartbeat() {
+    this.heartbeatInterval = setInterval(() => {
+      if (this.connected) {
+        this.send({ type: 'ping', timestamp: Date.now() })
+        this.missedHeartbeats++
+        
+        if (this.missedHeartbeats >= 2) {
+          this.disconnect()
+          this.reconnect()
+        }
+      }
+    }, 30000)
+  }
+
+  /**
+   * Stop heartbeat
+   */
+  stopHeartbeat() {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval)
+      this.heartbeatInterval = null
+    }
+    this.missedHeartbeats = 0
   }
 
   /**
@@ -281,66 +470,6 @@ export default class WebSocketService {
   }
 
   /**
-   * Send a message through the WebSocket
-   * @param {Object} message Message to send
-   * @returns {Promise} Message sending promise
-   */
-  send(message) {
-    return new Promise((resolve, reject) => {
-      try {
-        const enhancedMessage = {
-          ...message,
-          id: this.messageId++,
-          timestamp: Date.now()
-        }
-
-        if (!this.isConnected()) {
-          this.messageBuffer.push(enhancedMessage)
-          resolve(enhancedMessage)
-          return
-        }
-
-        if (this.shouldBatchMessage(message)) {
-          this.queueForBatch(enhancedMessage)
-          resolve(enhancedMessage)
-        } else {
-          this.sendImmediate(enhancedMessage)
-            .then(() => resolve(enhancedMessage))
-            .catch(reject)
-        }
-      } catch (error) {
-        reject(error)
-      }
-    })
-  }
-
-  /**
-   * Send a message immediately
-   * @param {Object} message Message to send
-   * @returns {Promise} Message sending promise
-   */
-  sendImmediate(message) {
-    return new Promise((resolve, reject) => {
-      try {
-        if (!this.isConnected()) {
-          this.messageBuffer.push(message)
-          resolve(message)
-          return
-        }
-
-        const messageStr = JSON.stringify(message)
-        this.socket.send(messageStr)
-        this.pendingMessages.set(message.id, message)
-        this.metrics.messagesSent++
-        resolve(message)
-      } catch (error) {
-        this.handleError(error)
-        reject(error)
-      }
-    })
-  }
-
-  /**
    * Queue a message for batch sending
    * @param {Object} message Message to queue
    */
@@ -378,16 +507,6 @@ export default class WebSocketService {
   }
 
   /**
-   * Send buffered messages
-   */
-  sendBufferedMessages() {
-    while (this.messageBuffer.length > 0) {
-      const message = this.messageBuffer.shift()
-      this.send(message).catch(this.handleError.bind(this))
-    }
-  }
-
-  /**
    * Handle error
    * @param {Error} error Error to handle
    */
@@ -409,26 +528,22 @@ export default class WebSocketService {
   }
 
   /**
-   * Start heartbeat
+   * Notify typing change
    */
-  startHeartbeat() {
-    this.stopHeartbeat()
-    this.heartbeatInterval = setInterval(() => {
-      if (this.isConnected()) {
-        this.send({ type: 'ping', timestamp: Date.now() })
-          .catch(this.handleError.bind(this))
-      }
-    }, 30000)
+  notifyTypingCallbacks() {
+    const typingList = Array.from(this.typingUsers.entries())
+      .filter(([_, timestamp]) => Date.now() - timestamp < 5000)
+      .map(([userId]) => userId)
+    
+    this.typingCallbacks.forEach(callback => callback(typingList))
   }
 
   /**
-   * Stop heartbeat
+   * Notify read receipt change
+   * @param {Object} message Read receipt message
    */
-  stopHeartbeat() {
-    if (this.heartbeatInterval) {
-      clearInterval(this.heartbeatInterval)
-      this.heartbeatInterval = null
-    }
+  notifyReadReceiptCallbacks(message) {
+    this.readReceiptCallbacks.forEach(callback => callback(message))
   }
 
   /**
@@ -473,103 +588,5 @@ export default class WebSocketService {
       latencySum: 0,
       latencyCount: 0
     }
-  }
-
-  /**
-   * Handle delivery confirmation message
-   * @param {Object} message Delivery confirmation message
-   */
-  handleDeliveryConfirmation(message) {
-    const { messageId, status = 'delivered', timestamp = Date.now() } = message
-    if (this.pendingMessages.has(messageId)) {
-      const originalMessage = this.pendingMessages.get(messageId)
-      this.pendingMessages.delete(messageId)
-      
-      const deliveryInfo = {
-        messageId,
-        status,
-        message: originalMessage,
-        deliveryTime: timestamp
-      }
-
-      this.notifyMessageCallbacks({
-        type: 'delivery',
-        ...deliveryInfo
-      })
-    }
-  }
-
-  /**
-   * Handle presence update message
-   * @param {Object} message Presence update message
-   */
-  handlePresenceUpdate(message) {
-    const { userId, status, timestamp = Date.now() } = message
-    if (userId) {
-      const presenceInfo = {
-        userId,
-        status,
-        timestamp,
-        lastSeen: timestamp
-      }
-      this.presenceCallbacks.forEach(callback => callback(presenceInfo))
-    }
-  }
-
-  /**
-   * Handle typing update message
-   * @param {Object} message Typing update message
-   */
-  handleTypingUpdate(message) {
-    const { userId, isTyping, timestamp = Date.now() } = message
-    if (userId !== undefined) {
-      if (isTyping) {
-        this.typingUsers.set(userId, timestamp)
-      } else {
-        this.typingUsers.delete(userId)
-      }
-      this.notifyTypingCallbacks()
-    }
-  }
-
-  /**
-   * Handle read receipt message
-   * @param {Object} message Read receipt message
-   */
-  handleReadReceipt(message) {
-    const { userId, messageIds, timestamp = Date.now() } = message
-    if (userId && Array.isArray(messageIds)) {
-      messageIds.forEach(messageId => {
-        if (!this.readReceipts.has(messageId)) {
-          this.readReceipts.set(messageId, new Map())
-        }
-        this.readReceipts.get(messageId).set(userId, timestamp)
-      })
-      this.notifyReadReceiptCallbacks({
-        type: 'read',
-        userId,
-        messageIds,
-        timestamp
-      })
-    }
-  }
-
-  /**
-   * Notify typing change
-   */
-  notifyTypingCallbacks() {
-    const typingList = Array.from(this.typingUsers.entries())
-      .filter(([_, timestamp]) => Date.now() - timestamp < 5000)
-      .map(([userId]) => userId)
-    
-    this.typingCallbacks.forEach(callback => callback(typingList))
-  }
-
-  /**
-   * Notify read receipt change
-   * @param {Object} message Read receipt message
-   */
-  notifyReadReceiptCallbacks(message) {
-    this.readReceiptCallbacks.forEach(callback => callback(message))
   }
 } 

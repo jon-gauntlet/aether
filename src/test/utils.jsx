@@ -221,14 +221,73 @@ export class TestErrorBoundary extends React.Component {
   }
 }
 
-// Mock file
-export const createTestFile = (name = 'test.txt', type = 'text/plain', size = 1024) => {
-  return new File(['test content'], name, { type })
+// Mock file with custom size and content
+export const createTestFile = (name = 'test.txt', type = 'text/plain', size = 1024, content = null) => {
+  const fileContent = content || new Array(size).fill('a').join('')
+  const file = new File([fileContent], name, { type })
+  
+  // Add custom size property for testing
+  Object.defineProperty(file, 'size', {
+    value: size,
+    configurable: true
+  })
+
+  // Add preview URL for images
+  if (type.startsWith('image/')) {
+    Object.defineProperty(file, 'preview', {
+      value: URL.createObjectURL(file),
+      configurable: true
+    })
+  }
+
+  return file
 }
 
-// Mock drag event
-export const createDragEvent = (type, files = [createTestFile()]) => {
-  const event = new Event(type, { bubbles: true })
+// Create multiple test files
+export const createTestFiles = (count = 3, options = {}) => {
+  const defaults = {
+    namePrefix: 'test',
+    type: 'text/plain',
+    size: 1024,
+    content: null
+  }
+  const config = { ...defaults, ...options }
+
+  return Array.from({ length: count }, (_, i) => 
+    createTestFile(
+      `${config.namePrefix}${i + 1}${getExtensionFromType(config.type)}`,
+      config.type,
+      config.size,
+      config.content
+    )
+  )
+}
+
+// Get file extension from mime type
+export const getExtensionFromType = (type) => {
+  const extensions = {
+    'text/plain': '.txt',
+    'application/pdf': '.pdf',
+    'application/msword': '.doc',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+    'image/jpeg': '.jpg',
+    'image/png': '.png',
+    'image/gif': '.gif'
+  }
+  return extensions[type] || ''
+}
+
+// Enhanced drag event creator with more options
+export const createDragEvent = (type, files = [createTestFile()], options = {}) => {
+  const defaults = {
+    bubbles: true,
+    cancelable: true,
+    composed: true
+  }
+  const config = { ...defaults, ...options }
+
+  const event = new Event(type, config)
+  
   Object.defineProperty(event, 'dataTransfer', {
     value: {
       files,
@@ -237,11 +296,82 @@ export const createDragEvent = (type, files = [createTestFile()]) => {
         type: file.type,
         getAsFile: () => file
       })),
-      types: ['Files']
+      types: ['Files'],
+      setData: vi.fn(),
+      getData: vi.fn(),
+      clearData: vi.fn(),
+      setDragImage: vi.fn()
     }
   })
+
   return event
 }
+
+// Mock upload progress event
+export const createUploadProgressEvent = (loaded, total) => ({
+  lengthComputable: true,
+  loaded,
+  total
+})
+
+// Mock XMLHttpRequest for upload testing
+export const mockXHR = () => {
+  const xhrMock = {
+    open: vi.fn(),
+    send: vi.fn(),
+    setRequestHeader: vi.fn(),
+    upload: {
+      addEventListener: vi.fn()
+    },
+    readyState: 4,
+    status: 200,
+    response: '{"success": true}',
+    responseText: '{"success": true}',
+    onload: null,
+    onerror: null,
+    onabort: null,
+    onprogress: null
+  }
+
+  window.XMLHttpRequest = vi.fn(() => xhrMock)
+  return xhrMock
+}
+
+// Mock FormData for testing file uploads
+export const mockFormData = () => {
+  const store = new Map()
+  
+  class MockFormData {
+    append(key, value) {
+      store.set(key, value)
+    }
+    get(key) {
+      return store.get(key)
+    }
+    has(key) {
+      return store.has(key)
+    }
+    delete(key) {
+      store.delete(key)
+    }
+    entries() {
+      return store.entries()
+    }
+    values() {
+      return store.values()
+    }
+    keys() {
+      return store.keys()
+    }
+  }
+
+  window.FormData = MockFormData
+  return store
+}
+
+// Wait for file processing (e.g. preview generation)
+export const waitForFileProcessing = () => 
+  new Promise(resolve => setTimeout(resolve, 100))
 
 // Mock form data
 export const createTestFormData = (data = {}) => {
