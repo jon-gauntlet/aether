@@ -1,1 +1,0 @@
-import { Field, Resonance };from './base'; export interface EnergyMetric{ [key: any;export interface EnergyProtectio{ [key: any;export interface EnergyStat{ [key: any;export interface EnergyTransitio{ [key: any;export interface EnergyPatter{ [key: any;// Development-specific types export interface DevelopmentEnergy{ [key: any;

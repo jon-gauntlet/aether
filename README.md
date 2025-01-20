@@ -1,152 +1,108 @@
-# Auth & Files System
+# Aether
 
-A modern authentication and file management system built with React, Supabase, and WebSocket for real-time updates.
+A modern RAG (Retrieval-Augmented Generation) system built with React and Python.
 
-## Features
+## Repository Structure
 
-### Authentication
-- Secure email/password authentication
-- Session management with auto-refresh
-- Real-time auth state synchronization
-- Comprehensive error handling
-- Rate limiting protection
+```
+.
+├── config/           # Configuration files for all tools and services
+├── docs/            # Documentation
+│   ├── api/         # API documentation and prompts
+│   └── development/ # Development notes and progress
+├── scripts/         # Utility scripts
+│   ├── setup/      # Setup and initialization scripts
+│   └── verification/ # Verification and analysis scripts
+├── src/             # Main source code
+│   ├── components/  # React components
+│   ├── contexts/    # React contexts
+│   ├── hooks/       # Custom React hooks
+│   ├── rag_aether/  # RAG implementation
+│   ├── services/    # Service layer
+│   └── utils/       # Utility functions
+└── tests/           # All test files
+    ├── e2e/        # End-to-end tests
+    ├── integration/ # Integration tests
+    └── unit/       # Unit tests
+```
 
-### File Management
-- Drag and drop file upload
-- Progress tracking
-- File type validation
-- Size limits
-- Folder organization
-- Search functionality
-- Real-time updates
+## Key Technologies
 
-### Real-time Updates
-- WebSocket integration
-- Auto-reconnection
-- Event filtering
-- Concurrent operation handling
-- State synchronization
-
-## Tech Stack
-
-- **Frontend**: React, Framer Motion, Styled Components
-- **Backend**: Supabase (Auth, Storage, Real-time)
-- **State Management**: React Context + Hooks
-- **Testing**: Vitest, Testing Library, Playwright
-- **Build Tool**: Vite
-- **Type Safety**: PropTypes (with TypeScript-like validation)
-- **Code Quality**: ESLint, Prettier
+- Frontend: React, Vite
+- Backend: Python, FastAPI
+- RAG: OpenAI, FAISS
+- Testing: Pytest, Vitest, Testing Library
 
 ## Getting Started
 
-1. Clone the repository:
-```bash
-git clone https://github.com/yourusername/auth-files.git
-cd auth-files
-```
-
-2. Install dependencies:
-```bash
-npm install
-```
-
-3. Create environment file:
-```bash
-cp .env.example .env
-```
-
-4. Update environment variables in `.env`:
-```bash
-VITE_SUPABASE_URL=your_supabase_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-VITE_MAX_FILE_SIZE=5242880
-VITE_ALLOWED_FILE_TYPES=image/*,application/pdf,.doc,.docx
-VITE_UPLOAD_BUCKET=files
-```
-
-5. Start development server:
-```bash
-npm run dev
-```
+1. Clone the repository
+2. Copy `.env.example` to `.env` and fill in required values
+3. Install dependencies:
+   ```bash
+   # Python dependencies
+   pip install -r requirements.txt
+   
+   # Node dependencies
+   npm install
+   ```
+4. Run the development servers:
+   ```bash
+   # Backend
+   python -m src.main
+   
+   # Frontend
+   npm run dev
+   ```
 
 ## Development
 
-### Project Structure
-```
-src/
-├── components/          # React components
-│   ├── Auth/           # Authentication components
-│   └── FileUpload/     # File upload components
-├── config/             # Configuration and constants
-├── contexts/           # React contexts
-├── hooks/              # Custom hooks
-├── lib/               # Library integrations
-├── utils/             # Utility functions
-└── tests/             # Test files
-```
-
-### Available Scripts
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run preview` - Preview production build
-- `npm test` - Run tests
-- `npm run lint` - Lint code
-- `npm run format` - Format code
+- All configuration files are in the `config/` directory
+- Frontend code is in `src/` with React components, contexts, etc.
+- Backend RAG implementation is in `src/rag_aether/`
+- Tests are in `tests/` directory with clear separation:
+  - End-to-end tests in `tests/e2e/`
+  - Integration tests in `tests/integration/`
+  - Unit tests in `tests/unit/`
 
 ## Testing
 
-### Unit Tests
+### Running End-to-End Tests
 ```bash
-npm run test:unit
-```
+# Run the chat system E2E test
+npm test tests/e2e/frontend/chat.test.jsx
 
-### Integration Tests
-```bash
-npm run test:integration
-```
+# Run all frontend tests
+npm test
 
-### E2E Tests
-```bash
-npm run test:e2e
-```
-
-### Coverage Report
-```bash
+# Run with coverage
 npm run test:coverage
 ```
 
-## Deployment
-
-1. Build the application:
+### Running Backend Tests
 ```bash
-npm run build
+# Run all backend tests
+pytest
+
+# Run specific test directory
+pytest tests/unit/backend
+
+# Run with coverage
+pytest --cov=src tests/
 ```
 
-2. Deploy to your hosting platform:
-```bash
-npm run deploy
-```
-
-## API Documentation
-
-See [API.md](API.md) for detailed API documentation.
+See [tests/README.md](tests/README.md) for detailed testing documentation.
 
 ## Contributing
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+1. Read `docs/development/` for development guidelines
+2. Check `docs/api/` for API documentation
+3. Run tests before submitting changes:
+   ```bash
+   # Run all tests
+   pytest tests/
+   npm test
+   ```
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-- [Supabase](https://supabase.io/) for the amazing backend platform
-- [React](https://reactjs.org/) for the frontend framework
-- [Framer Motion](https://www.framer.com/motion/) for animations
-- [Styled Components](https://styled-components.com/) for styling
-- [Vite](https://vitejs.dev/) for the build tool
+See LICENSE file for details.

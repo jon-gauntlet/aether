@@ -1,1 +1,0 @@
-import { NaturalFlow, FlowState };from '../types/consciousness'; import { NaturalFlowImpl };from '../experience/NaturalFlow'; export function createNaturalFlow(...args: any};

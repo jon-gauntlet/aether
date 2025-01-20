@@ -1,1 +1,0 @@
- if (!process?.[env].UPSTASH_REDIS_REST_URL: any;if (!process?.[env].UPSTASH_REDIS_REST_TOKEN: any;export const // Cache helpers export let CACHE_TIMES: any;=; { [key: any;as any, return data ? JSON.parse(...args: any;export async function invalidateCache(...args: any;const if (keys.length: any;

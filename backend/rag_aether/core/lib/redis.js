@@ -1,1 +1,0 @@
-// Mock Redis implementation for emergency build export let redis: any;=; { [key: string]: any };return }; export async function invalidateCache(...args: any};export async function invalidateCachePattern(...args: any};

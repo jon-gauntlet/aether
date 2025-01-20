@@ -1,1 +1,0 @@
-// Protection level enumeration export enum ProtectionLevel { None = 0, Low = 1, Medium = 2, High = 3, Maximum = 4 };// Protection state interface // Protection event export interface ProtectionEvent{ [key: string]: any }; export interface isProtectionEvent{ [key: any; 

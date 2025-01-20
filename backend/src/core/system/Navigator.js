@@ -1,1 +1,0 @@
-import { BehaviorSubject, Observable };from 'rxjs'; export interface NavigationState{ [key: string]: any } };public updateParams(...args: any; // Update the last history entry if (this?.[navigationHistory].length > 0: any} };public clearParams(...args: any; // Update the last history entry if (this?.[navigationHistory].length > 0: any} } };

@@ -12,12 +12,20 @@ class QueryExpansionError(RAGError):
     """Raised when query expansion fails."""
     pass
 
-class CacheError(RAGError):
-    """Raised when cache operations fail."""
+class DocumentProcessingError(RAGError):
+    """Raised when document processing fails."""
     pass
 
 class VectorStoreError(RAGError):
     """Raised when vector store operations fail."""
+    pass
+
+class CacheError(RAGError):
+    """Raised when cache operations fail."""
+    pass
+
+class MonitoringError(RAGError):
+    """Raised when monitoring system operations fail."""
     pass
 
 class MLClientError(RAGError):

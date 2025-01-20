@@ -3,17 +3,26 @@ import asyncio
 from typing import List, Dict, Any
 import logging
 from openai import AsyncOpenAI
-from ..config import load_credentials, BATCH_SIZE
+import os
+from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
+
+# Load environment variables
+load_dotenv()
+
+# Constants
+BATCH_SIZE = int(os.getenv("BATCH_SIZE", "32"))
 
 class MLClient:
     """Client for ML model interactions."""
     
     def __init__(self):
         """Initialize ML client with OpenAI."""
-        creds = load_credentials()
-        self.client = AsyncOpenAI(api_key=creds.openai_api_key)
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("OPENAI_API_KEY environment variable is required")
+        self.client = AsyncOpenAI(api_key=api_key)
         
     async def create_embedding(self, text: str) -> List[float]:
         """Create embedding for a single text.

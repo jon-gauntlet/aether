@@ -1,1 +1,0 @@
-/** * Natural flow of information and communication */ export interface F{ [key: string]: any };export enum FlowState { Peak = 'peak', Flow = 'flow', Focus = 'focus', Normal = 'normal', Low = 'low' };export interface EnergyM{ [key: any;

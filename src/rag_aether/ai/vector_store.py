@@ -1,39 +1,40 @@
-"""Vector store client for Supabase."""
+"""Vector store client for document storage and retrieval."""
 import asyncio
 from typing import List, Dict, Any, Optional
 import logging
-import os
-from supabase import create_client, Client
-from .ml_client import MLClient
-from ..config import load_credentials, SIMILARITY_THRESHOLD
 import faiss
 import numpy as np
+import os
+import uuid
 from datetime import datetime, UTC
-from uuid import uuid4
+from dotenv import load_dotenv
+from .ml_client import MLClient
 
 logger = logging.getLogger(__name__)
+
+# Load environment variables
+load_dotenv()
+
+# Constants
+SIMILARITY_THRESHOLD = float(os.getenv("SIMILARITY_THRESHOLD", "0.7"))
+VECTOR_DIMENSION = int(os.getenv("VECTOR_DIMENSION", "1536"))  # For text-embedding-3-small
 
 class VectorStore:
     """Vector store for document embeddings."""
     
-    def __init__(self, use_mock: bool = False, dimension: int = 1536):
+    def __init__(self, use_mock: bool = False, vector_dimension: int = VECTOR_DIMENSION):
         """Initialize vector store.
         
         Args:
-            use_mock: Whether to use mock responses for testing
-            dimension: Dimension of vectors (1536 for OpenAI ada-002)
+            use_mock: Whether to use mock embeddings
+            vector_dimension: Dimension of vectors to store
         """
-        self.dimension = dimension
-        self.index = faiss.IndexFlatL2(dimension)
-        self.documents = []
-        self.document_vectors = None
-        self.metadata = []
         self.use_mock = use_mock
-        
-        if not self.use_mock:
-            creds = load_credentials()
-            self.supabase = create_client(creds.supabase_url, creds.supabase_key)
-            self.ml_client = MLClient()
+        self.vector_dimension = vector_dimension
+        self.index = faiss.IndexFlatL2(vector_dimension)
+        self.documents = []
+        self.ml_client = None if use_mock else MLClient()
+        self.metadata = []
         
     async def add_documents(
         self,
@@ -72,7 +73,7 @@ class VectorStore:
             for i, text in enumerate(texts):
                 doc_metadata = metadata[i] if metadata else {}
                 doc_metadata.update({
-                    "document_id": str(uuid4()),
+                    "document_id": str(uuid.uuid4()),
                     "timestamp": datetime.now(UTC).isoformat(),
                     "index": len(self.documents)
                 })
@@ -101,9 +102,6 @@ class VectorStore:
         Returns:
             List of document IDs
         """
-        if self.use_mock:
-            return [str(uuid4()) for _ in texts]
-            
         if metadata is None:
             metadata = [{} for _ in texts]
             
@@ -127,7 +125,7 @@ class VectorStore:
             for text, meta in zip(batch_texts, batch_metadata):
                 doc_metadata = meta.copy()
                 doc_metadata.update({
-                    "document_id": str(uuid4()),
+                    "document_id": str(uuid.uuid4()),
                     "timestamp": datetime.now(UTC).isoformat(),
                     "index": len(self.documents)
                 })
@@ -182,14 +180,6 @@ class VectorStore:
         Returns:
             List of documents with similarity scores
         """
-        if self.use_mock:
-            return [{
-                "document_id": str(uuid4()),
-                "score": 1.0,
-                "metadata": {"mock": True},
-                "content": "Mock document content"
-            }]
-            
         if not self.documents:
             return []
             
@@ -220,9 +210,6 @@ class VectorStore:
         Args:
             doc_ids: List of document IDs to delete
         """
-        if self.use_mock:
-            return
-            
         try:
             self.supabase.table('embeddings').delete().in_('id', doc_ids).execute()
         except Exception as e:

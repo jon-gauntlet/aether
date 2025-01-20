@@ -1,1 +1,0 @@
-import _ expect_ _ eforeAll_ aterAll _ ro _vitest__; import { };from '@testing-library/react'; import matchers from '@testing-library/jest-dom/matchers'; import { vi };from 'vitest'; expect.extend(matchers: any) => { cleanup() } );

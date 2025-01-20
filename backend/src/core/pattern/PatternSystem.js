@@ -1,1 +1,0 @@
-import { Field, FlowState };from '../types/base'; import { ConsciousnessState };from '../types/consciousness'; export interface PatternConditi{ [key: string]: any } };return matches.sort((a: any{ [key: string]: any } };return { [key: string]: any } };

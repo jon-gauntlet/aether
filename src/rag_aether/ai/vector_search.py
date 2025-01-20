@@ -8,6 +8,10 @@ from ..core.performance import with_performance_monitoring, performance_section
 from ..ai.cache_manager import LRUCache
 from .vector_store import VectorStore
 import hashlib
+import asyncio
+import faiss
+from openai import AsyncOpenAI
+from .errors import DocumentProcessingError
 
 logger = logging.getLogger(__name__)
 
@@ -133,4 +137,108 @@ class OptimizedVectorSearch:
             "total_queries": self._total_queries,
             "cache_hits": self._cache_hits,
             "cache_hit_rate": self._cache_hits / max(1, self._total_queries)
-        } 
+        }
+
+class VectorStore:
+    """Vector store for document search."""
+    
+    def __init__(self, use_mock: bool = False):
+        """Initialize vector store.
+        
+        Args:
+            use_mock: Whether to use mock responses
+        """
+        self.use_mock = use_mock
+        self.client = AsyncOpenAI()
+        self.documents = []
+        self.index = None
+        
+    async def add_document(self, text: str, metadata: Optional[Dict] = None) -> None:
+        """Add document to vector store.
+        
+        Args:
+            text: Document text
+            metadata: Optional document metadata
+        """
+        try:
+            if self.use_mock:
+                return
+                
+            # Get embeddings
+            embedding = await self._get_embeddings([text])
+            
+            # Add to documents
+            self.documents.append({
+                "text": text,
+                "metadata": metadata or {}
+            })
+            
+            # Update index
+            if self.index is None:
+                self.index = faiss.IndexFlatL2(embedding.shape[1])
+            self.index.add(embedding)
+            
+        except Exception as e:
+            raise DocumentProcessingError(f"Failed to add document: {str(e)}")
+            
+    async def search(self, query: str, max_results: int = 3, min_score: float = 0.7) -> List[Dict]:
+        """Search for relevant documents.
+        
+        Args:
+            query: Search query
+            max_results: Maximum number of results
+            min_score: Minimum similarity score
+            
+        Returns:
+            List of relevant documents with scores
+        """
+        if self.use_mock:
+            return [{
+                "text": "This is a mock document for testing",
+                "metadata": {"source": "mock"},
+                "score": 0.95
+            }]
+            
+        try:
+            # Get query embedding
+            embedding = await self._get_embeddings([query])
+            
+            # Search index
+            if self.index is None or len(self.documents) == 0:
+                return []
+                
+            D, I = self.index.search(embedding, max_results)
+            
+            # Format results
+            results = []
+            for score, idx in zip(D[0], I[0]):
+                if score >= min_score and idx < len(self.documents):
+                    doc = self.documents[idx]
+                    results.append({
+                        "text": doc["text"],
+                        "metadata": doc["metadata"],
+                        "score": float(score)
+                    })
+                    
+            return results
+            
+        except Exception as e:
+            raise DocumentProcessingError(f"Failed to search documents: {str(e)}")
+            
+    async def _get_embeddings(self, texts: List[str]) -> np.ndarray:
+        """Get embeddings for texts.
+        
+        Args:
+            texts: List of texts to embed
+            
+        Returns:
+            Array of embeddings
+        """
+        try:
+            response = await self.client.embeddings.create(
+                model="text-embedding-ada-002",
+                input=texts
+            )
+            return np.array([e.embedding for e in response.data])
+        except Exception as e:
+            raise DocumentProcessingError(f"Failed to get embeddings: {str(e)}") 

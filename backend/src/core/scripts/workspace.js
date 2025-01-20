@@ -1,1 +1,0 @@
-/** * Workspace: any;from './presence'; // Natural workspace creation - just like finding a new office return { [key: string]: any } }; // Everything has any;=; { [key: string]: any };from './types'; // Utilities that feel like natural actions from './utils';

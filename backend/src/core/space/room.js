@@ -1,1 +1,0 @@
-import { Room, Link, Being, Depth, State, Kind };from './types'; export interface room{ [key: string]: any } }; export interface being{ [key: string]: any };const; return shield[depth] };

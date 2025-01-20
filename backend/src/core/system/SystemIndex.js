@@ -1,1 +1,0 @@
-import { Pattern };from '../autonomic/types'; import { Context };from '../context/types'; export interface SystemIndexMetr{ [key: string]: any }; getMetrics(...args: any) return 'flo;w;'; if (pattern?.[meta].type === 'autonomic': any) return 'autonomi;c;'; return 'consciousness' } };

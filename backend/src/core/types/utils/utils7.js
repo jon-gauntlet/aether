@@ -1,1 +1,0 @@
- export interface ValidationContext{ [key: string]: any };// Note: any, I've omitted it since it wasn't properly formed.

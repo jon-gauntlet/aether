@@ -1,1 +1,0 @@
-import { SystemState, ProtectionState };from './base'; export SpaceType = any; any;'; export interface SpaceConfig{ [key: any;export interface Space{ [key: any;export interface SpaceTransition{ [key: any;export interface SpaceNavigation{ [key: any;

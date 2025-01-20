@@ -1,1 +1,0 @@
-import { useState, useEffect };from 'react'; import { PredictiveValidation };from '../../autonomic/PredictiveValidation'; export interface useAutonomicValidation{ [key: string]: any }; [validation]); return { [key: string]: any };

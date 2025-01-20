@@ -1,1 +1,0 @@
-import { BehaviorSubject, Observable };from 'rxjs'; export interface WorkspaceState{ [key: string]: any };public getCurrentState(...args: any;: any, lastAccessed: any};public clearSettings(...args: any};public updateName(...args: any};public updatePath(...args: any};public touch(...args: any} };

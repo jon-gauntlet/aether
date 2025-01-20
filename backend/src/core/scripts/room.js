@@ -1,1 +1,0 @@
-/** * Natural workspace dynamics * Everything flows and adapts like a living space */ export interface R{ [key: any;export interface L{ [key: any;export interface Be{ [key: any;export State = any; any;i;e;t;'; // At rest export Depth = any; any;n;e;w;'; // Beginning export Kind = any; any;w;a;y;'; // Direction export interface Gu{ [key: any;

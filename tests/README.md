@@ -1,154 +1,103 @@
-# Aether Testing Guide
+# Testing Guide
 
-## Test Organization
+This directory contains all tests for the Aether project, organized by type and component.
 
-The test suite is organized into the following directories:
+## Directory Structure
 
 ```
 tests/
-  e2e/          # End-to-end tests using Playwright
-  unit/         # Unit tests for components and functions
-  integration/  # Integration tests between services
-  fixtures/     # Test data and fixtures
-  utils/        # Shared test utilities
-```
-
-## Test Categories
-
-### Unit Tests
-- Frontend: Vitest for Vue components and utilities
-- Backend: Pytest for Python functions and classes
-- Coverage requirement: 80% minimum
-
-### Integration Tests
-- API communication
-- Database operations
-- External service integration
-- Coverage requirement: 70% minimum
-
-### E2E Tests
-- Critical user flows
-- Cross-browser compatibility
-- Coverage requirement: Key user journeys
+├── e2e/                    # End-to-end tests
+│   ├── frontend/          # Frontend E2E tests using Vitest
+│   │   └── chat.test.jsx  # Chat system E2E test
+│   └── backend/           # Backend E2E tests
+├── integration/           # Integration tests
+│   ├── frontend/         # Frontend integration tests
+│   └── backend/          # Backend integration tests
+└── unit/                 # Unit tests
+    ├── frontend/         # Frontend unit tests
+    │   ├── auth.test.jsx
+    │   └── file-handling.test.jsx
+    └── backend/          # Backend unit tests
+        ├── test_vector_search.py
+        └── test_vector_store.py
 
 ## Running Tests
 
-### Frontend Tests
+### Frontend Tests (Vitest)
+
 ```bash
 # Run all frontend tests
-npm run test:frontend
+npm test
 
-# Watch mode
-npm run test:frontend:watch
+# Run frontend tests in watch mode
+npm run test:watch
 
-# Coverage report
-npm run test:frontend:coverage
+# Run specific test file
+npm test tests/e2e/frontend/chat.test.jsx
+
+# Run with coverage
+npm run test:coverage
 ```
 
-### Backend Tests
+### Backend Tests (Pytest)
+
 ```bash
 # Run all backend tests
-poetry run pytest
+pytest
 
-# With coverage
-poetry run pytest --cov
+# Run specific test directory
+pytest tests/unit/backend
 
-# Specific test file
-poetry run pytest tests/path/to/test_file.py
+# Run with coverage
+pytest --cov=src tests/
 ```
 
-### E2E Tests
-```bash
-# Run all E2E tests
-npm run test:e2e
+## Test Types
 
-# Run specific browser
-npx playwright test --project=chromium
-```
+### End-to-End Tests
+Located in `tests/e2e/`, these tests verify complete user workflows:
+- Frontend E2E tests use Vitest and Testing Library
+- Focus on user interactions and full system behavior
+- Example: `chat.test.jsx` tests the complete chat interaction flow
+
+### Integration Tests
+Located in `tests/integration/`, these test interactions between components:
+- API integrations
+- Database operations
+- Service interactions
+
+### Unit Tests
+Located in `tests/unit/`, these test individual components:
+- Frontend component tests
+- Backend function and class tests
+- Utility function tests
 
 ## Writing Tests
 
-### Naming Conventions
-- Test files: `test_*.py` (Python), `*.test.js` or `*.spec.js` (JavaScript)
-- Test functions: `test_*` (Python), `it('should...')` (JavaScript)
-- Test descriptions: Should clearly state the expected behavior
+### Frontend Tests
+```jsx
+import { describe, it, expect } from 'vitest'
+import { render, screen } from '@testing-library/react'
 
-### Best Practices
-1. Follow AAA pattern (Arrange, Act, Assert)
-2. One assertion per test when possible
-3. Use meaningful test descriptions
-4. Keep tests independent
-5. Use fixtures for common setup
-6. Mock external dependencies
-
-### Example Test Structure
-
-```javascript
-// Frontend test example
 describe('Component', () => {
   it('should render correctly', () => {
-    // Arrange
-    const props = {...}
-    
-    // Act
-    const wrapper = mount(Component, { props })
-    
-    // Assert
-    expect(wrapper.exists()).toBe(true)
+    render(<Component />)
+    expect(screen.getByText('Expected Text')).toBeInTheDocument()
   })
 })
 ```
 
+### Backend Tests
 ```python
-# Backend test example
-def test_endpoint_behavior():
-    # Arrange
-    test_data = {...}
-    
-    # Act
-    response = client.post("/endpoint", json=test_data)
-    
-    # Assert
-    assert response.status_code == 200
+import pytest
+
+def test_function():
+    result = function_to_test()
+    assert result == expected_value
 ```
 
-## Coverage Requirements
-
-| Category    | Minimum Coverage |
-|------------|-----------------|
-| Unit       | 80%            |
-| Integration| 70%            |
-| E2E        | Key Flows      |
-
-## CI/CD Integration
-
-Tests are automatically run on:
-- Pull requests
-- Merges to main branch
-- Release tags
-
-### CI Pipeline Steps
-1. Install dependencies
-2. Run linters
-3. Run unit tests
-4. Run integration tests
-5. Run E2E tests
-6. Generate coverage reports
-
-## Troubleshooting
-
-### Common Issues
-1. Test database connection failures
-   - Check environment variables
-   - Verify database is running
-   
-2. Flaky E2E tests
-   - Increase timeouts
-   - Add retry logic
-   - Check for race conditions
-
-### Debug Tools
-- `pytest -vv` for verbose output
-- `pytest -s` to see print statements
-- Browser DevTools for E2E tests
-- Coverage reports for identifying gaps 
+## Test Data
+- Test fixtures are in `tests/fixtures/`
+- Mock data is in `tests/data/`
+- Use `setup.js` for frontend test setup
+- Use `conftest.py` for backend test setup 
