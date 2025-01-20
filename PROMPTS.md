@@ -2,6 +2,30 @@
 
 Christ is King! ☦
 
+## 🚨 MERGE TO MAIN FIRST
+
+1. Stop current processes:
+   ```bash
+   pkill -f "npm"
+   ```
+
+2. Merge to main:
+   ```bash
+   cd /home/jon/git/aether
+   git checkout main
+   git pull
+   git merge feature/auth-files
+   git push
+   ```
+
+3. Test in main:
+   ```bash
+   npm run dev
+   ```
+   Then verify at http://localhost:5173
+
+Rest of plan follows after main verification...
+
 ## 🚨 STOP TESTING - VERIFY REAL FUNCTIONALITY
 
 1. Kill test process:
