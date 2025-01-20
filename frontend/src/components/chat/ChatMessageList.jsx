@@ -1,6 +1,6 @@
 import React from 'react'
 import { Box, VStack, Text, Skeleton, Fade } from '@chakra-ui/react';
-import { ErrorBoundary } from './ErrorBoundary';
+import ErrorBoundary from './ErrorBoundary';
 import { Message } from './Message';
 
 function ChatMessage({ message, isUser }) {

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import WebSocket from 'ws'
-import { config } from '../../shared/utils/supabase/config'
+import config from '../../shared/utils/supabase/config'
 
 const WS_URL = `${config.api.wsUrl}/test-channel`
 const NUM_MESSAGES = 1000

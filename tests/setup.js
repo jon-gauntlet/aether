@@ -1,31 +1,126 @@
 import '@testing-library/jest-dom'
-import { expect, afterEach, vi } from 'vitest'
+import { expect, afterEach, vi, beforeAll, beforeEach } from 'vitest'
 import { cleanup } from '@testing-library/react'
+import * as matchers from '@testing-library/jest-dom/matchers'
+import { configure } from '@testing-library/react'
+import { act } from 'react'
+import { TextEncoder, TextDecoder } from 'util'
 
-// Extend expect
-expect.extend({})
+// Configure React Testing Library with proper async handling
+configure({
+  asyncUtilTimeout: 30000,
+  eventWrapper: async (cb) => {
+    let result
+    await act(async () => {
+      result = await cb()
+    })
+    return result
+  }
+})
 
-// Clean up after each test
+// Configure React testing environment for act()
+global.IS_REACT_ACT_ENVIRONMENT = true
+
+// Configure requestAnimationFrame with proper timing
+global.requestAnimationFrame = (callback) => {
+  return setTimeout(() => {
+    callback(Date.now())
+  }, 16) // Use 16ms for 60fps simulation
+}
+
+// Configure cancelAnimationFrame
+global.cancelAnimationFrame = (id) => {
+  clearTimeout(id)
+}
+
+// Extend Vitest's expect with Testing Library matchers
+expect.extend(matchers)
+
+// Configure global objects
+global.TextEncoder = TextEncoder
+global.TextDecoder = TextDecoder
+
+// Mock ResizeObserver
+global.ResizeObserver = vi.fn().mockImplementation(() => ({
+  observe: vi.fn(),
+  unobserve: vi.fn(),
+  disconnect: vi.fn(),
+}))
+
+// Mock localStorage with async behavior
+const localStorageMock = {
+  store: new Map(),
+  getItem: vi.fn((key) => {
+    return Promise.resolve(localStorageMock.store.get(key) || null)
+  }),
+  setItem: vi.fn((key, value) => {
+    return Promise.resolve(localStorageMock.store.set(key, value))
+  }),
+  removeItem: vi.fn((key) => {
+    return Promise.resolve(localStorageMock.store.delete(key))
+  }),
+  clear: vi.fn(() => {
+    return Promise.resolve(localStorageMock.store.clear())
+  }),
+}
+global.localStorage = localStorageMock
+
+// Mock fetch
+global.fetch = vi.fn()
+
+// Configure Vitest
+vi.mock('@supabase/supabase-js', () => {
+  return {
+    createClient: () => ({
+      auth: {
+        signInWithPassword: vi.fn(),
+        signUp: vi.fn(),
+        signOut: vi.fn(),
+        getSession: vi.fn(),
+        onAuthStateChange: vi.fn((callback) => {
+          callback('SIGNED_IN', { session: null })
+          return { data: { subscription: { unsubscribe: vi.fn() } } }
+        }),
+      },
+    }),
+  }
+})
+
+// Configure testing environment
+beforeAll(() => {
+  // Reset all mocks
+  vi.clearAllMocks()
+  
+  // Configure longer timeout for async tests
+  vi.setConfig({ testTimeout: 10000 })
+})
+
+beforeEach(() => {
+  // Clear localStorage
+  localStorageMock.store.clear()
+  
+  // Reset fetch mock
+  global.fetch.mockReset()
+})
+
 afterEach(() => {
+  // Clean up any mounted components
   cleanup()
+  
+  // Clear all mocks
+  vi.clearAllMocks()
 })
 
-// Mock matchMedia
-Object.defineProperty(window, 'matchMedia', {
-  writable: true,
-  value: vi.fn().mockImplementation(query => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    dispatchEvent: vi.fn(),
-  })),
+afterAll(() => {
+  vi.clearAllTimers()
 })
 
-// Mock WebSocket
+// Mock Portal container with proper cleanup
+const portalRoot = document.createElement('div')
+portalRoot.setAttribute('id', 'chakra-portal')
+document.body.appendChild(portalRoot)
+
+// Mock WebSocket with proper async behavior and cleanup
 class MockWebSocket {
   constructor(url) {
     this.url = url
@@ -35,27 +130,36 @@ class MockWebSocket {
     this.onclose = null
     this.onerror = null
 
-    // Auto trigger onopen
     setTimeout(() => {
-      if (this.onopen) this.onopen()
-    }, 0)
+      if (this.onopen) {
+        act(() => {
+          this.onopen()
+        })
+      }
+    }, 16)
   }
 
   send(data) {
-    // Mock echo behavior
     setTimeout(() => {
       if (this.onmessage) {
-        this.onmessage({ data })
+        act(() => {
+          this.onmessage({ data })
+        })
       }
-    }, 0)
+    }, 16)
   }
 
   close() {
-    if (this.onclose) this.onclose()
+    setTimeout(() => {
+      if (this.onclose) {
+        act(() => {
+          this.onclose()
+        })
+      }
+    }, 16)
   }
 }
 
-// Add WebSocket constants
 MockWebSocket.CONNECTING = 0
 MockWebSocket.OPEN = 1
 MockWebSocket.CLOSING = 2

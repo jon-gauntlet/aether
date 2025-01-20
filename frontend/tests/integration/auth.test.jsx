@@ -1,9 +1,9 @@
 import React from 'react'
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { Auth } from '../../src/components/Auth'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { Auth } from '../../src/components/auth/Auth'
 import { AuthProvider } from '../../src/contexts/AuthContext'
-import { ChatContainer } from '../../src/components/ChatContainer'
+import { ChatContainer } from '../../src/components/chat/ChatContainer'
 import { supabase } from '../../src/lib/supabaseClient'
 
 // Mock Supabase client
@@ -30,11 +30,12 @@ describe('Auth Integration', () => {
     vi.clearAllMocks()
     mockFetch.mockReset()
     localStorage.clear()
-    vi.useFakeTimers()
-  })
 
-  afterEach(() => {
-    vi.useRealTimers()
+    // Mock initial session check
+    supabase.auth.getSession.mockResolvedValue({
+      data: { session: null },
+      error: null
+    })
   })
 
   it('redirects to chat after successful login', async () => {
@@ -62,21 +63,25 @@ describe('Auth Integration', () => {
       json: async () => ([])
     })
 
-    render(
-      <AuthProvider>
-        <Auth />
-        <ChatContainer />
-      </AuthProvider>
-    )
+    await act(async () => {
+      render(
+        <AuthProvider>
+          <Auth />
+          <ChatContainer />
+        </AuthProvider>
+      )
+    })
 
     // Perform login
     const emailInput = screen.getByLabelText('Email')
     const passwordInput = screen.getByLabelText('Password')
     const loginButton = screen.getByRole('button', { name: /sign in/i })
 
-    fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
-    fireEvent.change(passwordInput, { target: { value: 'password' } })
-    fireEvent.click(loginButton)
+    await act(async () => {
+      fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
+      fireEvent.change(passwordInput, { target: { value: 'password' } })
+      fireEvent.click(loginButton)
+    })
 
     // Verify auth state and API calls
     await waitFor(() => {
@@ -142,20 +147,24 @@ describe('Auth Integration', () => {
       error: { message: 'Invalid credentials' }
     })
 
-    render(
-      <AuthProvider>
-        <Auth />
-      </AuthProvider>
-    )
+    await act(async () => {
+      render(
+        <AuthProvider>
+          <Auth />
+        </AuthProvider>
+      )
+    })
 
     // Perform login
     const emailInput = screen.getByLabelText('Email')
     const passwordInput = screen.getByLabelText('Password')
     const loginButton = screen.getByRole('button', { name: /sign in/i })
 
-    fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
-    fireEvent.change(passwordInput, { target: { value: 'wrong-password' } })
-    fireEvent.click(loginButton)
+    await act(async () => {
+      fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
+      fireEvent.change(passwordInput, { target: { value: 'wrong-password' } })
+      fireEvent.click(loginButton)
+    })
 
     // Verify error is shown
     await waitFor(() => {
@@ -175,20 +184,24 @@ describe('Auth Integration', () => {
       new Error('Network error')
     )
 
-    render(
-      <AuthProvider>
-        <Auth />
-      </AuthProvider>
-    )
+    await act(async () => {
+      render(
+        <AuthProvider>
+          <Auth />
+        </AuthProvider>
+      )
+    })
 
     // Perform login
     const emailInput = screen.getByLabelText('Email')
     const passwordInput = screen.getByLabelText('Password')
     const loginButton = screen.getByRole('button', { name: /sign in/i })
 
-    fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
-    fireEvent.change(passwordInput, { target: { value: 'password' } })
-    fireEvent.click(loginButton)
+    await act(async () => {
+      fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
+      fireEvent.change(passwordInput, { target: { value: 'password' } })
+      fireEvent.click(loginButton)
+    })
 
     // Verify error is shown with user-friendly message
     await waitFor(() => {
@@ -213,13 +226,37 @@ describe('Auth Integration', () => {
       error: null
     })
 
-    const { unmount } = render(
-      <AuthProvider>
-        <Auth />
-      </AuthProvider>
-    )
+    // Set initial auth state
+    supabase.auth.getSession.mockResolvedValueOnce({
+      data: { 
+        session: { 
+          user: { email: 'test@example.com' },
+          access_token: 'fake-token'
+        } 
+      },
+      error: null
+    })
 
-    // Wait for initial setup
+    await act(async () => {
+      render(
+        <AuthProvider>
+          <ChatContainer />
+        </AuthProvider>
+      )
+    })
+
+    // Wait for loading to finish
+    await waitFor(() => {
+      expect(screen.queryByText('Loading...')).not.toBeInTheDocument()
+    })
+
+    // Perform logout
+    const logoutButton = screen.getByTestId('logout-button')
+    await act(async () => {
+      fireEvent.click(logoutButton)
+    })
+
+    // Verify auth state is cleared
     await waitFor(() => {
       expect(supabase.auth.getSession).toHaveBeenCalled()
     })

@@ -6,12 +6,11 @@ import {
   FormLabel,
   Input,
   VStack,
+  Alert,
+  AlertIcon,
+  AlertDescription,
   Text,
-  useToast,
-  Container,
-  InputGroup,
-  InputRightElement,
-  IconButton,
+  Link
 } from '@chakra-ui/react';
 import { ViewIcon, ViewOffIcon } from '@chakra-ui/icons';
 import { motion } from 'framer-motion';
@@ -24,9 +23,9 @@ export function Auth() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const { signIn } = useAuth();
-  const toast = useToast();
+  const [error, setError] = useState('');
+  const [isSignup, setIsSignup] = useState(false);
+  const { login, signup, logout, user } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -42,111 +41,106 @@ export function Auth() {
     }
 
     setIsLoading(true);
+    setError('');
+
     try {
-      await signIn(email, password);
-      toast({
-        title: 'Success',
-        description: 'Successfully signed in!',
-        status: 'success',
-        duration: 3000,
-        isClosable: true,
-      });
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to sign in',
-        status: 'error',
-        duration: 3000,
-        isClosable: true,
-      });
+      const { error: authError } = isSignup 
+        ? await signup({ email, password })
+        : await login({ email, password });
+      
+      if (authError) {
+        setError(typeof authError === 'string' ? authError : authError.message);
+      }
+    } catch (err) {
+      setError(err.message || 'Network error');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleTogglePassword = () => setShowPassword(!showPassword);
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (err) {
+      setError(err.message || 'Error logging out');
+    }
+  };
 
   return (
-    <MotionContainer
-      maxW="container.sm"
-      py={10}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-    >
-      <MotionBox
-        p={8}
-        borderWidth={1}
-        borderRadius="lg"
-        boxShadow="lg"
-        initial={{ scale: 0.95 }}
-        animate={{ scale: 1 }}
-        transition={{ duration: 0.3 }}
-        whileHover={{ boxShadow: "xl" }}
-      >
-        <VStack spacing={6} as="form" onSubmit={handleSubmit}>
-          <Text
-            fontSize="2xl"
-            fontWeight="bold"
-            bgGradient="linear(to-r, blue.400, blue.600)"
-            bgClip="text"
-          >
-            Sign In
-          </Text>
-          
-          <FormControl isRequired>
-            <FormLabel>Email</FormLabel>
-            <Input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your email"
-              size="lg"
-              variant="filled"
-              _hover={{ bg: 'gray.100' }}
-              _focus={{ bg: 'white', borderColor: 'blue.500' }}
-            />
-          </FormControl>
-
-          <FormControl isRequired>
-            <FormLabel>Password</FormLabel>
-            <InputGroup size="lg">
-              <Input
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
-                variant="filled"
-                _hover={{ bg: 'gray.100' }}
-                _focus={{ bg: 'white', borderColor: 'blue.500' }}
-              />
-              <InputRightElement>
-                <IconButton
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                  icon={showPassword ? <ViewOffIcon /> : <ViewIcon />}
-                  onClick={handleTogglePassword}
-                  variant="ghost"
-                  size="sm"
-                />
-              </InputRightElement>
-            </InputGroup>
-          </FormControl>
-
+    <Box p={4}>
+      {error && (
+        <Alert status="error" mb={4} data-testid="error-message">
+          <AlertIcon />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+      {user ? (
+        <VStack spacing={4}>
+          <Text>Logged in as {user.email}</Text>
           <Button
-            type="submit"
-            colorScheme="blue"
-            width="full"
-            size="lg"
+            data-testid="logout-button"
+            colorScheme="red"
+            onClick={handleLogout}
             isLoading={isLoading}
             loadingText="Signing in..."
             _hover={{ transform: 'translateY(-2px)', boxShadow: 'lg' }}
             _active={{ transform: 'translateY(0)' }}
             transition="all 0.2s"
           >
-            Sign In
+            Logout
           </Button>
         </VStack>
-      </MotionBox>
-    </MotionContainer>
+      ) : (
+        <form onSubmit={handleSubmit} noValidate data-testid="auth-form">
+          <VStack spacing={4}>
+            <FormControl isRequired>
+              <FormLabel>Email</FormLabel>
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                data-testid="email-input"
+                disabled={isLoading}
+                required
+                aria-invalid={!email && 'true'}
+              />
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel>Password</FormLabel>
+              <Input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                data-testid="password-input"
+                disabled={isLoading}
+                required
+                aria-invalid={!password && 'true'}
+              />
+            </FormControl>
+
+            <Button
+              type="submit"
+              colorScheme="blue"
+              width="full"
+              isLoading={isLoading}
+              data-testid={isSignup ? "signup-button" : "login-button"}
+              disabled={isLoading}
+            >
+              {isSignup ? 'Sign Up' : 'Login'}
+            </Button>
+
+            <Link
+              onClick={() => setIsSignup(!isSignup)}
+              color="blue.500"
+              data-testid="signup-switch"
+              _hover={{ textDecoration: 'underline' }}
+            >
+              {isSignup ? 'Already have an account? Login' : 'Need an account? Sign Up'}
+            </Link>
+          </VStack>
+        </form>
+      )}
+    </Box>
   );
 } 

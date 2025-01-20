@@ -1,80 +1,29 @@
-import React, { useCallback } from 'react'
-import { Box, Input, Button, Text } from '@chakra-ui/react'
+import React, { useState } from 'react'
+import { Box, Input, Button, HStack } from '@chakra-ui/react'
 
-const DEFAULT_MAX_LENGTH = 500
+const ChatInput = ({ onSendMessage, isLoading }) => {
+  const [message, setMessage] = useState('')
 
-const ChatInput = ({ onSendMessage, isLoading, maxLength = DEFAULT_MAX_LENGTH }) => {
-  const [message, setMessage] = React.useState('')
-  const remainingChars = maxLength - message.length
-  const showCharCount = remainingChars <= 50
-
-  const handleSend = useCallback(() => {
-    if (message.trim()) {
-      onSendMessage(message.trim())
-      setMessage('')
-    }
-  }, [message, onSendMessage])
-
-  const handleKeyDown = useCallback((e) => {
-    if (e.key === 'Enter') {
-      if (e.shiftKey) {
-        // Don't prevent default - let the newline be inserted
-        return
-      } else {
-        e.preventDefault()
-        handleSend()
-      }
-    }
-  }, [handleSend])
-
-  const handleChange = useCallback((e) => {
-    const newValue = e.target.value
-    if (newValue.length <= maxLength) {
-      setMessage(newValue)
-    }
-  }, [maxLength])
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    if (!message.trim()) return
+    onSendMessage(message)
+    setMessage('')
+  }
 
   return (
-    <Box position="relative">
-      <Box display="flex" gap={2}>
+    <Box as="form" onSubmit={handleSubmit}>
+      <HStack>
         <Input
-          as="textarea"
-          data-testid="message-input"
           value={message}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
+          onChange={(e) => setMessage(e.target.value)}
           placeholder="Type a message..."
-          disabled={isLoading}
-          rows={1}
-          resize="none"
-          minHeight="40px"
-          pr={showCharCount ? "120px" : "70px"}
+          isDisabled={isLoading}
         />
-        <Button
-          data-testid="send-button"
-          onClick={handleSend}
-          isDisabled={!message.trim() || isLoading}
-          position="absolute"
-          right={2}
-          top="50%"
-          transform="translateY(-50%)"
-        >
+        <Button type="submit" isDisabled={isLoading || !message.trim()}>
           Send
         </Button>
-      </Box>
-      {showCharCount && (
-        <Text 
-          data-testid="char-count"
-          fontSize="sm" 
-          color="gray.500" 
-          position="absolute"
-          right="70px"
-          top="50%"
-          transform="translateY(-50%)"
-        >
-          {remainingChars} characters remaining
-        </Text>
-      )}
+      </HStack>
     </Box>
   )
 }

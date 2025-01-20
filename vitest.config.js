@@ -4,31 +4,29 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   test: {
-    globals: true,
     environment: 'jsdom',
-    setupFiles: ['./src/tests/setup.js'],
-    include: ['src/**/*.{test,spec}.{js,jsx}'],
-    coverage: {
-      reporter: ['text', 'json', 'html'],
-      exclude: [
-        'node_modules/',
-        'src/tests/',
-      ],
+    globals: true,
+    setupFiles: ['./tests/setup.js'],
+    testTimeout: 10000,
+    hookTimeout: 10000,
+    pool: 'forks',
+    poolOptions: {
+      threads: {
+        singleThread: true
+      }
     },
-    minThreads: 1,
-    maxThreads: 4,
-    slowTestThreshold: 5000,
-    fileParallelism: false,
-    isolate: false,
-    reporters: ['tap'],
-    css: false,
-    exclude: [
-      'node_modules',
-      'dist',
-      '.storybook',
-      'storybook-static'
-    ],
-    watchExclude: ['**/node_modules/**', '**/dist/**'],
-    passWithNoTests: false
+    environmentOptions: {
+      jsdom: {
+        resources: 'usable'
+      }
+    }
+  },
+  server: {
+    port: 5173,
+    host: 'localhost'
+  },
+  define: {
+    'import.meta.env.VITE_SUPABASE_URL': JSON.stringify('http://localhost:54321'),
+    'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify('test-anon-key')
   }
 }) 

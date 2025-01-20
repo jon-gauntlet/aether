@@ -5,6 +5,18 @@
     "preserveAcrossSessions": true,
     "autoEnable": true
   },
+  "theme": {
+    "name": "GitHub Dark",
+    "colors": {
+      "editor.background": "#0d1117",
+      "sideBar.background": "#161b22",
+      "activityBar.background": "#1565c0",
+      "titleBar.activeBackground": "#1565c0",
+      "statusBar.background": "#1565c0",
+      "tab.activeBackground": "#1565c0",
+      "tab.inactiveBackground": "#161b22"
+    }
+  },
   "commandExecution": {
     "preferNonInteractive": true,
     "appendCatToPagers": true,

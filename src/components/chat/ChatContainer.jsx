@@ -1,14 +1,26 @@
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react'
-import { Box, VStack, Text, useColorMode } from '@chakra-ui/react'
+import { Box, VStack, Text, useColorMode, Button, Select, Drawer, DrawerBody, DrawerHeader, DrawerOverlay, DrawerContent, DrawerCloseButton, useDisclosure } from '@chakra-ui/react'
 import ChatInput from './ChatInput'
 import ChatMessageList from './ChatMessageList'
 import ConnectionStatus from './ConnectionStatus'
 import ThreadView from './ThreadView'
+import { FileUpload } from '../FileUpload'
 import { useRAG } from '../../hooks/useRAG'
 import { useAuth } from '../../contexts/AuthContext'
 
-export default function ChatContainer({ spaceType = 'garden' }) {
-  const [messagesBySpace, setMessagesBySpace] = useState({})
+export default function ChatContainer() {
+  const { user, logout } = useAuth()
+  const { isOpen, onOpen, onClose } = useDisclosure()
+
+  if (!user) {
+    return (
+      <Box p={4}>
+        <Text>Please log in to access the chat.</Text>
+      </Box>
+    )
+  }
+
+  const [messagesBySpace, setMessagesBySpace] = useState({ general: [] })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [isConnected, setIsConnected] = useState(false)
@@ -16,7 +28,6 @@ export default function ChatContainer({ spaceType = 'garden' }) {
   const [activeThread, setActiveThread] = useState(null)
   const [userReactions, setUserReactions] = useState(new Map())
   const { colorMode } = useColorMode()
-  const { user } = useAuth()
   const ws = useRef(null)
   const sentMessages = useRef(new Set())
   
@@ -25,8 +36,8 @@ export default function ChatContainer({ spaceType = 'garden' }) {
 
   // Get messages for current space
   const messages = useMemo(() => {
-    return messagesBySpace[spaceType] || []
-  }, [messagesBySpace, spaceType])
+    return messagesBySpace['general'] || []
+  }, [messagesBySpace])
 
   const handleReaction = useCallback((messageId, reaction) => {
     if (!ws.current || ws.current.readyState !== WebSocket.OPEN) return
@@ -36,7 +47,7 @@ export default function ChatContainer({ spaceType = 'garden' }) {
       messageId,
       reaction,
       timestamp: new Date().toISOString(),
-      spaceType
+      spaceType: 'general'
     }
 
     ws.current.send(JSON.stringify(message))
@@ -44,7 +55,7 @@ export default function ChatContainer({ spaceType = 'garden' }) {
     // Optimistic update
     setUserReactions(prev => {
       const newReactions = new Map(prev)
-      const messageReactions = new Set(prev.get(messageId) || [])
+      const messageReactions = new Set(newReactions.get(messageId) || [])
       
       if (messageReactions.has(reaction)) {
         messageReactions.delete(reaction)
@@ -62,10 +73,10 @@ export default function ChatContainer({ spaceType = 'garden' }) {
     })
 
     setMessagesBySpace(prev => {
-      const spaceMessages = prev[spaceType] || []
+      const spaceMessages = prev.general || []
       return {
         ...prev,
-        [spaceType]: spaceMessages.map(msg => {
+        general: spaceMessages.map(msg => {
           if (msg.id === messageId) {
             const reactions = { ...(msg.reactions || {}) }
             if (reactions[reaction]) {
@@ -82,7 +93,7 @@ export default function ChatContainer({ spaceType = 'garden' }) {
         })
       }
     })
-  }, [spaceType])
+  }, [])
 
   const connectWebSocket = useCallback(() => {
     if (ws.current?.readyState === WebSocket.OPEN) return
@@ -120,10 +131,10 @@ export default function ChatContainer({ spaceType = 'garden' }) {
       
       if (message.type === 'reaction') {
         setMessagesBySpace(prev => {
-          const spaceMessages = prev[message.spaceType] || []
+          const spaceMessages = prev.general || []
           return {
             ...prev,
-            [message.spaceType]: spaceMessages.map(msg => {
+            general: spaceMessages.map(msg => {
               if (msg.id === message.messageId) {
                 const reactions = { ...(msg.reactions || {}) }
                 if (message.add) {
@@ -145,7 +156,7 @@ export default function ChatContainer({ spaceType = 'garden' }) {
 
       if (!sentMessages.current.has(message.id)) {
         // Add message to RAG context if in library space
-        if (spaceType === 'library' && message.content) {
+        if ('general' === 'library' && message.content) {
           await ingestText(message.content, {
             messageId: message.id,
             timestamp: message.timestamp,
@@ -154,12 +165,12 @@ export default function ChatContainer({ spaceType = 'garden' }) {
         }
 
         setMessagesBySpace(prev => {
-          const spaceMessages = prev[spaceType] || []
+          const spaceMessages = prev.general || []
           if (message.parent_id) {
             // Handle thread replies
             return {
               ...prev,
-              [spaceType]: spaceMessages.map(msg => {
+              general: spaceMessages.map(msg => {
                 if (msg.id === message.parent_id) {
                   return {
                     ...msg,
@@ -172,14 +183,14 @@ export default function ChatContainer({ spaceType = 'garden' }) {
           }
           return {
             ...prev,
-            [spaceType]: [...spaceMessages, message]
+            general: [...spaceMessages, message]
           }
         })
       }
     }
 
     ws.current = socket
-  }, [retryCount, spaceType, ingestText])
+  }, [retryCount, ingestText])
 
   useEffect(() => {
     if (user) {
@@ -197,7 +208,7 @@ export default function ChatContainer({ spaceType = 'garden' }) {
 
     // If in library space, query RAG for context
     let ragContext = null
-    if (spaceType === 'library' && !activeThread) {
+    if ('general' === 'library' && !activeThread) {
       try {
         const result = await ragQuery(content)
         ragContext = result
@@ -212,7 +223,7 @@ export default function ChatContainer({ spaceType = 'garden' }) {
       timestamp: new Date().toISOString(),
       sender: user.email,
       parent_id: activeThread?.id,
-      spaceType,
+      spaceType: 'general',
       ragContext
     }
 
@@ -221,11 +232,11 @@ export default function ChatContainer({ spaceType = 'garden' }) {
     ws.current.send(JSON.stringify(message))
     
     setMessagesBySpace(prev => {
-      const spaceMessages = prev[spaceType] || []
+      const spaceMessages = prev['general'] || []
       if (activeThread) {
         return {
           ...prev,
-          [spaceType]: spaceMessages.map(msg => {
+          general: spaceMessages.map(msg => {
             if (msg.id === activeThread.id) {
               return {
                 ...msg,
@@ -238,10 +249,10 @@ export default function ChatContainer({ spaceType = 'garden' }) {
       }
       return {
         ...prev,
-        [spaceType]: [...spaceMessages, message]
+        general: [...spaceMessages, message]
       }
     })
-  }, [activeThread, spaceType, ragQuery, user])
+  }, [activeThread, 'general', ragQuery, user])
 
   const handleThreadClick = useCallback((message) => {
     setActiveThread(message)
@@ -252,46 +263,49 @@ export default function ChatContainer({ spaceType = 'garden' }) {
   }, [])
 
   return (
-    <VStack
-      spacing={4}
-      h="calc(100vh - 4rem)"
-      bg={colorMode === 'light' ? 'white' : 'gray.800'}
-      borderRadius="lg"
-      shadow="sm"
-      p={4}
-      data-space={spaceType}
-    >
-      <ConnectionStatus 
-        isConnected={isConnected} 
-        error={error}
-        retryCount={retryCount}
-      />
-      <Box flex="1" w="full" overflow="hidden" display="flex" gap={4}>
-        <Box flex="1" overflow="hidden">
-          <ChatMessageList 
-            messages={messages}
-            loading={loading}
-            sendingMessages={sentMessages.current}
-            onReact={handleReaction}
+    <Box h="100vh" display="flex" flexDirection="column">
+      <Box p={4} borderBottom="1px" borderColor="gray.200">
+        <Button onClick={logout} size="sm" colorScheme="red">
+          Logout
+        </Button>
+        <Button ml={2} onClick={onOpen} size="sm" colorScheme="blue">
+          Files
+        </Button>
+      </Box>
+
+      <Box flex="1" overflow="hidden">
+        {activeThread ? (
+          <ThreadView
+            thread={activeThread}
+            onClose={() => setActiveThread(null)}
+            onSendMessage={handleSendMessage}
             userReactions={userReactions}
-            spaceType={spaceType}
+            onReaction={handleReaction}
           />
-        </Box>
-        {activeThread && (
-          <Box w="350px" borderLeft="1px" borderColor="gray.200" pl={4}>
-            <ThreadView
-              parentMessage={activeThread}
-              onClose={handleCloseThread}
-              spaceType={spaceType}
+        ) : (
+          <VStack h="100%" spacing={0}>
+            <ConnectionStatus isConnected={isConnected} error={error} />
+            <ChatMessageList
+              messages={messages}
+              onThreadClick={setActiveThread}
+              userReactions={userReactions}
+              onReaction={handleReaction}
             />
-          </Box>
+            <ChatInput onSendMessage={handleSendMessage} isDisabled={!isConnected} />
+          </VStack>
         )}
       </Box>
-      <ChatInput 
-        onSendMessage={handleSendMessage}
-        disabled={!isConnected}
-        placeholder={activeThread ? "Reply in thread..." : "Type a message..."}
-      />
-    </VStack>
+
+      <Drawer isOpen={isOpen} placement="right" onClose={onClose} size="md">
+        <DrawerOverlay />
+        <DrawerContent>
+          <DrawerCloseButton />
+          <DrawerHeader>Chat Files</DrawerHeader>
+          <DrawerBody>
+            <FileUpload />
+          </DrawerBody>
+        </DrawerContent>
+      </Drawer>
+    </Box>
   )
 } 
