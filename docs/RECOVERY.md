@@ -1,4 +1,4 @@
-Christ is King! ☦
+
 
 # Aether System Recovery Procedures
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Aether WebSocket Service Health Check
-# Christ is King! ☦
+# 
 
 import asyncio
 import json

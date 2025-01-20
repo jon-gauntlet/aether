@@ -1,8 +1,10 @@
 import React from 'react'
-import { Box, Text, VStack, HStack, Avatar } from '@chakra-ui/react'
+import { Box, Text, VStack, HStack, Avatar, Spinner, Collapse } from '@chakra-ui/react'
+import { InfoIcon } from '@chakra-ui/icons'
 
-export function Message({ content, timestamp, role, avatar }) {
+export function Message({ content, timestamp, role, avatar, isLoading, sources }) {
   const isUser = role === 'user'
+  const isRAG = role === 'assistant' && sources?.length > 0
   
   return (
     <HStack
@@ -14,9 +16,9 @@ export function Message({ content, timestamp, role, avatar }) {
       {!isUser && (
         <Avatar
           size="sm"
-          name="AI Assistant"
+          name={isRAG ? "RAG Assistant" : "AI Assistant"}
           src={avatar}
-          bg="blue.500"
+          bg={isRAG ? "purple.500" : "blue.500"}
         />
       )}
       <VStack
@@ -25,14 +27,36 @@ export function Message({ content, timestamp, role, avatar }) {
         spacing={1}
       >
         <Box
-          bg={isUser ? 'blue.500' : 'gray.700'}
+          bg={isUser ? 'blue.500' : isRAG ? 'purple.700' : 'gray.700'}
           color="white"
           px={4}
           py={2}
           borderRadius="lg"
-          whiteSpace="pre-wrap"
+          position="relative"
         >
-          <Text>{content}</Text>
+          {isLoading ? (
+            <HStack spacing={3} p={2}>
+              <Spinner size="sm" />
+              <Text>Thinking...</Text>
+            </HStack>
+          ) : (
+            <>
+              <Text whiteSpace="pre-wrap">{content}</Text>
+              {isRAG && sources?.length > 0 && (
+                <VStack align="start" mt={2} pt={2} borderTop="1px solid" borderColor="whiteAlpha.300">
+                  <HStack spacing={1} color="whiteAlpha.700">
+                    <InfoIcon boxSize={3} />
+                    <Text fontSize="xs">Sources:</Text>
+                  </HStack>
+                  {sources.map((source, idx) => (
+                    <Text key={idx} fontSize="xs" color="whiteAlpha.800">
+                      {source.title || `Source ${idx + 1}`}
+                    </Text>
+                  ))}
+                </VStack>
+              )}
+            </>
+          )}
         </Box>
         {timestamp && (
           <Text fontSize="xs" color="gray.500">

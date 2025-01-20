@@ -2,6 +2,7 @@
 import asyncio
 from typing import List, Dict, Any, Optional
 import logging
+import os
 from supabase import create_client, Client
 from .ml_client import MLClient
 from ..config import load_credentials, SIMILARITY_THRESHOLD
@@ -15,10 +16,11 @@ logger = logging.getLogger(__name__)
 class VectorStore:
     """Vector store for document embeddings."""
     
-    def __init__(self, dimension: int = 1536):
+    def __init__(self, use_mock: bool = False, dimension: int = 1536):
         """Initialize vector store.
         
         Args:
+            use_mock: Whether to use mock responses for testing
             dimension: Dimension of vectors (1536 for OpenAI ada-002)
         """
         self.dimension = dimension
@@ -26,9 +28,12 @@ class VectorStore:
         self.documents = []
         self.document_vectors = None
         self.metadata = []
-        creds = load_credentials()
-        self.supabase = create_client(creds.supabase_url, creds.supabase_key)
-        self.ml_client = MLClient()
+        self.use_mock = use_mock
+        
+        if not self.use_mock:
+            creds = load_credentials()
+            self.supabase = create_client(creds.supabase_url, creds.supabase_key)
+            self.ml_client = MLClient()
         
     async def add_documents(
         self,
@@ -46,6 +51,9 @@ class VectorStore:
         Returns:
             bool: True if successful
         """
+        if self.use_mock:
+            return True
+            
         try:
             if not texts or embeddings.size == 0:
                 return False
@@ -93,6 +101,9 @@ class VectorStore:
         Returns:
             List of document IDs
         """
+        if self.use_mock:
+            return [str(uuid4()) for _ in texts]
+            
         if metadata is None:
             metadata = [{} for _ in texts]
             
@@ -171,6 +182,14 @@ class VectorStore:
         Returns:
             List of documents with similarity scores
         """
+        if self.use_mock:
+            return [{
+                "document_id": str(uuid4()),
+                "score": 1.0,
+                "metadata": {"mock": True},
+                "content": "Mock document content"
+            }]
+            
         if not self.documents:
             return []
             
@@ -201,6 +220,9 @@ class VectorStore:
         Args:
             doc_ids: List of document IDs to delete
         """
+        if self.use_mock:
+            return
+            
         try:
             self.supabase.table('embeddings').delete().in_('id', doc_ids).execute()
         except Exception as e:

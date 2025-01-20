@@ -1,6 +1,6 @@
 # RAG System Optimization Guide
 
-Christ is King! ☦
+
 
 ## System Tuning Parameters
 

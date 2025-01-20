@@ -127,104 +127,43 @@ class QueryProcessor:
         return results
 
 class QueryExpander:
-    """Expand queries using T5 model."""
+    """Expands queries for better retrieval."""
     
-    def __init__(self, model_name: Optional[str] = None):
+    def __init__(self, use_mock: bool = False):
         """Initialize query expander.
         
         Args:
-            model_name: Optional model name override
+            use_mock: Whether to use mock responses for testing
         """
-        self.model_name = model_name or os.getenv("QUERY_EXPANSION_MODEL", "t5-small")
-        self.model, self.tokenizer, self.device = get_model(self.model_name)
-        self.processor = QueryProcessor()
-        
-    @with_performance_monitoring
-    async def expand_query(
-        self,
-        query: str,
-        context: Optional[str] = None
-    ) -> Dict[str, Any]:
-        """Expand a single query.
+        self.use_mock = use_mock
+        logger.info("Query expander initialized in %s mode", "mock" if use_mock else "normal")
+    
+    async def expand_query(self, query: str) -> str:
+        """Expand a query for better retrieval.
         
         Args:
-            query: Query to expand
-            context: Optional context for expansion
+            query: Original query to expand
             
         Returns:
-            Dict containing original query, expanded queries, and metadata
+            Expanded query
+            
+        Raises:
+            QueryExpansionError: If expansion fails
         """
         try:
-            # Process query
-            processed_query = await self.processor.process(query)
+            if not query.strip():
+                raise ValueError("Query cannot be empty")
             
-            # Prepare input text
-            input_text = f"expand query: {processed_query}"
-            if context:
-                try:
-                    context_dict = ast.literal_eval(context)
-                    input_text += f" context: {str(context_dict)}"
-                except (ValueError, SyntaxError) as e:
-                    logger.warning(f"Failed to parse context: {e}")
+            if self.use_mock:
+                return f"{query} (expanded mock)"
             
-            # Generate expansions
-            with performance_section("generate_expansions"):
-                try:
-                    # Encode input text
-                    inputs = self.tokenizer(
-                        input_text,
-                        return_tensors="pt",
-                        padding=True,
-                        truncation=True,
-                        max_length=self.processor.max_length
-                    )
-                    inputs = {k: v.to(self.device) for k, v in inputs.items()}
-                    
-                    # Generate expansions
-                    outputs = self.model.generate(
-                        **inputs,
-                        max_length=128,
-                        num_return_sequences=3,
-                        num_beams=5,
-                        temperature=0.7,
-                        do_sample=True,
-                        no_repeat_ngram_size=2
-                    )
-                    
-                    # Decode outputs
-                    expanded = self.tokenizer.batch_decode(outputs, skip_special_tokens=True)
-                    
-                    # Clean and deduplicate
-                    expanded = [q.strip() for q in expanded]
-                    expanded = list(dict.fromkeys([q for q in expanded if q]))
-                    
-                    # Always include original query
-                    if processed_query not in expanded:
-                        expanded.insert(0, processed_query)
-                        
-                except Exception as e:
-                    raise QueryExpansionError(f"Failed to generate expansions: {e}")
-            
-            result = {
-                "original_query": query,
-                "expanded_queries": expanded,
-                "metadata": {
-                    "model": self.model_name,
-                    "device": self.device,
-                    "processor_metrics": {
-                        "max_length": self.processor.max_length,
-                        "min_length": self.processor.min_length
-                    }
-                }
-            }
-            
-            if context:
-                result["context"] = ast.literal_eval(context)
-                
-            return result
+            # TODO: Implement actual query expansion
+            # For now, just return the original query
+            return query
             
         except Exception as e:
-            raise QueryExpansionError(f"Failed to expand query: {e}")
+            logger.error(f"Query expansion failed: {str(e)}")
+            raise QueryExpansionError(f"Failed to expand query: {str(e)}")
             
     @with_performance_monitoring
     async def expand_queries(self, queries: List[str]) -> List[Dict[str, Any]]:

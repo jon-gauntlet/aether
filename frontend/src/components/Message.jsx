@@ -1,14 +1,14 @@
 import React, { useState, useCallback } from 'react';
 import { Box, Text, VStack, HStack, Avatar, IconButton, Button, useToast } from '@chakra-ui/react';
-import { EmojiHappyIcon, EmojiSadIcon, ThumbUpIcon, HeartIcon, ReplyIcon } from '@heroicons/react/outline';
+import { FaceSmileIcon, FaceFrownIcon, HandThumbUpIcon, HeartIcon, ArrowUturnLeftIcon } from '@heroicons/react/24/outline';
 import { format } from 'date-fns';
 import { useAuth } from '../contexts/AuthContext';
 
 const REACTIONS = [
-    { icon: ThumbUpIcon, value: '👍' },
+    { icon: HandThumbUpIcon, value: '👍' },
     { icon: HeartIcon, value: '❤️' },
-    { icon: EmojiHappyIcon, value: '😊' },
-    { icon: EmojiSadIcon, value: '😢' }
+    { icon: FaceSmileIcon, value: '😊' },
+    { icon: FaceFrownIcon, value: '😢' }
 ];
 
 export function Message({ message, onReaction, onReply, onViewThread }) {
@@ -61,93 +61,97 @@ export function Message({ message, onReaction, onReply, onViewThread }) {
     
     return (
         <Box 
-            p={2} 
-            borderRadius="md" 
-            bg={message.user_id === user?.id ? "blue.50" : "gray.50"}
+            p={4} 
+            borderWidth="1px" 
+            borderRadius="lg" 
             position="relative"
-            onMouseEnter={() => setShowReactions(true)}
-            onMouseLeave={() => setShowReactions(false)}
+            _hover={{ '& .message-actions': { opacity: 1 } }}
         >
-            <HStack spacing={2} mb={1}>
-                <Text fontWeight="bold">{message.user_id}</Text>
-                <Text fontSize="sm" color="gray.500">
-                    {format(new Date(message.timestamp), 'HH:mm')}
-                </Text>
+            <HStack spacing={4} align="flex-start">
+                <Avatar 
+                    size="sm" 
+                    name={message.sender.name || 'Anonymous'} 
+                    src={message.sender.avatar} 
+                />
+                <VStack align="stretch" flex={1} spacing={1}>
+                    <HStack justify="space-between">
+                        <Text fontWeight="bold">
+                            {message.sender.name || 'Anonymous'}
+                        </Text>
+                        <Text fontSize="sm" color="gray.500">
+                            {format(new Date(message.timestamp), 'MMM d, h:mm a')}
+                        </Text>
+                    </HStack>
+                    <Text>{message.content}</Text>
+                    {message.reactions && message.reactions.length > 0 && (
+                        <HStack spacing={2} mt={2}>
+                            {message.reactions.map((reaction, index) => (
+                                <Button
+                                    key={index}
+                                    size="xs"
+                                    variant="ghost"
+                                    leftIcon={<Text>{reaction.emoji}</Text>}
+                                >
+                                    {reaction.count}
+                                </Button>
+                            ))}
+                        </HStack>
+                    )}
+                </VStack>
             </HStack>
             
-            <Text>{message.content}</Text>
-            
-            {/* Thread info */}
-            {message.is_thread_starter && message.reply_count > 0 && (
-                <Button
+            <HStack 
+                className="message-actions" 
+                position="absolute" 
+                right={2} 
+                bottom={2}
+                opacity={0}
+                transition="opacity 0.2s"
+                bg="white" 
+                p={1} 
+                borderRadius="md" 
+                shadow="md"
+            >
+                <IconButton
+                    icon={<ArrowUturnLeftIcon className="h-4 w-4" />}
+                    aria-label="Reply"
                     size="sm"
                     variant="ghost"
-                    leftIcon={<ReplyIcon className="h-4 w-4" />}
-                    onClick={handleViewThread}
-                    mt={2}
-                >
-                    {message.reply_count} {message.reply_count === 1 ? 'reply' : 'replies'}
-                </Button>
-            )}
-            
-            {/* Reply button */}
-            <IconButton
-                icon={<ReplyIcon className="h-4 w-4" />}
-                size="sm"
-                variant="ghost"
-                position="absolute"
-                top={2}
-                right={2}
-                onClick={handleReply}
-                aria-label="Reply to message"
-            />
-            
-            {/* Reaction buttons */}
+                    onClick={handleReply}
+                />
+                <IconButton
+                    icon={<FaceSmileIcon className="h-4 w-4" />}
+                    aria-label="Add reaction"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setShowReactions(!showReactions)}
+                />
+            </HStack>
+
             {showReactions && (
-                <HStack 
-                    position="absolute" 
-                    top="-8" 
-                    right="0" 
-                    bg="white" 
-                    shadow="md" 
-                    borderRadius="md" 
-                    p={1}
+                <Box
+                    position="absolute"
+                    right={2}
+                    bottom={12}
+                    bg="white"
+                    p={2}
+                    borderRadius="md"
+                    shadow="lg"
+                    zIndex={1}
                 >
-                    {REACTIONS.map(({ icon: Icon, value }) => (
-                        <IconButton
-                            key={value}
-                            icon={<Icon className="h-4 w-4" />}
-                            size="sm"
-                            variant="ghost"
-                            colorScheme={hasReacted(value) ? "blue" : "gray"}
-                            onClick={() => handleReaction(value)}
-                            aria-label={`React with ${value}`}
-                        />
-                    ))}
-                </HStack>
-            )}
-            
-            {/* Reaction display */}
-            {message.reactions?.length > 0 && (
-                <HStack spacing={2} mt={2}>
-                    {REACTIONS.map(({ value }) => {
-                        const count = getReactionCount(value);
-                        if (count === 0) return null;
-                        
-                        return (
-                            <Box
+                    <HStack>
+                        {REACTIONS.map(({ icon: Icon, value }) => (
+                            <IconButton
                                 key={value}
-                                px={2}
-                                py={1}
-                                borderRadius="full"
-                                bg={hasReacted(value) ? "blue.100" : "gray.100"}
-                                fontSize="sm"
-                            >
-                                {value} {count}
-                            </Box>
-                        );
-                    })}
-                </HStack>
+                                icon={<Icon className="h-4 w-4" />}
+                                aria-label={`React with ${value}`}
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleReaction(value)}
+                            />
+                        ))}
+                    </HStack>
+                </Box>
             )}
         </Box>
     );

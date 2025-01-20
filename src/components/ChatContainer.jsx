@@ -1,46 +1,46 @@
-import React from 'react'
-import { Box, Button, Select, Text } from '@chakra-ui/react'
-import { useAuth } from '../contexts/AuthContext'
-import { motion, AnimatePresence } from 'framer-motion'
+import React, { useEffect, useState, useCallback } from 'react'
+import { Box, VStack, useToast } from '@chakra-ui/react'
+import { ChatMessageList } from './ChatMessageList'
+import ChatInput from './ChatInput'
+import { FileUpload } from './FileUpload'
 
-export function ChatContainer() {
-  const { user, logout } = useAuth()
+const MOCK_USER = {
+  id: 'demo-user',
+  name: 'Demo User',
+  email: 'demo@example.com'
+};
 
-  if (!user) {
-    return (
-      <Box p={4}>
-        <Text>Please log in to access the chat.</Text>
-      </Box>
-    )
-  }
+export default function ChatContainer() {
+  const [messages, setMessages] = useState([])
+  const [isConnected, setIsConnected] = useState(true) // Default to connected for demo
+  const toast = useToast()
+
+  const handleSendMessage = useCallback((content) => {
+    const newMessage = {
+      id: Date.now(),
+      content,
+      sender: MOCK_USER,
+      timestamp: new Date().toISOString()
+    };
+    setMessages(prev => [...prev, newMessage]);
+  }, []);
 
   return (
-    <Box p={4}>
-      <Button 
-        onClick={logout} 
-        data-testid="logout-button"
-        colorScheme="red"
-        size="sm"
-        position="absolute"
-        top={4}
-        right={4}
-      >
-        Logout
-      </Button>
-      
-      <Select 
-        data-testid="channel-select" 
-        defaultValue="general"
-        mb={4}
-      >
-        <option value="general">General</option>
-        <option value="support">Support</option>
-        <option value="random">Random</option>
-      </Select>
+    <Box h="100vh" p={4}>
+      <VStack h="full" spacing={4}>
+        <Box flex="1" overflowY="auto">
+          <ChatMessageList 
+            messages={messages}
+          />
+        </Box>
 
-      <Box borderWidth={1} borderRadius="lg" p={4} minH="400px">
-        {/* Chat messages will go here */}
-      </Box>
+        <FileUpload />
+
+        <ChatInput 
+          onSendMessage={handleSendMessage}
+          isConnected={isConnected}
+        />
+      </VStack>
     </Box>
   )
 } 

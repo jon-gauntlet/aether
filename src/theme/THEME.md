@@ -1,6 +1,6 @@
 # Theme System Documentation
 
-Christ is King! ☦
+
 
 ## Overview
 The theme system provides a comprehensive design system with dark mode support, responsive utilities, and accessibility features.

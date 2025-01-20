@@ -1,5 +1,5 @@
 # Aether WebSocket Service Backup Cron Configuration
-# Christ is King! ☦
+# 
 
 # Run daily backup at 2 AM
 0 2 * * * websocket /opt/aether/websocket/.venv/bin/python /opt/aether/websocket/scripts/backup.py >> /var/log/websocket/backup.log 2>&1

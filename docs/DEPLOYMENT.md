@@ -1,6 +1,6 @@
 # RAG System Deployment Guide
 
-Christ is King! ☦
+
 
 ## Deployment Overview
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate SSL certificates for development and testing.
 
-Christ is King! ☦
+
 """
 import os
 import sys

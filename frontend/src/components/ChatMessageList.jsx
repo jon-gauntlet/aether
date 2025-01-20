@@ -1,9 +1,10 @@
 import React, { useRef, useEffect } from 'react';
-import { Box, VStack, Text, Skeleton, Fade } from '@chakra-ui/react';
+import { Box, VStack, Text, Skeleton } from '@chakra-ui/react';
 import { ErrorBoundary } from './ErrorBoundary';
-import { Message } from './Message';
 
-function ChatMessage({ message, isUser, onReaction }) {
+function ChatMessage({ message }) {
+  const isUser = message.sender?.id === 'demo-user';
+  
   return (
     <Box
       data-testid="message-container"
@@ -23,37 +24,28 @@ function ChatMessage({ message, isUser, onReaction }) {
       }}
     >
       <Text>{message.content}</Text>
-      {message.created_at && (
+      {message.timestamp && (
         <Text fontSize="xs" opacity={0.8} mt={1}>
-          {new Date(message.created_at).toLocaleTimeString()}
+          {new Date(message.timestamp).toLocaleTimeString()}
         </Text>
       )}
     </Box>
   );
 }
 
-function ChatMessageListComponent({ messages = [], isLoading, error, typingUsers, onReaction }) {
+function ChatMessageListComponent({ messages = [], isLoading }) {
   const bottomRef = useRef(null);
   
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  if (error) {
-    return (
-      <Box role="alert" p={4} color="red.500">
-        {error}
-      </Box>
-    );
-  }
-
   if (isLoading) {
     return (
       <VStack spacing={4} align="stretch" p={4}>
-        <Skeleton data-testid="skeleton" height="40px" width="60%" startColor="gray.700" endColor="gray.600" />
-        <Skeleton data-testid="skeleton" height="60px" width="75%" alignSelf="flex-end" startColor="blue.700" endColor="blue.600" />
-        <Skeleton data-testid="skeleton" height="80px" width="65%" startColor="gray.700" endColor="gray.600" />
-        <Skeleton data-testid="skeleton" height="40px" width="70%" alignSelf="flex-end" startColor="blue.700" endColor="blue.600" />
+        <Skeleton height="40px" width="60%" startColor="gray.700" endColor="gray.600" />
+        <Skeleton height="60px" width="75%" alignSelf="flex-end" startColor="blue.700" endColor="blue.600" />
+        <Skeleton height="40px" width="65%" startColor="gray.700" endColor="gray.600" />
       </VStack>
     );
   }
@@ -61,7 +53,7 @@ function ChatMessageListComponent({ messages = [], isLoading, error, typingUsers
   if (!messages.length) {
     return (
       <Box p={4} textAlign="center" color="gray.500">
-        No messages yet
+        No messages yet. Try sending one!
       </Box>
     );
   }
@@ -74,36 +66,14 @@ function ChatMessageListComponent({ messages = [], isLoading, error, typingUsers
       w="100%"
       maxH="calc(100vh - 200px)"
       overflowY="auto"
+      p={4}
     >
-      {isLoading ? (
-        <>
-          <Skeleton data-testid="skeleton" height="60px" />
-          <Skeleton data-testid="skeleton" height="60px" />
-          <Skeleton data-testid="skeleton" height="60px" />
-        </>
-      ) : messages?.length === 0 ? (
-        <Text data-testid="empty-message">No messages yet</Text>
-      ) : (
-        messages?.map((message, index) => (
-          <ChatMessage
-            key={message.id || index}
-            message={message}
-            isUser={message.user_id === 'anonymous'}
-            onReaction={onReaction}
-          />
-        ))
-      )}
-      
-      {typingUsers.size > 0 && (
-        <Box p={2}>
-          <Text fontSize="sm" color="gray.500">
-            {Array.from(typingUsers).join(', ')} 
-            {typingUsers.size === 1 ? ' is ' : ' are '} 
-            typing...
-          </Text>
-        </Box>
-      )}
-      
+      {messages.map((message, index) => (
+        <ChatMessage
+          key={message.id || index}
+          message={message}
+        />
+      ))}
       <div ref={bottomRef} />
     </VStack>
   );

@@ -1,6 +1,6 @@
 """Security module for RAG system.
 
-Christ is King! ☦
+
 """
 import os
 import ssl

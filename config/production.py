@@ -1,6 +1,6 @@
 """
 Production configuration for the Aether WebSocket System.
-Christ is King! ☦
+
 """
 
 from typing import Dict, Any

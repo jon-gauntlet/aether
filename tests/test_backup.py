@@ -1,6 +1,6 @@
 """Tests for backup system.
 
-Christ is King! ☦
+
 """
 import os
 import json

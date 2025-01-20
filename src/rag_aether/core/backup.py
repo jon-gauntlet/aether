@@ -1,6 +1,6 @@
 """Backup system for RAG implementation.
 
-Christ is King! ☦
+
 """
 import os
 import json

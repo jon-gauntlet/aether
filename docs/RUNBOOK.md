@@ -1,6 +1,6 @@
 # Operations Runbook
 
-Christ is King! ☦
+
 
 ## Quick Reference
 

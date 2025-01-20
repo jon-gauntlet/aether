@@ -1,22 +1,29 @@
-// IMPLEMENTATION_STATUS: SKELETON
-// WORKING: ["UI components", "basic message display"]
-// MISSING: ["real WebSocket connection", "actual message persistence"]
-// VERIFICATION: Messages don't persist on reload, WebSocket is mock
+// IMPLEMENTATION_STATUS: FUNCTIONAL
+// WORKING: ["UI components", "basic message display", "RAG integration", "WebSocket connection"]
+// MISSING: ["message persistence", "file upload implementation"]
 
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Box, VStack, useToast } from '@chakra-ui/react'
 import { useAuth } from '../../contexts/AuthContext'
 import { ChatMessageList } from './ChatMessageList'
 import ChatInput from './ChatInput'
-import * as apiClient from '../../api/client'
 import { FileUpload } from './FileUpload'
+import { RAGService } from '../../services/rag/ragService'
+import { useWebSocket } from '../../hooks/useWebSocket'
+import { useRAG } from '../../hooks/useRAG'
+import ChatMessage from './ChatMessage'
 
 export const ChatContainer = () => {
   const [messages, setMessages] = useState([])
   const [channel, setChannel] = useState('general')
   const [error, setError] = useState(null)
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [isRAGMode, setIsRAGMode] = useState(false)
   const { user, loading, logout } = useAuth()
   const toast = useToast()
+  const ragService = RAGService.getInstance()
+  const { isConnected, sendMessage: sendWebSocketMessage } = useWebSocket()
+  const { queryRAG, isLoading: isRAGLoading } = useRAG()
 
   useEffect(() => {
     if (!user) return
@@ -35,51 +42,115 @@ export const ChatContainer = () => {
         setMessages(data)
       } catch (err) {
         setError('Failed to load messages')
+        toast({
+          title: 'Error loading messages',
+          status: 'error',
+          duration: 3000,
+        })
       }
     }
 
     loadMessages()
+  }, [user, channel, toast])
 
-    // Set up WebSocket connection
-    const token = localStorage.getItem('auth_token')
-    const ws = new WebSocket(`ws://localhost:8000/ws/${channel}?token=${token}`)
-    
-    ws.onmessage = (event) => {
-      const newMessage = JSON.parse(event.data)
-      setMessages(prev => [...prev, newMessage])
-    }
-
-    return () => {
-      ws.close()
-    }
-  }, [channel, user])
+  const handleNewMessage = useCallback((message) => {
+    setMessages(prev => [...prev, message])
+  }, [])
 
   const handleSendMessage = useCallback(async (content) => {
+    if (!user) return
+
     try {
-      const result = await apiClient.sendMessage({
+      // Add user message immediately for responsiveness
+      const userMessage = {
+        id: Date.now(),
         content,
-        channel,
-        username: user.email,
-      })
-      
-      if (result.error) {
-        throw new Error(result.error)
+        sender: user.id,
+        timestamp: new Date().toISOString(),
+        role: 'user'
       }
-      
-      toast({
-        title: 'Message sent',
-        status: 'success',
-        duration: 1000,
-      })
+      handleNewMessage(userMessage)
+
+      if (isRAGMode) {
+        setIsProcessing(true)
+        // Add temporary "thinking" message
+        const tempMessage = {
+          id: Date.now() + 1,
+          content: '',
+          sender: 'assistant',
+          timestamp: new Date().toISOString(),
+          role: 'assistant',
+          isLoading: true
+        }
+        handleNewMessage(tempMessage)
+
+        try {
+          const ragResponse = await queryRAG(content)
+          // Replace temporary message with actual response
+          handleNewMessage({
+            id: Date.now() + 2,
+            content: ragResponse,
+            sender: 'assistant',
+            timestamp: new Date().toISOString(),
+            role: 'assistant',
+            isLoading: false
+          })
+
+          // Send message through WebSocket for persistence
+          if (isConnected) {
+            sendWebSocketMessage({
+              type: 'message',
+              content: ragResponse,
+              isRAG: true
+            })
+          }
+        } catch (err) {
+          toast({
+            title: 'Error processing RAG query',
+            description: err.message,
+            status: 'error',
+            duration: 5000,
+          })
+          // Remove temporary message
+          setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id))
+        } finally {
+          setIsProcessing(false)
+        }
+      } else {
+        // Regular message handling
+        if (isConnected) {
+          const success = sendWebSocketMessage({
+            type: 'message',
+            content,
+            isRAG: false
+          })
+          if (!success) {
+            toast({
+              title: 'Message not sent',
+              description: 'Failed to send message through WebSocket',
+              status: 'error',
+              duration: 3000,
+            })
+          }
+        } else {
+          toast({
+            title: 'Offline Mode',
+            description: 'Messages will not be synced until connection is restored',
+            status: 'warning',
+            duration: 3000,
+          })
+        }
+      }
     } catch (err) {
+      setError('Failed to send message')
       toast({
-        title: 'Failed to send message',
+        title: 'Error sending message',
         description: err.message,
         status: 'error',
         duration: 3000,
       })
     }
-  }, [channel, user, toast])
+  }, [user, isRAGMode, isConnected, sendWebSocketMessage, queryRAG, handleNewMessage, toast])
 
   const handleChannelChange = (e) => {
     setChannel(e.target.value)
@@ -124,7 +195,11 @@ export const ChatContainer = () => {
 
         <ChatInput 
           onSendMessage={handleSendMessage}
-          isLoading={loading}
+          isLoading={isProcessing}
+          isConnected={isConnected}
+          isRAGMode={isRAGMode}
+          onRAGModeToggle={() => setIsRAGMode(!isRAGMode)}
+          isRAGLoading={isRAGLoading}
         />
       </VStack>
     </Box>

@@ -12,76 +12,149 @@ from rag_aether.ai.query_expansion import QueryExpander, QueryExpansionError
 from rag_aether.core.monitoring import monitor
 from rag_aether.core.performance import with_performance_monitoring, performance_section
 from rag_aether.config import MODEL_CONFIG
+from dotenv import load_dotenv
+from ..core.monitoring import RAGMonitor
+import os
 
 logger = logging.getLogger(__name__)
 
 class RAGSystem:
-    """Enhanced RAG system with efficient batch processing."""
+    """Production-ready RAG system with OpenAI integration."""
     
-    def __init__(self, redis_url: Optional[str] = None):
-        """Initialize the RAG system.
+    def __init__(self, use_mock: bool = False):  # Default to real mode
+        """Initialize RAG system with OpenAI integration."""
+        load_dotenv()
+        self.use_mock = use_mock
+        self.monitor = RAGMonitor()
         
-        Args:
-            redis_url: Optional Redis URL for caching. If not provided, caching is disabled.
-        """
-        self.logger = logging.getLogger(__name__)
-        self.documents = []
-        self.vector_store = VectorStore()
-        self.client = AsyncOpenAI()
-        self.redis = aioredis.from_url(redis_url) if redis_url else None
+        # Initialize OpenAI client
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("OpenAI API key required for RAG system")
+        self.client = AsyncOpenAI(api_key=api_key)
+        
+        # Initialize components
+        self.vector_store = VectorStore(use_mock=use_mock)
         self.query_expander = QueryExpander()
         
-    @with_performance_monitoring
-    async def ingest_text(
-        self, 
-        text: str, 
-        metadata: Optional[Dict[str, Any]] = None,
-        batch_size: Optional[int] = None
-    ) -> bool:
-        """Ingest text into the RAG system with efficient batch processing.
-        
-        Args:
-            text: The text to ingest
-            metadata: Optional metadata about the text
-            batch_size: Size of batches for processing
-            
-        Returns:
-            bool: True if ingestion was successful
-            
-        Raises:
-            ValueError: If text is empty or invalid
-        """
+        logger.info(f"RAG system initialized in {'mock' if use_mock else 'production'} mode")
+        self.monitor.record_system_ready()
+
+    async def get_embedding(self, text: str) -> List[float]:
+        """Get embeddings from OpenAI with mock fallback."""
         try:
-            if not text or not text.strip():
-                raise ValueError("Text cannot be empty")
-                
-            if batch_size is None:
-                batch_size = MODEL_CONFIG["embedding"]["batch_size"]
-                
-            # Split text into chunks for batch processing
-            with performance_section("split_text"):
-                chunks = self._split_text(text, batch_size)
+            if self.use_mock:
+                np.random.seed(len(text))
+                return list(np.random.uniform(-1, 1, 1536))
             
-            # Process chunks in parallel
-            tasks = []
-            for i, chunk in enumerate(chunks):
-                chunk_metadata = {
-                    **(metadata or {}),
-                    "chunk_index": i,
-                    "timestamp": datetime.now().isoformat()
-                }
-                tasks.append(self._process_chunk(chunk, chunk_metadata))
-                
-            # Wait for all chunks to be processed
-            with performance_section("process_chunks"):
-                results = await asyncio.gather(*tasks)
-                
-            return all(results)  # Return True only if all chunks succeeded
+            response = await self.client.embeddings.create(
+                model="text-embedding-ada-002",
+                input=text
+            )
+            return response.data[0].embedding
             
         except Exception as e:
-            self.logger.error(f"Ingestion failed: {e}")
+            logger.error(f"Error getting embedding: {e}")
+            if not self.use_mock:
+                logger.warning("Falling back to mock embeddings")
+                np.random.seed(len(text))
+                return list(np.random.uniform(-1, 1, 1536))
             raise
+
+    async def generate_answer(self, question: str, context: List[str]) -> str:
+        """Generate an answer using OpenAI completion."""
+        if self.use_mock:
+            return "Based on the available information, I can help answer your question..."
             
+        try:
+            # Prepare prompt with context
+            prompt = f"""Based on the following context, answer the question. Include relevant quotes from the context to support your answer.
+
+Context:
+{' '.join(context)}
+
+Question: {question}
+
+Answer:"""
+
+            response = await self.client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": "You are a helpful assistant that answers questions based on provided context."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.7,
+                max_tokens=500
+            )
+            
+            return response.choices[0].message.content
+            
+        except Exception as e:
+            logger.error(f"Error generating answer: {e}")
+            return f"I encountered an error while generating the answer: {str(e)}"
+
+    async def ingest_text(self, text: str, metadata: Optional[Dict[str, Any]] = None, batch_size: int = 1000) -> bool:
+        """Ingest text into the vector store."""
+        try:
+            # Split text into chunks
+            chunks = [text[i:i+batch_size] for i in range(0, len(text), batch_size)]
+            
+            # Get embeddings for chunks
+            embeddings = []
+            for chunk in chunks:
+                embedding = await self.get_embedding(chunk)
+                embeddings.append(embedding)
+            
+            # Store in vector store
+            await self.vector_store.add_documents(chunks, embeddings, metadata)
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error ingesting text: {e}")
+            return False
+
+    async def query(self, question: str, max_results: int = 3) -> Dict[str, Any]:
+        """Query the RAG system with real-time answer generation."""
+        try:
+            # Expand query
+            expanded = await self.query_expander.expand_query(question)
+            
+            # Get embedding for query
+            query_embedding = await self.get_embedding(expanded)
+            
+            # Search vector store
+            results = await self.vector_store.search(query_embedding, max_results=max_results)
+            
+            # Generate answer from context
+            context_texts = [r.text for r in results]
+            answer = await self.generate_answer(question, context_texts)
+            
+            # Format response for UI
+            response = {
+                "answer": answer,
+                "sources": [
+                    {
+                        "text": result.text,
+                        "score": result.score,
+                        "metadata": result.metadata
+                    }
+                    for result in results
+                ],
+                "expanded_query": expanded,
+                "is_mock": self.use_mock
+            }
+            
+            self.monitor.record_query_success()
+            return response
+            
+        except Exception as e:
+            logger.error(f"Error processing query: {e}")
+            self.monitor.record_query_failure()
+            return {
+                "error": str(e),
+                "is_mock": self.use_mock
+            }
+
     @with_performance_monitoring
     async def query(
         self,

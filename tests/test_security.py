@@ -1,6 +1,6 @@
 """Tests for security module.
 
-Christ is King! ☦
+
 """
 import os
 import ssl

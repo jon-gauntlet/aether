@@ -4,6 +4,8 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { ChakraProvider } from '@chakra-ui/react'
 import { supabase } from '../../../src/lib/supabaseClient'
 import { FileUpload } from '../../../src/components/FileUpload'
+import { AuthProvider } from '../../contexts/AuthContext'
+import { ThemeProvider } from '../../contexts/ThemeContext'
 
 // Mock URL.createObjectURL
 const mockCreateObjectURL = vi.fn()
@@ -25,6 +27,18 @@ vi.mock('../../../src/lib/supabaseClient', () => ({
   }
 }))
 
+const TestWrapper = ({ children }) => (
+  <AuthProvider>
+    <ThemeProvider>
+      {children}
+    </ThemeProvider>
+  </AuthProvider>
+)
+
+const renderWithProviders = (ui, options = {}) => {
+  return render(ui, { wrapper: TestWrapper, ...options })
+}
+
 const renderWithChakra = (component) => {
   return render(
     <ChakraProvider>
@@ -43,7 +57,7 @@ describe('File Handling', () => {
     it('should upload file successfully', async () => {
       const file = new File(['test content'], 'test.pdf', { type: 'application/pdf' })
       
-      renderWithChakra(<FileUpload />)
+      renderWithProviders(<FileUpload />)
       
       const input = screen.getByTestId('file-input')
       fireEvent.change(input, { target: { files: [file] } })
@@ -59,7 +73,7 @@ describe('File Handling', () => {
     it('should validate file size', async () => {
       const largeFile = new File(['x'.repeat(11 * 1024 * 1024)], 'large.pdf', { type: 'application/pdf' })
       
-      renderWithChakra(<FileUpload />)
+      renderWithProviders(<FileUpload />)
       
       const input = screen.getByTestId('file-input')
       fireEvent.change(input, { target: { files: [largeFile] } })
@@ -82,7 +96,7 @@ describe('File Handling', () => {
       }))
       vi.mocked(supabase.storage.from).mockImplementation(mockFrom)
       
-      renderWithChakra(<FileUpload />)
+      renderWithProviders(<FileUpload />)
       
       const input = screen.getByTestId('file-input')
       fireEvent.change(input, { target: { files: [file] } })
@@ -107,7 +121,7 @@ describe('File Handling', () => {
       }))
       vi.mocked(supabase.storage.from).mockImplementation(mockFrom)
       
-      renderWithChakra(<FileUpload />)
+      renderWithProviders(<FileUpload />)
       
       await waitFor(() => {
         expect(screen.getByTestId('file-name')).toHaveTextContent('test.pdf')
@@ -132,7 +146,7 @@ describe('File Handling', () => {
       }))
       vi.mocked(supabase.storage.from).mockImplementation(mockFrom)
       
-      renderWithChakra(<FileUpload />)
+      renderWithProviders(<FileUpload />)
       
       await waitFor(() => {
         expect(screen.getByTestId('file-name')).toHaveTextContent('test.pdf')
@@ -157,7 +171,7 @@ describe('File Handling', () => {
       }))
       vi.mocked(supabase.storage.from).mockImplementation(mockFrom)
       
-      renderWithChakra(<FileUpload />)
+      renderWithProviders(<FileUpload />)
       
       await waitFor(() => {
         expect(screen.getByTestId('file-name')).toHaveTextContent('test.pdf')
@@ -173,7 +187,7 @@ describe('File Handling', () => {
 
   describe('List Files', () => {
     it('should list files on mount', async () => {
-      renderWithChakra(<FileUpload />)
+      renderWithProviders(<FileUpload />)
       
       await waitFor(() => {
         expect(screen.getByTestId('file-name')).toHaveTextContent('test.pdf')
@@ -191,7 +205,7 @@ describe('File Handling', () => {
       }))
       vi.mocked(supabase.storage.from).mockImplementation(mockFrom)
       
-      renderWithChakra(<FileUpload />)
+      renderWithProviders(<FileUpload />)
       
       await waitFor(() => {
         expect(screen.getByTestId('message')).toHaveTextContent('Failed to list files')

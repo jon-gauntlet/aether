@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { HStack, Button, Text, Tooltip } from '@chakra-ui/react';
 
-export function ReactionDisplay({ messageId, reactions, userReactions = [], onReact, isLoading = false }) {
+const ReactionDisplay = ({ messageId, reactions, userReactions = [], onReact, isLoading = false }) => {
   const [hoveredReaction, setHoveredReaction] = useState(null);
 
   const handleReaction = (reaction) => {
@@ -11,6 +11,8 @@ export function ReactionDisplay({ messageId, reactions, userReactions = [], onRe
   const getTooltipText = (reaction, count) => {
     return `${count} ${count === 1 ? 'person' : 'people'} reacted`;
   };
+
+  if (!reactions || reactions.length === 0) return null;
 
   return (
     <HStack spacing={2} data-testid="reaction-display">
@@ -47,4 +49,6 @@ export function ReactionDisplay({ messageId, reactions, userReactions = [], onRe
       })}
     </HStack>
   );
-} 
+};
+
+export default ReactionDisplay; 

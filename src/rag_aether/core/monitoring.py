@@ -1,6 +1,6 @@
 """Monitoring system for RAG implementation.
 
-Christ is King! ☦
+
 """
 import os
 import time

@@ -1,6 +1,6 @@
 # RAG System Setup Guide
 
-Christ is King! ☦
+
 
 ## Prerequisites
 - Python 3.12+

@@ -10,9 +10,8 @@ import {
   Icon
 } from '@chakra-ui/react'
 import { AttachmentIcon } from '@chakra-ui/icons'
-import { supabase } from '../services/supabase'
 
-export function FileUpload({ channel }) {
+export function FileUpload() {
   const [file, setFile] = useState(null)
   const [uploading, setUploading] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -37,34 +36,25 @@ export function FileUpload({ channel }) {
 
     try {
       setUploading(true)
-      const fileExt = file.name.split('.').pop()
-      const filePath = `${channel}/${Date.now()}.${fileExt}`
-
-      const { error: uploadError } = await supabase.storage
-        .from('chat-files')
-        .upload(filePath, file, {
-          onUploadProgress: (progress) => {
-            const percent = (progress.loaded / progress.total) * 100
-            setProgress(percent)
-          },
-        })
-
-      if (uploadError) throw uploadError
-
-      const { data: { publicUrl }, error: urlError } = await supabase.storage
-        .from('chat-files')
-        .getPublicUrl(filePath)
-
-      if (urlError) throw urlError
-
-      toast({
-        title: 'File uploaded successfully',
-        status: 'success',
-        duration: 2000,
-      })
-
-      // TODO: Send file message to chat
-      console.log('File URL:', publicUrl)
+      
+      // Simulate upload progress
+      let progress = 0
+      const interval = setInterval(() => {
+        progress += 10
+        setProgress(progress)
+        if (progress >= 100) {
+          clearInterval(interval)
+          setUploading(false)
+          setProgress(0)
+          setFile(null)
+          toast({
+            title: 'File uploaded successfully',
+            description: '(Demo mode - file not actually uploaded)',
+            status: 'success',
+            duration: 2000,
+          })
+        }
+      }, 200)
 
     } catch (error) {
       toast({
@@ -73,12 +63,11 @@ export function FileUpload({ channel }) {
         status: 'error',
         duration: 3000,
       })
-    } finally {
       setUploading(false)
       setProgress(0)
       setFile(null)
     }
-  }, [file, channel, toast])
+  }, [file, toast])
 
   return (
     <Box>
@@ -90,8 +79,9 @@ export function FileUpload({ channel }) {
             cursor="pointer"
             leftIcon={<Icon as={AttachmentIcon} />}
             isDisabled={uploading}
+            size="sm"
           >
-            Choose File
+            Attach File
             <input
               id="file-upload"
               type="file"
@@ -105,6 +95,8 @@ export function FileUpload({ channel }) {
               onClick={uploadFile}
               isLoading={uploading}
               data-testid="upload-button"
+              size="sm"
+              colorScheme="blue"
             >
               Upload
             </Button>

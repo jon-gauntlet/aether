@@ -1,31 +1,41 @@
-import React, { useCallback } from 'react'
-import { Box, Input, Button, Text } from '@chakra-ui/react'
+import React, { useState, useCallback } from 'react'
+import { Box, Input, Button, HStack, IconButton, Switch, FormControl, FormLabel, Text } from '@chakra-ui/react'
+import { useRAG } from '../hooks/useRAG'
 
 const DEFAULT_MAX_LENGTH = 500
 
-const ChatInput = ({ onSendMessage, isLoading, maxLength = DEFAULT_MAX_LENGTH }) => {
-  const [message, setMessage] = React.useState('')
+const ChatInput = ({ onSendMessage, isLoading, isConnected, maxLength = DEFAULT_MAX_LENGTH }) => {
+  const [message, setMessage] = useState('')
+  const [isRAGMode, setIsRAGMode] = useState(false)
+  const { query } = useRAG()
   const remainingChars = maxLength - message.length
   const showCharCount = remainingChars <= 50
 
-  const handleSend = useCallback(() => {
-    if (message.trim()) {
-      onSendMessage(message.trim())
-      setMessage('')
+  const handleSubmit = useCallback(async (e) => {
+    e.preventDefault()
+    if (!message.trim()) return
+
+    if (isRAGMode) {
+      try {
+        const response = await query(message)
+        onSendMessage(response.answer || 'AI is thinking...')
+      } catch (err) {
+        console.error('RAG query failed:', err)
+        onSendMessage('Sorry, I encountered an error processing your request.')
+      }
+    } else {
+      onSendMessage(message)
     }
-  }, [message, onSendMessage])
+
+    setMessage('')
+  }, [message, onSendMessage, isRAGMode, query])
 
   const handleKeyDown = useCallback((e) => {
-    if (e.key === 'Enter') {
-      if (e.shiftKey) {
-        // Don't prevent default - let the newline be inserted
-        return
-      } else {
-        e.preventDefault()
-        handleSend()
-      }
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSubmit(e)
     }
-  }, [handleSend])
+  }, [handleSubmit])
 
   const handleChange = useCallback((e) => {
     const newValue = e.target.value
@@ -35,33 +45,39 @@ const ChatInput = ({ onSendMessage, isLoading, maxLength = DEFAULT_MAX_LENGTH })
   }, [maxLength])
 
   return (
-    <Box position="relative">
-      <Box display="flex" gap={2}>
+    <Box as="form" onSubmit={handleSubmit} position="relative">
+      <HStack spacing={4}>
+        <FormControl display="flex" alignItems="center" maxW="200px">
+          <FormLabel htmlFor="rag-mode" mb="0" fontSize="sm">
+            AI Mode
+          </FormLabel>
+          <Switch
+            id="rag-mode"
+            isChecked={isRAGMode}
+            onChange={(e) => setIsRAGMode(e.target.checked)}
+            size="sm"
+          />
+        </FormControl>
         <Input
-          as="textarea"
-          data-testid="message-input"
           value={message}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
-          placeholder="Type a message..."
-          disabled={isLoading}
+          placeholder={isRAGMode ? "Ask AI anything..." : "Type a message..."}
+          disabled={isLoading || !isConnected}
           rows={1}
           resize="none"
           minHeight="40px"
           pr={showCharCount ? "120px" : "70px"}
         />
         <Button
-          data-testid="send-button"
-          onClick={handleSend}
-          isDisabled={!message.trim() || isLoading}
-          position="absolute"
-          right={2}
-          top="50%"
-          transform="translateY(-50%)"
+          type="submit"
+          colorScheme="blue"
+          isLoading={isLoading}
+          disabled={!message.trim() || !isConnected}
         >
           Send
         </Button>
-      </Box>
+      </HStack>
       {showCharCount && (
         <Text 
           data-testid="char-count"

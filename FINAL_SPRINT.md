@@ -1,6 +1,6 @@
 # Final Sprint Plan
 
-Christ is King! ☦
+
 
 ## 🎯 AFTER EMERGENCY PUSH (7:00pm)
 

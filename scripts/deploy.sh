@@ -1,6 +1,6 @@
 #!/bin/bash
 # Aether WebSocket System Deployment Script
-# Christ is King! ☦
+# 
 
 set -e  # Exit on error
 

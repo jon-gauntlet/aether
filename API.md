@@ -1,6 +1,6 @@
 <<<<<<< HEAD
 # Aether WebSocket API Documentation
-Christ is King! ☦
+
 
 ## WebSocket Endpoints
 

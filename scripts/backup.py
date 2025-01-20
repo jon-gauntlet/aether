@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Aether WebSocket Service Backup Script
-# Christ is King! ☦
+# 
 
 import argparse
 import datetime

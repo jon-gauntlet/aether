@@ -1,6 +1,6 @@
 # RAG System API Documentation
 
-Christ is King! ☦
+
 
 ## Overview
 The RAG (Retrieval-Augmented Generation) system provides high-performance document processing and querying capabilities with Redis caching and vector search.

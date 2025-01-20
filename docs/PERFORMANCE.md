@@ -1,6 +1,6 @@
 # RAG System Performance Documentation
 
-Christ is King! ☦
+
 
 ## Performance Metrics (2024-03-21)
 

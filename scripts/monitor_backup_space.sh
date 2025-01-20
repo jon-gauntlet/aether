@@ -1,6 +1,6 @@
 #!/bin/bash
 # Aether WebSocket Service Backup Space Monitor
-# Christ is King! ☦
+# 
 
 set -e
 
