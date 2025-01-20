@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Box, Button, Input, Text, useColorModeValue, VStack, HStack, IconButton } from '@chakra-ui/react';
+import { Box, Button, Input, Text, useColorModeValue, VStack, HStack, IconButton, useToast } from '@chakra-ui/react';
 import { DeleteIcon, EditIcon } from '@chakra-ui/icons';
 import { useAuth } from '../contexts/AuthContext'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -19,6 +19,7 @@ export default function ChatContainer() {
   const messagesEndRef = useRef(null)
   const typingTimeoutRef = useRef(null)
   const fileInputRef = useRef(null)
+  const toast = useToast()
   
   // Check for existing session in localStorage
   useEffect(() => {
@@ -82,64 +83,55 @@ export default function ChatContainer() {
     e.preventDefault()
     if (!text.trim()) return
 
-    if (editingId) {
-      setMessages(prev => prev.map(msg => 
-        msg.id === editingId ? { ...msg, text: text.trim(), isEdited: true } : msg
-      ))
-      setEditingId(null)
-    } else {
-      // Add user message
-      const userMessage = {
-        id: Date.now(),
-        text: text.trim(),
-        timestamp: new Date().toISOString(),
-        userId: currentUser.id,
-        reactions: {},
-        attachments: []
-      }
-      setMessages(prev => [...prev, userMessage])
-
-      // If message starts with /rag, send to RAG system
-      if (text.trim().startsWith('/rag ')) {
-        try {
-          const query = text.trim().slice(5)
-          const response = await fetch('http://localhost:8002/api/rag/query', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ question: query })
-          })
-
-          if (!response.ok) throw new Error('RAG query failed')
-          
-          const data = await response.json()
-          
-          // Add AI response
-          setMessages(prev => [...prev, {
-            id: Date.now(),
-            text: data.answer || 'Sorry, I could not process that query.',
-            timestamp: new Date().toISOString(),
-            userId: 'ai',
-            reactions: {},
-            attachments: [],
-            sources: data.sources || []
-          }])
-        } catch (error) {
-          console.error('RAG Error:', error)
-          setMessages(prev => [...prev, {
-            id: Date.now(),
-            text: 'Sorry, there was an error processing your query.',
-            timestamp: new Date().toISOString(),
-            userId: 'ai',
-            reactions: {},
-            attachments: []
-          }])
-        }
-      }
+    const userMessage = {
+      id: Date.now(),
+      text: text.trim(),
+      timestamp: new Date().toISOString(),
+      sender: 'user'
     }
+    
+    setMessages(prev => [...prev, userMessage])
     setText('')
-    setIsTyping(false)
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current)
+
+    // Handle RAG query
+    if (text.trim().toLowerCase().startsWith('/rag ')) {
+      setIsLoading(true)
+      try {
+        const query = text.trim().slice(5)
+        const response = await fetch('http://localhost:8002/api/rag/query', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question: query })
+        })
+
+        if (!response.ok) throw new Error('RAG query failed')
+        
+        const data = await response.json()
+        
+        setMessages(prev => [...prev, {
+          id: Date.now() + 1,
+          text: data.answer || 'I could not find a relevant answer.',
+          timestamp: new Date().toISOString(),
+          sender: 'ai',
+          sources: data.sources || []
+        }])
+      } catch (error) {
+        console.error('RAG Error:', error)
+        toast({
+          title: 'Error',
+          description: 'Failed to get AI response. Please try again.',
+          status: 'error',
+          duration: 3000,
+        })
+        setMessages(prev => [...prev, {
+          id: Date.now() + 1,
+          text: 'Sorry, I encountered an error processing your query.',
+          timestamp: new Date().toISOString(),
+          sender: 'ai'
+        }])
+      } finally {
+        setIsLoading(false)
+      }
     }
   }
 
@@ -185,7 +177,7 @@ export default function ChatContainer() {
       id: Date.now(),
       text: `Sent file: ${file.name}`,
       timestamp: new Date().toISOString(),
-      userId: currentUser.id,
+      sender: 'user',
       reactions: {},
       attachments: [attachment]
     }])
@@ -195,8 +187,10 @@ export default function ChatContainer() {
     msg.text.toLowerCase().includes(searchText.toLowerCase())
   )
 
+  const [isLoading, setIsLoading] = useState(false)
+
   return (
-    <Box p={5} maxW="600px" mx="auto">
+    <Box p={5} maxW="800px" mx="auto">
       <HStack mb={4} spacing={4}>
         {session ? (
           <>
@@ -299,176 +293,54 @@ export default function ChatContainer() {
       )}
 
       <Box
-        h="400px"
+        h="500px"
         borderWidth={1}
-        borderRadius="md"
+        borderRadius="lg"
         mb={4}
         overflowY="auto"
         p={4}
+        bg={useColorModeValue('white', 'gray.800')}
+        boxShadow="sm"
       >
         <VStack spacing={4} align="stretch">
-          {filteredMessages.map(msg => {
-            const isCurrentUser = msg.userId === currentUser.id
-            const isAI = msg.userId === 'ai'
-            return (
+          {filteredMessages.map(msg => (
+            <Box
+              key={msg.id}
+              alignSelf={msg.sender === 'user' ? 'flex-end' : 'flex-start'}
+              maxW="70%"
+              position="relative"
+            >
               <Box
-                key={msg.id}
-                alignSelf={isCurrentUser ? 'flex-end' : 'flex-start'}
-                maxW="70%"
+                bg={msg.sender === 'ai' ? 'gray.100' : 'blue.500'}
+                color={msg.sender === 'user' ? 'white' : 'black'}
+                p={3}
+                borderRadius="lg"
                 position="relative"
               >
-                <Box
-                  bg={isAI ? 'gray.50' : (isCurrentUser ? 'blue.500' : 'gray.100')}
-                  color={isCurrentUser ? 'white' : 'black'}
-                  p={3}
-                  borderRadius="lg"
-                  position="relative"
-                >
-                  <Text>{msg.text}</Text>
-                  {msg.sources && msg.sources.length > 0 && (
-                    <Box mt={2} pt={2} borderTopWidth={1} fontSize="sm" color="gray.600">
-                      <Text>Sources:</Text>
-                      <VStack align="stretch" pl={4} mt={1}>
-                        {msg.sources.map((source, i) => (
-                          <Text key={i}>{source}</Text>
-                        ))}
-                      </VStack>
-                    </Box>
-                  )}
-                  {msg.isEdited && (
-                    <Text as="span" fontSize="xs" opacity={0.7} ml={2}>(edited)</Text>
-                  )}
-                  {msg.attachments?.map(attachment => (
-                    <Box
-                      key={attachment.id}
-                      mt={2}
-                      p={2}
-                      bg="blackAlpha.100"
-                      borderRadius="md"
-                      fontSize="sm"
-                    >
-                      <a
-                        href={attachment.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ color: isCurrentUser ? 'white' : 'blue' }}
-                      >
-                        📎 {attachment.name}
-                      </a>
-                    </Box>
-                  ))}
-                </Box>
-                {isCurrentUser && (
-                  <HStack
-                    position="absolute"
-                    right={-10}
-                    top={0}
-                    spacing={1}
-                  >
-                    <IconButton
-                      size="xs"
-                      icon={<DeleteIcon />}
-                      onClick={() => deleteMessage(msg.id)}
-                      variant="ghost"
-                    />
-                    <IconButton
-                      size="xs"
-                      icon={<EditIcon />}
-                      onClick={() => editMessage(msg)}
-                      variant="ghost"
-                    />
-                  </HStack>
+                <Text>{msg.text}</Text>
+                {msg.sources && msg.sources.length > 0 && (
+                  <Box mt={2} pt={2} borderTopWidth={1} fontSize="sm" color="gray.600">
+                    <Text fontWeight="bold">Sources:</Text>
+                    <VStack align="stretch" pl={4} mt={1}>
+                      {msg.sources.map((source, i) => (
+                        <Text key={i}>{source}</Text>
+                      ))}
+                    </VStack>
+                  </Box>
                 )}
-                <Text
-                  fontSize="xs"
-                  color="gray.500"
-                  textAlign={isCurrentUser ? 'right' : 'left'}
-                  mt={1}
-                >
-                  {new Date(msg.timestamp).toLocaleTimeString()}
-                </Text>
-                <HStack
-                  spacing={1}
-                  justify={isCurrentUser ? 'flex-end' : 'flex-start'}
-                  wrap="wrap"
-                  mt={1}
-                >
-                  {Object.entries(msg.reactions || {}).map(([reaction, users]) => (
-                    <Button
-                      key={reaction}
-                      size="xs"
-                      variant={users.includes(currentUser.id) ? 'solid' : 'ghost'}
-                      onClick={() => addReaction(msg.id, reaction)}
-                    >
-                      {reaction} {users.length}
-                    </Button>
-                  ))}
-                  <Button
-                    size="xs"
-                    variant="ghost"
-                    onClick={(event) => {
-                      const menu = document.createElement('div')
-                      menu.style.position = 'fixed'
-                      menu.style.background = 'white'
-                      menu.style.border = '1px solid #ccc'
-                      menu.style.borderRadius = '8px'
-                      menu.style.padding = '4px'
-                      menu.style.display = 'flex'
-                      menu.style.gap = '4px'
-                      menu.style.zIndex = '1000'
-                      menu.style.boxShadow = '0 2px 5px rgba(0,0,0,0.1)'
-                      
-                      reactions.forEach(reaction => {
-                        const btn = document.createElement('button')
-                        btn.innerText = reaction
-                        btn.style.background = 'none'
-                        btn.style.border = 'none'
-                        btn.style.cursor = 'pointer'
-                        btn.style.fontSize = '16px'
-                        btn.style.padding = '4px'
-                        btn.style.borderRadius = '4px'
-                        btn.style.transition = 'background 0.2s'
-                        btn.onmouseover = () => btn.style.background = '#f0f0f0'
-                        btn.onmouseout = () => btn.style.background = 'none'
-                        btn.onclick = () => {
-                          addReaction(msg.id, reaction)
-                          menu.remove()
-                        }
-                        menu.appendChild(btn)
-                      })
-                      
-                      document.body.appendChild(menu)
-                      const rect = event.currentTarget.getBoundingClientRect()
-                      menu.style.left = `${rect.left}px`
-                      menu.style.top = `${rect.bottom + 5}px`
-                      
-                      const menuRect = menu.getBoundingClientRect()
-                      if (menuRect.right > window.innerWidth) {
-                        menu.style.left = `${window.innerWidth - menuRect.width - 5}px`
-                      }
-                      if (menuRect.bottom > window.innerHeight) {
-                        menu.style.top = `${rect.top - menuRect.height - 5}px`
-                      }
-                      
-                      const closeMenu = (e) => {
-                        if (!menu.contains(e.target)) {
-                          menu.remove()
-                          document.removeEventListener('click', closeMenu)
-                        }
-                      }
-                      requestAnimationFrame(() => {
-                        document.addEventListener('click', closeMenu)
-                      })
-                    }}
-                  >
-                    + Add Reaction
-                  </Button>
-                </HStack>
               </Box>
-            )
-          })}
+              <Text
+                fontSize="xs"
+                color="gray.500"
+                textAlign={msg.sender === 'user' ? 'right' : 'left'}
+                mt={1}
+              >
+                {new Date(msg.timestamp).toLocaleTimeString()}
+              </Text>
+            </Box>
+          ))}
           <div ref={messagesEndRef} />
-          {isTyping && (
+          {isLoading && (
             <Box
               p={3}
               bg="gray.100"
@@ -477,7 +349,7 @@ export default function ChatContainer() {
               mt={2}
             >
               <Text fontSize="sm" color="gray.600">
-                Typing...
+                Thinking...
               </Text>
             </Box>
           )}
@@ -488,26 +360,18 @@ export default function ChatContainer() {
         <HStack spacing={4}>
           <Input
             value={text}
-            onChange={e => {
-              setText(e.target.value)
-              if (!editingId) handleTyping()
-            }}
-            placeholder={editingId ? "Edit message..." : "Type a message..."}
+            onChange={e => setText(e.target.value)}
+            placeholder="Type a message... (use /rag for AI assistance)"
+            isDisabled={isLoading}
           />
-          <Button type="submit" colorScheme="blue">
-            {editingId ? 'Save' : 'Send'}
+          <Button 
+            type="submit" 
+            colorScheme="blue"
+            isLoading={isLoading}
+            loadingText="Sending"
+          >
+            Send
           </Button>
-          {editingId && (
-            <Button
-              onClick={() => {
-                setEditingId(null)
-                setText('')
-              }}
-              variant="ghost"
-            >
-              Cancel
-            </Button>
-          )}
         </HStack>
       </form>
     </Box>
